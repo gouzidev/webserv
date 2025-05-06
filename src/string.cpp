@@ -12,6 +12,12 @@ bool    strAllDigit(string s)
 	return true;
 }
 
+bool startsWith(string str, string sub)
+{
+	if (str.size() < sub.size())
+		return false;
+	return (str.substr(0, sub.size()) == sub);
+}
 
 string trimSpaces(string &text)
 {

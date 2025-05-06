@@ -8,14 +8,17 @@ ServerNode::ServerNode()
 
 LocationNode::LocationNode()
 {
+    possibleMethods.insert("DELETE");
+    possibleMethods.insert("GET");
+    possibleMethods.insert("POST");
     autoIndex = true;
-    index = "index.html";
     root = ".";
     path = "/";
 }
 
 WebServ::WebServ(char *filename)
 {
+    criticalErr = false;
     parsing(filename);
 }
 

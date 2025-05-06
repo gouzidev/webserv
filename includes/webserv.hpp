@@ -10,16 +10,25 @@
 
 using namespace std;
 
+class ErrorPageNode
+{
+    public :
+        set <unsigned short> codes;
+        string page;
+};
+
 class LocationNode
 {
     public :
+
+        static set <string> possibleMethods;
         LocationNode();
         vector <string> headers;
 
         string path;
         set <string> methods;
         string root;
-        string index;
+        vector <string> index;
         bool   autoIndex;
 };
 
@@ -32,15 +41,9 @@ class ServerNode
         string root;
         set <string> serverNames;
         vector <LocationNode> locationNodes;
+        vector <ErrorPageNode> errorNodes;
         long long clientMaxBodySize;
 
-};
-
-class ErrorPageNode
-{
-    public :
-        set <unsigned short> codes;
-        string page;
 };
 
 
@@ -53,11 +56,12 @@ class WebServ
         WebServ(char *confName);
         void parsing(char *filename);
         ServerNode parseServer(ifstream &configFile, size_t &lineNum);
-        LocationNode parseLocation(ServerNode &serverNode, ifstream &configFile, size_t &lineNum);
+        void parseLocation(ServerNode &serverNode, ifstream &configFile, size_t &lineNum);
         // void readFile(ifstream file);
 };
 std::vector<std::string> split (const std::string &s, char delim);
 string trimSpaces(string &text);
+bool startsWith(string str, string sub);
 bool    isStrEq(string a, string b);
 vector<string> split(string &str, char delim);
 bool    strAllDigit(string s);

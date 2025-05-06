@@ -1,39 +1,112 @@
 #include "../includes/webserv.hpp"
 
-LocationNode WebServ::parseLocation(ServerNode &serverNode, ifstream &configFile, size_t &lineNum)
+set <string> LocationNode::possibleMethods;
+
+void WebServ::parseLocation(ServerNode &serverNode, ifstream &configFile, size_t &lineNum)
 {
     string line;
     LocationNode locationNode;
+
     size_t posOfDelimiter;
     vector <string> tokens;
 
     getline(configFile, line);
     lineNum++;
     line = trimSpaces(line);
-    if (line != "{")
+    
+    if (line.size() > 0 && line != "{")
     {
+        cout << "{" << line << "}" << endl;
+        
         cerr << "syntax error, please enter \"{\" in the line:" << lineNum << endl;
         criticalErr = true;
-        return locationNode;
+        return ;
     }
+
+    getline(configFile, line);
+    lineNum++;
+    line = trimSpaces(line);
     while (!configFile.eof() && line != "}")
     {
-        getline(configFile, line);
-        lineNum++;
-        line = trimSpaces(line);
         posOfDelimiter = line.find(';');
         if (posOfDelimiter == string::npos && line.size() > 0) // not found
         {
             cerr << "syntax error, please end with ';' in the line:" << lineNum << endl;
             criticalErr = true;
-            return locationNode;
+            return ;
         }
         line = line.substr(0, posOfDelimiter);
         tokens = split(line, ' ');
-        cerr << endl;
+        if (tokens.size() == 0)
+        {
+
+        }
+        else if (tokens[0] == "methods")
+        {
+            for (size_t i = 1; i < tokens.size(); i++)
+            {
+                if (locationNode.possibleMethods.find(tokens[i]) == locationNode.possibleMethods.end())
+                {
+                    cerr << "syntax error, unknown method '" << tokens[i] << "' at line: " << lineNum << endl;
+                    criticalErr = true;
+                    return ;
+                }
+                locationNode.methods.insert(tokens[i]);
+            }
+        }
+        else if (tokens[0] == "index")
+        {
+            if (tokens.size() < 2)
+            {
+                cerr << "syntax error for index, please provide a default index: 'index [default page]' at line: " << lineNum << endl;
+                criticalErr = true;
+                return ;
+            }
+            for (size_t i = 1; i < tokens.size(); i++)
+            {
+                locationNode.index.push_back(tokens[i]);
+            }
+        }
+        else if (tokens[0] == "autoindex")
+        {
+            if (tokens.size() == 2)
+            {
+                if (tokens[1] != "on" && tokens[1] != "off")
+                {
+                    cerr << "syntax error for autoindex, 'autoindex [on/off]' at line: " << lineNum << endl;
+                    criticalErr = true;
+                    return ;
+                }
+                locationNode.autoIndex = tokens[1] == "on" ? true : false;
+            }
+        }
+        else if (tokens[0] == "redirect")
+        {
+            if (tokens.size() < 2)
+            {
+                cerr << "redirect syntax is wrong, : 'redirect [error code?] [page], at line: " << lineNum << endl;
+                criticalErr = true;
+                return ;
+            }
+            if (tokens.size() == 3)
+            {
+                if (!strAllDigit(tokens[1]))
+                {
+                    cerr << "redirect syntax is wrong, error code shall be an int, at line: " << lineNum << endl;
+                    criticalErr = true;
+                    return ;
+                }
+            }
+        }
+        getline(configFile, line);
+        lineNum++;
+        line = trimSpaces(line);
     }
+
+
+    
     serverNode.locationNodes.push_back(locationNode);
-    return locationNode;
+    return ;
 }
 
 
@@ -47,41 +120,39 @@ ServerNode WebServ::parseServer(ifstream &configFile, size_t &lineNum)
     getline(configFile, line);
     lineNum++;
     line = trimSpaces(line);
-    if (line != "{")
+    
+    if (line.size() > 0 && line != "{")
     {
+        cout << "{" << line << "}" << endl;
+        
         cerr << "syntax error, please enter \"{\" in the line:" << lineNum << endl;
         criticalErr = true;
         return servNode;
     }
+
+    getline(configFile, line);
+    lineNum++;
+    line = trimSpaces(line);
     while (!configFile.eof() && line != "}")
     {
-        getline(configFile, line);
-        lineNum++;
-        if (line == "}")
-            return servNode;
-        else if (configFile.eof() || line == "{")
+        if (!startsWith(line, "location"))
         {
-            cerr << "syntax error, at line:" << lineNum << endl;
-            criticalErr = true;
-            return servNode;
+            posOfDelimiter = line.find(';');
+            if (posOfDelimiter == string::npos && line.size() > 0) // not found
+            {
+                cerr << "syntax error, please end with ';' in the line:" << lineNum << endl;
+                criticalErr = true;
+                return servNode;
+            }
+            line = line.substr(0, posOfDelimiter);
         }
-        line = trimSpaces(line);
-        
-        posOfDelimiter = line.find(';');
-        if (posOfDelimiter == string::npos && line.size() > 0) // not found
-        {
-            cerr << "syntax error, please end with ';' in the line:" << lineNum << endl;
-            criticalErr = true;
-            return servNode;
-        }
-        line = line.substr(0, posOfDelimiter);
         tokens = split(line, ' ');
         if (tokens.size() == 0)
-            continue;
-        // if (tokens[0] == "location")
-        // {
-        //     parseLocation(servNode, configFile, lineNum);
-        // }
+        {
+
+        }
+        else if (startsWith(line, "location"))
+            parseLocation(servNode, configFile, lineNum);
         else if (tokens[0] == "listen")
         {
             if (tokens.size() != 2)
@@ -165,7 +236,6 @@ ServerNode WebServ::parseServer(ifstream &configFile, size_t &lineNum)
                 criticalErr = true;
                 return servNode;
             }
-            cout << "[" << tokens[1] << "]" << endl;
             char last = tokens[1][tokens[1].size() - 1];
             if (last != 'm' && last != 'M')
             {
@@ -191,8 +261,9 @@ ServerNode WebServ::parseServer(ifstream &configFile, size_t &lineNum)
                 criticalErr = true;
                 return servNode;
             }
-            ErrorPageNode errorPages;
-            for (size_t i = 1; i < tokens.size() - 1; i++)
+            ErrorPageNode errorPage;
+            size_t i = 1;
+            for (; i < tokens.size() - 1; i++)
             {
                 if (!strAllDigit(tokens[i]) || tokens[i].size() != 3)
                 {
@@ -207,20 +278,37 @@ ServerNode WebServ::parseServer(ifstream &configFile, size_t &lineNum)
                     criticalErr = true;
                     return servNode;
                 }
+
                 short errorCodeShort;
                 errorCode >> errorCodeShort;
-                errorPages.codes.insert(errorCodeShort);
+                errorPage.codes.insert(errorCodeShort);
+                errorPage.page = tokens[i];
             }
+            servNode.errorNodes.push_back(errorPage);
         }
+        else
+        {
+            cerr << "syntax error, unkown entry in server context: '" << tokens[0] << "' in the line:" << lineNum << endl;
+            criticalErr = true;
+            return servNode;
+        }
+        getline(configFile, line);
+        lineNum++;
+        line = trimSpaces(line);
     }
-    cerr << line << endl;
-
+    if (line == "}")
+    {
+        getline(configFile, line);
+        lineNum++;
+        line = trimSpaces(line);
+    }
     return servNode;
 }
 
 void WebServ::parsing(char *filename)
 {
     ifstream configFile;
+    vector <ServerNode> serverNodes;
     configFile.open(filename);
     if (configFile.fail())
     {
@@ -236,10 +324,16 @@ void WebServ::parsing(char *filename)
     while (!configFile.eof() && !criticalErr)
     {
         line = trimSpaces(line);
-        if (line.size() > 0 && line != "server")
+        if (line.size())
+        {
+            ServerNode server;
+            server = parseServer(configFile, lineNum);
+            serverNodes.push_back(server);
+        }
+        else if (line != "server")
             cerr << "syntax error, please enter \"server\" in the line" << endl;
-        else
-            parseServer(configFile, lineNum);
+        if (criticalErr)
+            return ;
         getline(configFile, line);
         lineNum++;
     }
