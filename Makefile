@@ -2,7 +2,7 @@ CC = c++
 
 FLAGS = -Wall -Wextra -Werror -std=c++98
 
-FILES = webserv.cpp parsing.cpp string.cpp
+FILES = src/webserv.cpp src/parsing.cpp src/string.cpp
 
 OBJ = $(FILES:.cpp=.o)
 

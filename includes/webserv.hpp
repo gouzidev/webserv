@@ -6,8 +6,22 @@
 #include <fstream>
 #include <set>
 #include <vector>
+#include <cstdlib>
 
 using namespace std;
+
+class LocationNode
+{
+    public :
+        LocationNode();
+        vector <string> headers;
+
+        string path;
+        set <string> methods;
+        string root;
+        string index;
+        bool   autoIndex;
+};
 
 class ServerNode
 {
@@ -29,18 +43,6 @@ class ErrorPageNode
 };
 
 
-class LocationNode
-{
-    public :
-        LocationNode();
-        vector <string> headers;
-
-        string path;
-        set <string> methods;
-        string root;
-        string index;
-        bool   autoIndex;
-};
 
 class WebServ
 {
@@ -49,10 +51,11 @@ class WebServ
     public:
         WebServ(char *confName);
         void parsing(char *filename);
-        ServerNode parseServer();
+        ServerNode parseServer(ifstream &configFile);
+        // LocationNode parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineI);
         // void readFile(ifstream file);
 };
 
 string trimSpaces(string &text);
-
+bool    isStrEq(string a, string b);
 #endif
