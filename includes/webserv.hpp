@@ -24,7 +24,7 @@ class LocationNode
         static set <string> possibleMethods;
         LocationNode();
         vector <string> headers;
-
+        pair <short, string> redirect;
         string path;
         set <string> methods;
         string root;

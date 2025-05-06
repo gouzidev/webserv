@@ -96,7 +96,31 @@ void WebServ::parseLocation(ServerNode &serverNode, ifstream &configFile, size_t
                     criticalErr = true;
                     return ;
                 }
+                istringstream redirect (tokens[1]);
+                if (redirect.fail())
+                {
+                    cerr << "redirect syntax is wrong, error code must be digits only (3 digits) at line: " << lineNum << endl;
+                    criticalErr = true;
+                    return ;
+                }
+
+                short redirectShort;
+                redirect >> redirectShort;
+                locationNode.redirect.first = redirectShort;
+                locationNode.redirect.second = tokens[2];
             }
+            else
+            {
+                locationNode.redirect.second = tokens[1];
+                locationNode.redirect.first = -1;
+            }
+            
+        }
+        else
+        {
+            cerr << "syntax error, unkown entry in location context: '" << tokens[0] << "' in the line:" << lineNum << endl;
+            criticalErr = true;
+            return ;
         }
         getline(configFile, line);
         lineNum++;
