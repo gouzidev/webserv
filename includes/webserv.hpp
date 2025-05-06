@@ -6,7 +6,7 @@
 #include <fstream>
 #include <set>
 #include <vector>
-#include <cstdlib>
+#include <sstream>
 
 using namespace std;
 
@@ -29,15 +29,16 @@ class ServerNode
         ServerNode();
         unsigned short port;
         string host;
+        string root;
         set <string> serverNames;
         vector <LocationNode> locationNodes;
         long long clientMaxBodySize;
+
 };
 
 class ErrorPageNode
 {
     public :
-        ErrorPageNode();
         set <unsigned short> codes;
         string page;
 };
@@ -51,11 +52,13 @@ class WebServ
     public:
         WebServ(char *confName);
         void parsing(char *filename);
-        ServerNode parseServer(ifstream &configFile);
-        // LocationNode parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineI);
+        ServerNode parseServer(ifstream &configFile, size_t &lineNum);
+        LocationNode parseLocation(ServerNode &serverNode, ifstream &configFile, size_t &lineNum);
         // void readFile(ifstream file);
 };
-
+std::vector<std::string> split (const std::string &s, char delim);
 string trimSpaces(string &text);
 bool    isStrEq(string a, string b);
+vector<string> split(string &str, char delim);
+bool    strAllDigit(string s);
 #endif
