@@ -9,6 +9,11 @@ bool    checkFile(string filename, int perm)
     return true;
 }
 
+bool    checkDir(string dirname, int dirStat)
+{
+    return access(dirname.c_str(), dirStat) == 0;
+}
+
 void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum)
 {
     if (tokens.size() == 0)
@@ -112,43 +117,30 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
         locationNode.upload_path = tokens[1];
     }
 
-    else if (tokens[0] == "cgi_extension")
-    {
-        for (size_t i = 1; i < tokens.size(); i++)
-        {
-            if (locationNode.possibleCgiExts.find(tokens[i]) == locationNode.possibleCgiExts.end())
-            {
-                cerr << "syntax error, unkown extention '" << tokens[i] << "' at line: " << lineNum << endl;
-                criticalErr = true;
-                return ;
-            }
-            
-            if (locationNode.cgi_exts.find(tokens[i]) != locationNode.cgi_exts.end())
-            {
-                cerr << "syntax error, duplicate extention '" << tokens[i] << "' at line: " << lineNum << endl;
-                criticalErr = true;
-                return ;
-            }
-            
-            locationNode.cgi_exts.insert(tokens[i]);
-        }
-    }
-
     else if (tokens[0] == "cgi_path")
     {
-        if (tokens.size() != 2)
+        if (tokens.size() != 3)
         {
-            cerr << "syntax error for cgi_path, 'cgi_path [path]' at line: " << lineNum << endl;
+            cerr << "syntax error for cgi_path, 'cgi_path [ext] [path_to_exec]' at line: " << lineNum << endl;
             criticalErr = true;
             return ;
         }
-        if (!checkFile(tokens[1], O_RDONLY | O_EXCL))
+        if (locationNode.possibleCgiExts.find(tokens[1]) == locationNode.possibleCgiExts.end())
         {
-            cerr << "bad path for cgi_path, at line: " << lineNum << endl;
+            cerr << "syntax error, unkown extention '" << tokens[1] << "' at line: " << lineNum << endl;
             criticalErr = true;
             return ;
         }
+
+        if (locationNode.cgi_exts.find(tokens[2]) != locationNode.cgi_exts.end())
+        {
+            cerr << "syntax error, duplicate extention '" << tokens[2] << "' at line: " << lineNum << endl;
+            criticalErr = true;
+            return ;
+        }
+        locationNode.cgi_exts[tokens[1]] = tokens[2];
     }
+
     else
     {
         cerr << "syntax error, unkown entry in location context: '" << tokens[0] << "' in the line:" << lineNum << endl;

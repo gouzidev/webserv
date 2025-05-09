@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 
 using namespace std;
 
@@ -67,7 +68,6 @@ class LocationNode
         string root;
         vector <string> index;
         bool   autoIndex;
-        string cgi_path;
         string upload_path;
         map <string, string> cgi_exts;
 };
@@ -132,4 +132,5 @@ bool    isStrEq(string a, string b);
 vector<string> split(string &str, char delim);
 bool    strAllDigit(string s);
 bool    checkFile(string filename, int perm);
+bool    checkDir(string dirname, int dirStat);
 #endif
