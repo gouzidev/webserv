@@ -2,9 +2,15 @@ CC = c++
 
 FLAGS = -Wall -Wextra -Werror -std=c++98 -g3
 
-FILES = src/webserv.cpp src/parsing.cpp src/string.cpp src/Request.cpp 
+SRC_DIR = src
+OBJ_DIR = obj
 
-OBJ = $(FILES:.cpp=.o)
+FILES = $(SRC_DIR)/webserv.cpp \
+		$(SRC_DIR)/parsing.cpp \
+		$(SRC_DIR)/string.cpp \
+		$(SRC_DIR)/Request.cpp 
+
+OBJ = $(FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 NAME = webserv
 
@@ -13,7 +19,7 @@ $(NAME): $(OBJ)
 
 all: $(NAME)
 
-%.o: %.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CC) $(FLAGS) -c $< -o $@
 
 clean:

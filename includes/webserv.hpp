@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <map>
 #include <set>
 #include <vector>
 #include <sstream>
@@ -56,8 +57,9 @@ class LocationNode
 {
     public :
 
-        static set <string> possibleMethods;
         LocationNode();
+        static set <string> possibleMethods;
+        static set <string> possibleCgiExts;
         vector <string> headers;
         pair <short, string> redirect;
         string path;
@@ -65,6 +67,9 @@ class LocationNode
         string root;
         vector <string> index;
         bool   autoIndex;
+        string cgi_path;
+        string upload_path;
+        set <string> cgi_exts;
 };
 
 class ServerNode
@@ -83,15 +88,41 @@ class ServerNode
 
 
 
+class Debugger
+{
+    public:
+        template <typename Container>
+        static void printVec(string varName, vector <Container> &v)
+        {
+            cout << varName << ": " << endl << "----";
+            for (size_t i = 0; i < v.size(); i++)
+                cout << v[i] << "  ";
+            cout << endl;
+        }
+
+        template <typename type1, typename type2>
+        static void printMap(string varName, map <type1, type2> &m)
+        {
+            cout << varName << ": " << endl << "----";
+            for (size_t i = 0; i < m.size(); i++)
+                cout << m[i].first << " -> " << m[i].second << "  ";
+            cout << endl;
+    }
+};
+
 class WebServ
 {
     private:
         bool    criticalErr;
     public:
         WebServ(char *confName);
+        WebServ(string filename);
         void parsing(char *filename);
         ServerNode parseServer(ifstream &configFile, size_t &lineNum);
-        void parseLocation(ServerNode &serverNode, ifstream &configFile, size_t &lineNum);
+        void handleServerLine(ServerNode &servNode, ifstream &configFile, vector <string> &tokens, string &line, size_t &lineNum);
+        void handleServerBlock(ServerNode &servNode, vector <string> &tokens, size_t &lineNum);
+        void handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum);
+        void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
         // void readFile(ifstream file);
 };
 std::vector<std::string> split (const std::string &s, char delim);

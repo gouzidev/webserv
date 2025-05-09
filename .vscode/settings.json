@@ -1,9 +1,14 @@
 {
     "files.associations": {
-        "*.embeddedhtml": "html",
-        "vector": "cpp",
-        "iosfwd": "cpp",
+        "*.php": "php",
+        "*.blade.php": "blade",
+        "array": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "span": "cpp",
         "iostream": "cpp",
+        "iosfwd": "cpp",
+        "vector": "cpp",
         "ostream": "cpp"
     }
 }

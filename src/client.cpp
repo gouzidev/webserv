@@ -18,8 +18,3 @@ int client()
     std::cout << "Sent " << res << " bytes" << std::endl;
     return 0;
 }
-
-int main()
-{
-    client();
-}
