@@ -69,7 +69,7 @@ class LocationNode
         bool   autoIndex;
         string cgi_path;
         string upload_path;
-        set <string> cgi_exts;
+        map <string, string> cgi_exts;
 };
 
 class ServerNode
@@ -131,4 +131,5 @@ bool startsWith(string str, string sub);
 bool    isStrEq(string a, string b);
 vector<string> split(string &str, char delim);
 bool    strAllDigit(string s);
+bool    checkFile(string filename, int perm);
 #endif

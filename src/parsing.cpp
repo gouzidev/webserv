@@ -1,6 +1,13 @@
 #include "../includes/webserv.hpp"
 
-
+bool    checkFile(string filename, int perm)
+{
+    int fd = open(filename.c_str(), perm);
+    if (fd == -1)
+        return false;
+    close (fd);
+    return true;
+}
 
 void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum)
 {
@@ -132,6 +139,12 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
         if (tokens.size() != 2)
         {
             cerr << "syntax error for cgi_path, 'cgi_path [path]' at line: " << lineNum << endl;
+            criticalErr = true;
+            return ;
+        }
+        if (!checkFile(tokens[1], O_RDONLY | O_EXCL))
+        {
+            cerr << "bad path for cgi_path, at line: " << lineNum << endl;
             criticalErr = true;
             return ;
         }
