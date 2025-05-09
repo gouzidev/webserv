@@ -1,40 +1,25 @@
-#include "main.hpp"
-
-using namespace std;
+#include "../includes/webserv.hpp"
 
 int client()
 {
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    int status;
-    cout << "sock -> " << sock << endl;
-    sockaddr_in sock_addr_in;
-    sock_addr_in.sin_family = AF_INET;
-    sock_addr_in.sin_port = htons(9999);
-    sock_addr_in.sin_addr.s_addr = inet_addr("127.0.0.1");
-    if (sock == -1)
-    {
-        cout << "issue with socket" << endl;
-    }
-    else
-    {
-        status = connect(sock, (struct sockaddr *)&sock_addr_in, sizeof(sock_addr_in));
-        cout << "client connected to the socket successfully" << endl;
-        ssize_t size ;
-        for (int i = 0; i < 10; i++)
-        {
-            size = send(sock, "Salam " + i, 10, 0);
-        }
-        if (size > 0)
-            cout << "client sent data successfully" << endl;
-        else
-            cout << "issue with send" << endl;
-        }
-    (void) status;
+    sockaddr_in ss;
+    ss.sin_family = AF_INET;
+    ss.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    ss.sin_port = htons(8080);
+    int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sock < 0)
+        std::cout << "client socket() failed" << std::endl;
+    // socklen_t len;
+    int res = connect(sock, (struct sockaddr *)&ss, sizeof(ss));
+    if (res < 0)
+        std::cout << "client connect() failed" << std::endl;
+    std::cout << "alloooo" <<std::endl;
+    res = send(sock, "ASMA", 5, 0);
+    std::cout << "Sent " << res << " bytes" << std::endl;
     return 0;
 }
 
-
 int main()
 {
-   client()   ;
+    client();
 }

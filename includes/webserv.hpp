@@ -7,8 +7,43 @@
 #include <set>
 #include <vector>
 #include <sstream>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
 
 using namespace std;
+
+
+#define GETROOT "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nDate: Wed, 30 Apr 2025 14:18:33 GMT\r\nLast-Modified: Thu, 17 Oct 2019 07:18:26 GMT\r\nContent-Length: 133\r\n\r\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Document</title>\n</head>\n<body>\n    asmaaaaaaaaaaaaa<3\n</body>\n</html>"
+#define GET 0
+#define POST 1
+#define DELETE 2
+#define other 3
+
+
+class Request
+{
+    private :
+        int req_type;
+        vector <string> start_line;
+        vector <string> headers;
+        vector <string> body;
+    public :
+        void setStartLine(string);
+        void setHeaders(string line);
+        void setBody(string line);
+        int isStartLineValid();
+        int getReqType();
+        std::string getStartLine();
+        vector <string> getHeaders();
+        vector <string> getBody;
+        
+
+};
 
 class ErrorPageNode
 {
