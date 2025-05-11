@@ -25,23 +25,26 @@ using namespace std;
 #define DELETE 2
 #define other 3
 
+typedef int REQUEST;
 
 class Request
 {
     private :
-        int req_type;
-        vector <string> start_line;
+        REQUEST req_type;
+        vector <string> start_line;//possible update
         map <string, string> headers;
-        vector <string> body;
+        vector <string> body;//possible update for large files in post
     public :
         void setStartLine(string);
         void setHeaders(string line);
         void setBody(string line);
         int isStartLineValid();
         int getReqType();
-        std::string getStartLine();
-        vector <string> getHeaders();
-        vector <string> getBody;
+        string getTargetResource();
+        string getHttpVer();
+        vector <string> getStartLine();
+        map  <string ,string> getHeaders();
+        vector <string> getBody();
 };
 
 class ErrorPageNode
@@ -122,6 +125,10 @@ class WebServ
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
         // void readFile(ifstream file);
 };
+
+void answer_req(Request req);
+int parse_request(int fd);
+int server();
 std::vector<std::string> split (const std::string &s, char delim);
 string trimSpaces(string &text);
 bool startsWith(string str, string sub);

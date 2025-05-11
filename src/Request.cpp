@@ -5,17 +5,21 @@ void Request::setStartLine(string line)
     start_line = split(line, ' ');
 }
 
-// std::string Request::getStartLine()
-// {
-//     return start_line;
-// }
+vector <string> Request::getStartLine()
+{
+    return start_line;
+}
 
-void Request::setHeaders(string line)
+string Request::getTargetResource()
+{
+    return start_line[1];
+}
+
+void Request::setHeaders(string line)//needs checking for headers syntax
 {
     vector <string> header_line = split(line, ':');
-    
-    // if (header_line )
-    headers.insert({header_line[0], header_line[1]});
+    pair <string, string> p = make_pair(header_line[0], header_line[1]);
+    headers.insert(p);
 }
 
 void Request::setBody(string line)

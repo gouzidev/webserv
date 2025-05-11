@@ -1,14 +1,26 @@
 #include "../includes/webserv.hpp"
 
+void GET_METHODE(Request req)
+{
+    
+}
+
 void answer_req(Request req)
 {
-    // if (req.getReqType() == 0)
+
+    if (req.getReqType() == GET)
+        GET_METHODE(req);
+    // else if (req.getReqType() == POST)
+    //     POST_METHODE(req);
+    // else if (req.getReqType() == DELETE)
+    //     DELETE_METHODE(req);
 
 }
 
 int parse_request(int fd)
 {
     Request req;
+    (void)fd;
     std::string line;
     std::ifstream read("Request");
     std::cout << "got here" << std::endl;
@@ -139,7 +151,7 @@ int server()
     return 0;
 }
 
-int main()
-{
-    server();
-}
+// int main()
+// {
+//     server();
+// }
