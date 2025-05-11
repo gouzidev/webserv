@@ -12,7 +12,10 @@ void Request::setStartLine(string line)
 
 void Request::setHeaders(string line)
 {
-    headers.push_back(line);
+    vector <string> header_line = split(line, ':');
+    
+    // if (header_line )
+    headers.insert({header_line[0], header_line[1]});
 }
 
 void Request::setBody(string line)
