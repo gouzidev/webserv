@@ -1,23 +1,29 @@
 #include "../includes/webserv.hpp"
 
-void GET_METHODE(Request req)
+void WebServ::GET_METHODE(Request req)
 {
-    
+    (void) req;
 }
 
-void answer_req(Request req)
+void WebServ::POST_METHODE(Request req)
+{
+    (void) req;
+
+}
+
+void WebServ::answer_req(Request req)
 {
 
     if (req.getReqType() == GET)
         GET_METHODE(req);
-    // else if (req.getReqType() == POST)
-    //     POST_METHODE(req);
+    else if (req.getReqType() == POST)
+        POST_METHODE(req);
     // else if (req.getReqType() == DELETE)
     //     DELETE_METHODE(req);
 
 }
 
-int parse_request(int fd)
+int WebServ::parse_request(int fd)
 {
     Request req;
     (void)fd;
@@ -70,7 +76,7 @@ int parse_request(int fd)
     return 0;
 }
 
-int server()
+int WebServ::server()
 {
     sockaddr_in ss;
     ss.sin_family = AF_INET;
@@ -90,6 +96,7 @@ int server()
         return 1;
     }
     res = listen(sock, 5);
+    cout << "server is listening at PORT => " << 5551 << " |  http://localhost:5551" << endl;
     if (res < 0)
     {
         std::cout << "listen() failed" << std::endl;
@@ -123,35 +130,5 @@ int server()
         std::cout << "while true" << std::endl;
    }
     close(sock);
-        // res = recv(new_sock, buff, 1000, 0);
-    
-    // std::cout << buff << std::endl;
-    // write1 << buff;
-    // write2 << buff;
-    // write2.close();
- 
-    // if (b == "")
-    //     send(new_sock, )
-    // for(int i = 0; i < 10; i++){
-    //     std::cout << "the message is " << buff << std::endl;
-    //     std::cout << std::endl;
-    //     std::cout << std::endl;
-    //     std::cout << std::endl;
-    //     res = recv(res, buff, 1000, 0);
-    // }
-    // if (res < 0)
-    // {
-    //     std::cout << "recv() failed" << std::endl;
-    //     return 1;
-    // }
-    // else
-    // {
-    //         std::cout << "the message is " << buff << std::endl;
-    // }
     return 0;
 }
-
-// int main()
-// {
-//     server();
-// }

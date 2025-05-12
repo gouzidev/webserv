@@ -86,8 +86,6 @@ class ServerNode
 
 };
 
-
-
 class Debugger
 {
     public:
@@ -114,21 +112,24 @@ class WebServ
 {
     private:
         bool    criticalErr;
+        vector <ServerNode> servNodes;
     public:
         WebServ(char *confName);
         WebServ(string filename);
-        void parsing(char *filename);
+        vector <ServerNode> parsing(char *filename);
         ServerNode parseServer(ifstream &configFile, size_t &lineNum);
         void handleServerLine(ServerNode &servNode, ifstream &configFile, vector <string> &tokens, string &line, size_t &lineNum);
         void handleServerBlock(ServerNode &servNode, vector <string> &tokens, size_t &lineNum);
         void handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum);
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
+        void GET_METHODE(Request req);
+        void POST_METHODE(Request req);
+        void answer_req(Request req);
+        int parse_request(int fd);
+        int server();
         // void readFile(ifstream file);
 };
 
-void answer_req(Request req);
-int parse_request(int fd);
-int server();
 std::vector<std::string> split (const std::string &s, char delim);
 string trimSpaces(string &text);
 bool startsWith(string str, string sub);

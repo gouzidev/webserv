@@ -395,7 +395,7 @@ ServerNode WebServ::parseServer(ifstream &configFile, size_t &lineNum)
     return servNode;
 }
 
-void WebServ::parsing(char *filename)
+vector <ServerNode> WebServ::parsing(char *filename)
 {
     ifstream configFile;
     vector <ServerNode> serverNodes;
@@ -404,7 +404,7 @@ void WebServ::parsing(char *filename)
     {
         criticalErr = true;
         cerr << "Error happened opening the file" << endl;
-        return ;
+        return serverNodes;
     }
     size_t lineNum = 0;
     string line;
@@ -423,8 +423,10 @@ void WebServ::parsing(char *filename)
         else if (line != "server")
             cerr << "syntax error, please enter \"server\" in the line" << endl;
         if (criticalErr)
-            return ;
+            return serverNodes;
         getline(configFile, line);
         lineNum++;
     }
+    this->servNodes = serverNodes;
+    return serverNodes;
 }
