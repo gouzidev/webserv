@@ -61,5 +61,6 @@ int main(int ac, char **av)
     {
         WebServ webserv = WebServ(av[1]);
         (void) webserv;
+        webserv.server();
     }
 }

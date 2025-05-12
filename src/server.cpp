@@ -1,45 +1,61 @@
 #include "../includes/webserv.hpp"
 
-void answer_req(Request req)
+void WebServ::GET_METHODE(Request req)
 {
-    // if (req.getReqType() == 0)
+    (void) req;
+}
+
+void WebServ::POST_METHODE(Request req)
+{
+    vector <string> start_line = req.getStartLine();
+    
+}
+
+void WebServ::answer_req(Request req)
+{
+
+    if (req.getReqType() == GET)
+        GET_METHODE(req);
+    else if (req.getReqType() == POST)
+        POST_METHODE(req);
+    // else if (req.getReqType() == DELETE)
+    //     DELETE_METHODE(req);
 
 }
 
-int parse_request(int fd)
+int WebServ::parse_request(int fd)
 {
-    Request req;
+    (void) fd;
     std::string line;
+    Request req;
     std::ifstream read("Request");
-    std::cout << "got here" << std::endl;
+    cout << "*********************************************" << endl;
     std::getline(read, line);
-    if(read.fail())
+    if (read.fail())
     {
         std::cerr << "[ " << line << " ]" << "wtf" << std::endl;
-        return 1;
+        return ERROR;
     }
     std::cout << line << std::endl;
     req.setStartLine(line);
     if (req.isStartLineValid() == 1)
     {
         cout << "invalid Request" << endl;
-        return 1;
+        return ERROR;
     }
     while(std::getline(read, line))
     {
-        cout << "hellooooooo" << endl;
         if(line.empty())
         {
-            cout << "we found the empty line" << endl;
             break;
         }
-        cout << "here after find" << endl;
         req.setHeaders(line);
         std::cout << line << std::endl;
     }
     while(getline(read, line))
         req.setBody(line);
-    cout << "Aaaaaaaaand CUT" << endl;
+    cout << "*********************************************" << endl;
+
     answer_req(req);
     // std::cerr << "line is " << line << std::endl;
     // if (req.getStartLine().find("GET / HTTP/1.1") != std::string::npos)
@@ -58,7 +74,7 @@ int parse_request(int fd)
     return 0;
 }
 
-int server()
+int WebServ::server()
 {
     sockaddr_in ss;
     ss.sin_family = AF_INET;
@@ -73,11 +89,12 @@ int server()
     int res = bind(sock, (struct sockaddr *)&ss, sizeof ss);
     if (res < 0)
     {
-        std::cout << "bind() failed" << std::endl;
+        std::cout << "bind() failed socket : " << sock << std::endl;
         printf("%d\n", errno);
         return 1;
     }
-    res = listen(sock, 5);
+    res = listen(sock, 1);
+    cout << "server is listening at PORT => " << 5551 << " |  http://localhost:5551" << endl;
     if (res < 0)
     {
         std::cout << "listen() failed" << std::endl;
@@ -87,59 +104,36 @@ int server()
     while(1)
     {
         int new_sock = accept(sock, (struct sockaddr *)&ss, &len);
-        if (res < 0)
+        if (new_sock < 0)
         {
             std::cout << "accept() didn't accept" << std::endl;
             return 1;
         }
         else
-            std::cout << "accept() accepted" << std::endl;
+            std::cout << "accept() accepted " << new_sock << std::endl;
         char buff[1000];
         std::ofstream write1("Request");
         // std::ifstream read("Request");
+        cout << "new socket -> " << new_sock << endl;
         res = recv(new_sock, buff, 1000, 0);
+        if (res == -1)
+        {
+            cout << "recv() didn't recv errno -> " << errno << " new socket " << new_sock << endl;
+            return 1;
+        }
         if (res > 0)
         {
             buff[res] = '\0';
             // std::cout << buff << std::endl;    
             write1.write(buff, res);
             write1.close();
+            // write1.clear();
         }
+        write1.close();
         if (parse_request(new_sock))
             return 100;
-        res = recv(new_sock, buff, 1000, 0);
-        std::cout << "while true" << std::endl;
+        close(new_sock);
    }
     close(sock);
-        // res = recv(new_sock, buff, 1000, 0);
-    
-    // std::cout << buff << std::endl;
-    // write1 << buff;
-    // write2 << buff;
-    // write2.close();
- 
-    // if (b == "")
-    //     send(new_sock, )
-    // for(int i = 0; i < 10; i++){
-    //     std::cout << "the message is " << buff << std::endl;
-    //     std::cout << std::endl;
-    //     std::cout << std::endl;
-    //     std::cout << std::endl;
-    //     res = recv(res, buff, 1000, 0);
-    // }
-    // if (res < 0)
-    // {
-    //     std::cout << "recv() failed" << std::endl;
-    //     return 1;
-    // }
-    // else
-    // {
-    //         std::cout << "the message is " << buff << std::endl;
-    // }
     return 0;
-}
-
-int main()
-{
-    server();
 }

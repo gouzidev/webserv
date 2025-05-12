@@ -1,24 +1,37 @@
 #ifndef WEBSERV_HPP
 #define WEBSERV_HPP
 
-#include <iostream>
-#include <iomanip>
-#include <fstream>
+
+// containers
 #include <map>
 #include <set>
 #include <vector>
+// containers
+
+
+// io operations
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <cstring>
 #include <sstream>
+#include <fcntl.h>
+// io operations
+
+
+// networking
+#include <sys/epoll.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <fcntl.h>
+// networking
+
+// others
 #include <unistd.h>
 #include <dirent.h>
+#include <algorithm>
+// others
 
 using namespace std;
-
 
 #define GETROOT "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nDate: Wed, 30 Apr 2025 14:18:33 GMT\r\nLast-Modified: Thu, 17 Oct 2019 07:18:26 GMT\r\nContent-Length: 133\r\n\r\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Document</title>\n</head>\n<body>\n    asmaaaaaaaaaaaaa<3\n</body>\n</html>"
 #define GET 0
@@ -26,25 +39,31 @@ using namespace std;
 #define DELETE 2
 #define other 3
 
+#define ERROR  1
+
+typedef int REQUEST;
 
 class Request
 {
     private :
-        int req_type;
-        vector <string> start_line;
-        vector <string> headers;
-        vector <string> body;
+        REQUEST req_type;
+        string resource; // tje resource is the path after the method in the request
+        vector <string> start_line; //possible update
+        map <string, string> headers;
+        map <string, string> queryParams;
+        vector <string> body; //possible update for large files in post
     public :
         void setStartLine(string);
         void setHeaders(string line);
         void setBody(string line);
         int isStartLineValid();
         int getReqType();
-        std::string getStartLine();
-        vector <string> getHeaders();
-        vector <string> getBody;
-        
-
+        string getResource();
+        string getHttpVer();
+        void fillQuery(string queryStr);
+        vector <string> getStartLine();
+        map  <string ,string> getHeaders();
+        vector <string> getBody();
 };
 
 class ErrorPageNode
@@ -57,7 +76,6 @@ class ErrorPageNode
 class LocationNode
 {
     public :
-
         LocationNode();
         static set <string> possibleMethods;
         static set <string> possibleCgiExts;
@@ -86,8 +104,6 @@ class ServerNode
 
 };
 
-
-
 class Debugger
 {
     public:
@@ -114,17 +130,24 @@ class WebServ
 {
     private:
         bool    criticalErr;
+        vector <ServerNode> servNodes;
     public:
         WebServ(char *confName);
         WebServ(string filename);
-        void parsing(char *filename);
+        vector <ServerNode> parsing(char *filename);
         ServerNode parseServer(ifstream &configFile, size_t &lineNum);
         void handleServerLine(ServerNode &servNode, ifstream &configFile, vector <string> &tokens, string &line, size_t &lineNum);
         void handleServerBlock(ServerNode &servNode, vector <string> &tokens, size_t &lineNum);
         void handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum);
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
+        void GET_METHODE(Request req);
+        void POST_METHODE(Request req);
+        void answer_req(Request req);
+        int parse_request(int fd);
+        int server();
         // void readFile(ifstream file);
 };
+
 std::vector<std::string> split (const std::string &s, char delim);
 string trimSpaces(string &text);
 bool startsWith(string str, string sub);

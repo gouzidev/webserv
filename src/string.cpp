@@ -57,7 +57,7 @@ vector<string> split(string &str, char delim)
             v.push_back(str.substr(start, end - start));
         }
         return v;
-    }
+}
 
 vector<string> splitNoSpace(string &str, char delim)
 {
