@@ -18,9 +18,11 @@ class Debugger
         template <typename type1, typename type2>
         static void printMap(string varName, map <type1, type2> &m)
         {
+            typedef map <type1, type2> mapType;
+            typename mapType::iterator it;
             cout << varName << ": " << endl << "----";
-            for (size_t i = 0; i < m.size(); i++)
-                cout << m[i].first << " -> " << m[i].second << "  ";
+            for (it = m.begin(); it != m.end(); it++)
+                cout << it->first << " -> " << it->second << "  ";
             cout << endl;
         }
 

@@ -1,14 +1,46 @@
 #include "../includes/webserv.hpp"
+#include "../includes/Debugger.hpp"
 
 void WebServ::GET_METHODE(Request req)
 {
-    (void) req;
+    const char *testResponse =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 13\r\n"
+    "\r\n"
+    "Hello, World!";
+
+    send(req.cfd, testResponse, strlen(testResponse), 0);
+
+    // cerr << testResponse;
+
 }
 
 void WebServ::POST_METHODE(Request req)
 {
     vector <string> start_line = req.getStartLine();
-    
+    ServerNode serv;
+    string &location = req.getResource();
+    cout << "location -> " << location << endl;
+    map <string, string> &headers = req.getHeaders();
+    string key = "host";
+    Debugger::printMap("headers", headers);
+    if (!exists(headers, "host"))
+    {
+        cerr << "send a host mf" << endl;
+        return ;
+    }
+    const char *testResponse =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 13\r\n"
+    "\r\n"
+    "Hello, World!";
+
+    send(req.cfd, testResponse, strlen(testResponse), 0);
+
+    // cerr << testResponse;
+
 }
 
 void WebServ::answer_req(Request req)
@@ -23,11 +55,13 @@ void WebServ::answer_req(Request req)
 
 }
 
-int WebServ::parse_request(int fd)
+int WebServ::parse_request(int cfd)
 {
-    (void) fd;
+
     string line;
     Request req;
+
+    req.cfd = cfd;
     ifstream read("Request");
     cout << "*********************************************" << endl;
     getline(read, line);
@@ -59,18 +93,7 @@ int WebServ::parse_request(int fd)
 
 
 
-    const char *testResponse =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 13\r\n"
-    "\r\n"
-    "Hello, World!";
-
-    send(fd, testResponse, strlen(testResponse), 0);
-
-    cerr << testResponse;
-
-    // answer_req(req);
+    answer_req(req);
     read.close();
     return 0;
 }

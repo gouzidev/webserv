@@ -47,24 +47,26 @@ typedef int REQUEST;
 class Request
 {
     private :
+
         REQUEST req_type;
-        string resource; // tje resource is the path after the method in the request
+        string resource; // the resource is the path after the method in the request
         vector <string> start_line; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
         vector <string> body; //possible update for large files in post
     public :
+        int cfd; // client fd
         void setStartLine(string);
         void setHeaders(string line);
         void setBody(string line);
         int isStartLineValid();
         int getReqType();
-        string getResource();
+        string & getResource();
         string getHttpVer();
         void fillQuery(string queryStr);
-        vector <string> getStartLine();
-        map  <string ,string> getHeaders();
-        vector <string> getBody();
+        vector <string> & getStartLine();
+        map  <string ,string> & getHeaders();
+        vector <string> & getBody();
 };
 
 class LocationNode
@@ -132,4 +134,10 @@ vector<string> split(string &str, char delim);
 bool    strAllDigit(string s);
 bool    checkFile(string filename, int perm);
 bool    checkDir(string dirname, int dirStat);
+
+
+
+
+bool exists(map <string, string> &m, string key);
+
 #endif

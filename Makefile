@@ -9,6 +9,7 @@ FILES = $(SRC_DIR)/webserv.cpp \
 		$(SRC_DIR)/parsing.cpp \
 		$(SRC_DIR)/string.cpp \
 		$(SRC_DIR)/Request.cpp \
+		$(SRC_DIR)/shortcuts.cpp \
 		$(SRC_DIR)/server.cpp
 
 OBJ = $(FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

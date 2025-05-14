@@ -41,12 +41,18 @@ void Request::fillQuery(string queryStr)
     }
 }
 
-vector <string> Request::getStartLine()
+vector <string> & Request::getStartLine()
 {
     return start_line;
 }
 
-string Request::getResource()
+map  <string ,string> & Request::getHeaders()
+{
+    return headers;
+}
+
+
+string & Request::getResource()
 {
     return resource;
 }
