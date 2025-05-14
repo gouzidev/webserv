@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.php": "php",
+        "*.blade.php": "blade",
+        "map": "cpp",
+        "format": "cpp"
+    }
+}

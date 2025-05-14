@@ -1,4 +1,5 @@
 #include "../includes/webserv.hpp"
+#include "../includes/Debugger.hpp"
 
 bool    checkFile(string filename, int perm)
 {
