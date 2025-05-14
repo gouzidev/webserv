@@ -1,0 +1,15 @@
+HTTP/1.1 200 OK
+
+Content-Type: application/json
+Content-Length: 56
+Date: Wed, 14 May 2025 12:00:00 GMT
+Server: Apache/2.4.41 (Ubuntu)
+
+{
+  "status": "success",
+  "data": {
+    "id": 123,
+    "name": "John Doe",
+    "email": "john.doe@example.com"
+  }
+}

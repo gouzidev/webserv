@@ -5,8 +5,10 @@ set <string> LocationNode::possibleMethods;
 
 ServerNode::ServerNode()
 {
-    clientMaxBodySize = 5000000ll;
-    host = "127.0.0.1";
+    port = 0;
+    clientMaxBodySize = 0;
+    host = "";
+    root = "";
 }
 
 LocationNode::LocationNode()
@@ -19,14 +21,17 @@ LocationNode::LocationNode()
     possibleCgiExts.insert(".py");
     possibleCgiExts.insert(".php");
     autoIndex = true;
-    root = ".";
-    path = "/";
+    root = "";
+    path = "";
+    upload_path = "";
 }
 
 WebServ::WebServ(char *filename)
 {
     criticalErr = false;
     parsing(filename);
+    if (!criticalErr)
+        server();
 }
 
 WebServ::WebServ(string filename)
@@ -34,6 +39,8 @@ WebServ::WebServ(string filename)
     criticalErr = false;
     char *filename2 = const_cast<char *> (filename.c_str());
     parsing(filename2);
+    if (!criticalErr)
+        server();
 }
 
 // void WebServ::readFile(ifstream file)
@@ -61,6 +68,5 @@ int main(int ac, char **av)
     {
         WebServ webserv = WebServ(av[1]);
         (void) webserv;
-        webserv.server();
     }
 }
