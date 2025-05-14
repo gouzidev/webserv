@@ -26,50 +26,51 @@ void WebServ::answer_req(Request req)
 int WebServ::parse_request(int fd)
 {
     (void) fd;
-    std::string line;
+    string line;
     Request req;
-    std::ifstream read("Request");
+    ifstream read("Request");
     cout << "*********************************************" << endl;
-    std::getline(read, line);
+    getline(read, line);
     if (read.fail())
     {
-        std::cerr << "[ " << line << " ]" << "wtf" << std::endl;
+        cerr << "[ " << line << " ]" << "wtf" << endl;
         return ERROR;
     }
-    std::cout << line << std::endl;
+    cout << line << endl;
     req.setStartLine(line);
     if (req.isStartLineValid() == 1)
     {
         cout << "invalid Request" << endl;
         return ERROR;
     }
-    while(std::getline(read, line))
+    while(getline(read, line))
     {
         if(line.empty())
         {
             break;
         }
         req.setHeaders(line);
-        std::cout << line << std::endl;
+        cout << line << endl;
     }
     while(getline(read, line))
         req.setBody(line);
     cout << "*********************************************" << endl;
 
-    answer_req(req);
-    // std::cerr << "line is " << line << std::endl;
-    // if (req.getStartLine().find("GET / HTTP/1.1") != std::string::npos)
-    // {
-    //     std::cerr << "wiwiwiwiw" << std::endl;
-    //     int bytes_sent = send(fd, GETROOT, strlen(GETROOT), 0);
-    //     if (bytes_sent < 0) {
-    //         std::cerr << "Send failed: " << strerror(errno) << std::endl;
-    //         return 1;
-    //     } else {
-    //         std::cerr << "Sent " << bytes_sent << " bytes" << std::endl;
-    //     }
-    // }
-    // std::cerr << "bye bye" << std::endl;
+
+
+
+    const char *testResponse =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 13\r\n"
+    "\r\n"
+    "Hello, World!";
+
+    send(fd, testResponse, strlen(testResponse), 0);
+
+    cerr << testResponse;
+
+    // answer_req(req);
     read.close();
     return 0;
 }
@@ -82,14 +83,14 @@ int WebServ::server()
     ss.sin_port = htons(5551);
     int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0)
-        std::cout << "socket() failed" << std::endl;
+        cout << "socket() failed" << endl;
     int flag = 1;
     if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
-        std::cout << "error :/" << std::endl;
+        cout << "error :/" << endl;
     int res = bind(sock, (struct sockaddr *)&ss, sizeof ss);
     if (res < 0)
     {
-        std::cout << "bind() failed socket : " << sock << std::endl;
+        cout << "bind() failed socket : " << sock << endl;
         printf("%d\n", errno);
         return 1;
     }
@@ -97,23 +98,22 @@ int WebServ::server()
     cout << "server is listening at PORT => " << 5551 << " |  http://localhost:5551" << endl;
     if (res < 0)
     {
-        std::cout << "listen() failed" << std::endl;
+        cout << "listen() failed" << endl;
         return 1;
     }
     socklen_t len;
-    while(1)
+    while (1)
     {
         int new_sock = accept(sock, (struct sockaddr *)&ss, &len);
         if (new_sock < 0)
         {
-            std::cout << "accept() didn't accept" << std::endl;
+            cout << "accept() didn't accept" << endl;
             return 1;
         }
         else
-            std::cout << "accept() accepted " << new_sock << std::endl;
+            cout << "accept() accepted " << new_sock << endl;
         char buff[1000];
-        std::ofstream write1("Request");
-        // std::ifstream read("Request");
+        ofstream write1("Request");
         cout << "new socket -> " << new_sock << endl;
         res = recv(new_sock, buff, 1000, 0);
         if (res == -1)
@@ -124,10 +124,8 @@ int WebServ::server()
         if (res > 0)
         {
             buff[res] = '\0';
-            // std::cout << buff << std::endl;    
             write1.write(buff, res);
             write1.close();
-            // write1.clear();
         }
         write1.close();
         if (parse_request(new_sock))
