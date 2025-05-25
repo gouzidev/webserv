@@ -1,9 +1,8 @@
 POST / HTTP/1.1
-host: localhost
-User-Agent: PostmanRuntime/7.43.4
+Host: localhost
+User-Agent: curl/8.9.1
 Accept: */*
-Postman-Token: 13390606-326b-412e-9241-e7c03d14fc56
-Accept-Encoding: gzip, deflate, br
-Connection: keep-alive
-Content-Length: 0
+Content-Type: application/json
+Content-Length: 11
 
+{key:value}

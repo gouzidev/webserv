@@ -23,6 +23,8 @@
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
 // networking
 
 // others
@@ -30,6 +32,7 @@
 #include <dirent.h>
 #include <algorithm>
 // others
+
 
 
 using namespace std;
@@ -40,13 +43,15 @@ using namespace std;
 #define DELETE 2
 #define other 3
 
+#define BUFFERSIZE 1024
+
 #define ERROR  1
 
 typedef int REQUEST;
 
 class Request
 {
-    private :
+    public :
 
         REQUEST req_type;
         string resource; // the resource is the path after the method in the request
@@ -105,6 +110,7 @@ class WebServ
     private:
         bool    criticalErr;
         vector <ServerNode> servNodes;
+        map <string, ServerNode> hostServMap;
     public:
         WebServ(char *confName);
         WebServ(string filename);
@@ -123,6 +129,7 @@ class WebServ
         void answer_req(Request req);
         int parse_request(int fd);
         int server();
+        int serverAsma();
         // void readFile(ifstream file);
 };
 
@@ -136,8 +143,17 @@ bool    checkFile(string filename, int perm);
 bool    checkDir(string dirname, int dirStat);
 
 
-
-
 bool exists(map <string, string> &m, string key);
 
+template <typename T>
+bool exists(map <T, T> &m, T key)
+{
+    return m.find(key) == m.end();
+};
+
+template <typename T>
+bool exists(set <T> s, T v)
+{
+    return s.find(v) != s.end();
+}
 #endif

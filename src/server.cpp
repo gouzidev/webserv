@@ -25,19 +25,28 @@ void WebServ::POST_METHODE(Request req)
     map <string, string> &headers = req.getHeaders();
     string key = "host";
     Debugger::printMap("headers", headers);
-    if (!exists(headers, "host"))
+    if (!exists(headers, "host") || !exists(headers, "content-type"))
     {
-        cerr << "send a host mf" << endl;
-        return ;
+        cerr << "send a host and content-type mf" << endl;
+        const char *testResponse =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 13\r\n"
+        "\r\n"
+        "Hello, World!";
+       send(req.cfd, testResponse, strlen(testResponse), 0);
     }
-    const char *testResponse =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 13\r\n"
-    "\r\n"
-    "Hello, World!";
+    else
+    {
+        const char *testResponse =
+        "HTTP/1.1 404 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 12\r\n"
+        "\r\n"
+        "bad request!";
+        send(req.cfd, testResponse, strlen(testResponse), 0);
+}
 
-    send(req.cfd, testResponse, strlen(testResponse), 0);
 
     // cerr << testResponse;
 
@@ -92,18 +101,113 @@ int WebServ::parse_request(int cfd)
 
 
 
-
     answer_req(req);
     read.close();
     return 0;
 }
 
+
+// here we will fill the start line, headers and body
+bool fillRequest(ofstream &outputFile, int new_sock)
+{
+    int res;
+    char buff[BUFFERSIZE + 1];
+
+    res = recv(new_sock, buff, BUFFERSIZE, 0);
+    while (res > 0 && res == BUFFERSIZE)
+    {
+        buff[res] = '\0';
+        outputFile.write(buff, res);
+        outputFile.write(buff, res);
+        res = recv(new_sock, buff, BUFFERSIZE, 0);
+        cout << "recv -> " << res << endl;
+    }
+    if (res > 0)
+        outputFile.write(buff, res);
+    outputFile.close();
+
+    ifstream read("Request");
+    string line;
+    cout << "*********************************************" << endl;
+    getline(read, line);
+    if (read.fail())
+    {
+        cerr << "[ " << line << " ]" << endl;
+        return ERROR;
+    }
+    cout << line << endl;
+    while (getline(read, line))
+    {
+        if(line.empty())
+        {
+            break;
+        }
+        cout << line << endl;
+    }
+    while(getline(read, line))
+        cout << (line);
+    cout << "*********************************************" << endl;
+
+    return (1);
+
+}
+
 int WebServ::server()
+{
+    std::map<std::string, ServerNode>::iterator servIt = hostServMap.begin();
+    int maxEvents = 1024;
+    struct epoll_event ev;
+    struct epoll_event events[maxEvents];
+    int sock;
+
+    // setup the server
+    while (servIt != hostServMap.end())
+    {
+        struct addrinfo hints;
+        struct addrinfo *res;
+        memset(&hints, 0, sizeof(hints)); // lets make our own memset cause forbidden
+        hints.ai_family = AF_INET;
+        hints.ai_protocol = SOCK_STREAM;
+        ServerNode serv = servIt->second;
+        unsigned short port = serv.port;
+        string host  = serv.host;
+        
+        sockaddr_in ss;
+        ss.sin_family = AF_INET;
+        ss.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        ss.sin_port = htons(port);
+        if (getaddrinfo(host.c_str(), "http" ,&hints, &res) == -1)
+            {cout << "getaddrinfo failed" << endl; criticalErr = true; return ERROR;}
+        
+        struct addrinfo *temp = res;
+        while (temp)
+        {
+            temp = temp->ai_next;
+            sock = socket(temp->ai_family, temp->ai_socktype, temp->ai_protocol);
+            if (sock == -1)
+                continue;
+            if (bind(sock, temp->ai_addr, temp->ai_addrlen) == 0)
+                break;
+            close(sock);
+        }
+        freeaddrinfo(res);
+        if (temp == NULL)
+            {cout << "could not bind.. aborting." << endl; criticalErr = true; return ERROR;}
+        int epollfd = epoll_create1(0);
+        ev.events = EPOLLIN;
+        ev.data.fd = sock;
+        epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev);
+    }
+    return 0;
+}
+
+
+int WebServ::serverAsma()
 {
     sockaddr_in ss;
     ss.sin_family = AF_INET;
     ss.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    ss.sin_port = htons(5551);
+    ss.sin_port = htons(9999);
     int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0)
         cout << "socket() failed" << endl;
@@ -114,15 +218,14 @@ int WebServ::server()
     if (res < 0)
     {
         cout << "bind() failed socket : " << sock << endl;
-        printf("%d\n", errno);
-        return 1;
+        return ERROR;
     }
     res = listen(sock, 1);
-    cout << "server is listening at PORT => " << 5551 << " |  http://localhost:5551" << endl;
+    cout << "server is listening at PORT => " << 9999 << " |  http://localhost:9999" << endl;
     if (res < 0)
     {
         cout << "listen() failed" << endl;
-        return 1;
+        return ERROR;
     }
     socklen_t len;
     while (1)
@@ -131,25 +234,10 @@ int WebServ::server()
         if (new_sock < 0)
         {
             cout << "accept() didn't accept" << endl;
-            return 1;
+            return ERROR;
         }
-        else
-            cout << "accept() accepted " << new_sock << endl;
-        char buff[1000];
         ofstream write1("Request");
-        cout << "new socket -> " << new_sock << endl;
-        res = recv(new_sock, buff, 1000, 0);
-        if (res == -1)
-        {
-            cout << "recv() didn't recv errno -> " << errno << " new socket " << new_sock << endl;
-            return 1;
-        }
-        if (res > 0)
-        {
-            buff[res] = '\0';
-            write1.write(buff, res);
-            write1.close();
-        }
+        fillRequest(write1, new_sock);
         write1.close();
         if (parse_request(new_sock))
             return 100;

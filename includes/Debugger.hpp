@@ -20,9 +20,12 @@ class Debugger
         {
             typedef map <type1, type2> mapType;
             typename mapType::iterator it;
+            cout << "--------------------------------------------------------------------------" << endl;;
             cout << varName << ": " << endl << "----";
             for (it = m.begin(); it != m.end(); it++)
                 cout << it->first << " -> " << it->second << "  ";
+            cout << "--------------------------------------------------------------------------" << endl;;
+            cout << endl;
             cout << endl;
         }
 

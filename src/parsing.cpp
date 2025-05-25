@@ -487,10 +487,17 @@ void WebServ::validateParsing()
 {
     size_t i = 0;
     ServerNode servNode;
+    set <unsigned short> ports;
     LocationNode localNode;
     while (i < servNodes.size())
     {
         ServerNode &servNode = servNodes[i];
+        if (exists(ports, servNode.port))
+        {
+            cerr << "duplicate port " << servNode.port << ".. aborting." << endl;
+            criticalErr = true;
+            return; 
+        }
         if (servNode.port == 0)
         {
             cerr << "no listen block provided" << endl;
@@ -513,6 +520,8 @@ void WebServ::validateParsing()
             criticalErr = true;
             return ;
         }
+        hostServMap[servNode.host] = servNode;
+        ports.insert(servNode.port);
         i++;
     }
     
@@ -612,8 +621,6 @@ vector <ServerNode> WebServ::parsing(char *filename)
     }
     this->servNodes = serverNodes;
     validateParsing();
-    if (!criticalErr)
-        Debugger::printServerConfig(servNodes);
 
     return serverNodes;
 }
