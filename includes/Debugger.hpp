@@ -111,7 +111,85 @@ class Debugger
             cout << "===========================================" << endl;
         }
     
-        // Main method to print all server configurations
+        // ✅ NEW: Print Host:Port to ServerNode mapping
+        static void printHostServMap(const map<string, ServerNode> &hostServMap)
+        {
+            cout << "\n🗺️  HOST:PORT TO SERVER MAPPING" << endl;
+            cout << "===========================================" << endl;
+            cout << "Total mappings: " << hostServMap.size() << endl;
+            
+            for (map<string, ServerNode>::const_iterator it = hostServMap.begin(); it != hostServMap.end(); ++it)
+            {
+                cout << "\n🔑 Key: \"" << it->first << "\"" << endl;
+                cout << "   └─ Maps to server with:" << endl;
+                cout << "      • Host: " << it->second.host << endl;
+                cout << "      • Port: " << it->second.port << endl;
+                cout << "      • Root: " << it->second.root << endl;
+                cout << "      • Server Names: ";
+                for (set<string>::const_iterator nameIt = it->second.serverNames.begin(); 
+                     nameIt != it->second.serverNames.end(); ++nameIt)
+                    cout << *nameIt << " ";
+                cout << endl;
+            }
+            cout << "===========================================" << endl;
+        }
+
+        // ✅ NEW: Print ServerName:Port to ServerNode mapping  
+        static void printServNameServMap(const map<string, ServerNode> &servNameServMap)
+        {
+            cout << "\n🏷️  SERVERNAME:PORT TO SERVER MAPPING" << endl;
+            cout << "===========================================" << endl;
+            cout << "Total mappings: " << servNameServMap.size() << endl;
+            
+            for (map<string, ServerNode>::const_iterator it = servNameServMap.begin(); it != servNameServMap.end(); ++it)
+            {
+                cout << "\n🔑 Key: \"" << it->first << "\"" << endl;
+                cout << "   └─ Maps to server with:" << endl;
+                cout << "      • Host: " << it->second.host << endl;
+                cout << "      • Port: " << it->second.port << endl;
+                cout << "      • Root: " << it->second.root << endl;
+            }
+            cout << "===========================================" << endl;
+        }
+
+        // ✅ NEW: Print validation results and port uniqueness
+        static void printValidationResults(const vector<ServerNode> &servNodes)
+        {
+            cout << "\n✅ VALIDATION RESULTS" << endl;
+            cout << "===========================================" << endl;
+            
+            set<unsigned short> seenPorts;
+            set<string> seenHostPorts;
+            
+            for (size_t i = 0; i < servNodes.size(); i++)
+            {
+                const ServerNode &node = servNodes[i];
+                string hostPort = node.host + ":" + to_string(node.port);
+                
+                cout << "Server " << (i + 1) << ":" << endl;
+                cout << "  • Host:Port = " << hostPort << endl;
+                cout << "  • Port only = " << node.port << endl;
+                
+                // Check for port conflicts (your current validation)
+                if (seenPorts.find(node.port) != seenPorts.end())
+                    cout << "  ❌ DUPLICATE PORT DETECTED!" << endl;
+                else
+                    cout << "  ✅ Port is unique" << endl;
+                
+                // Check for host:port conflicts (correct validation)
+                if (seenHostPorts.find(hostPort) != seenHostPorts.end())
+                    cout << "  ❌ DUPLICATE HOST:PORT DETECTED!" << endl;
+                else
+                    cout << "  ✅ Host:Port combination is unique" << endl;
+                
+                seenPorts.insert(node.port);
+                seenHostPorts.insert(hostPort);
+                cout << endl;
+            }
+            cout << "===========================================" << endl;
+        }
+
+        // ✅ ENHANCED: Main method with all new features
         static void printServerConfig(const vector<ServerNode> &servNodes)
         {
             cout << "\n\n🖥️  WEBSERV CONFIGURATION" << endl;
@@ -123,6 +201,9 @@ class Debugger
                 cout << "\n📌 Server Block [" << i + 1 << "]" << endl;
                 printServerNode(servNodes[i]);
             }
+            
+            // Print validation results
+            printValidationResults(servNodes);
             
             // Print a summary of all servers by host:port
             cout << "\n📊 SERVER SUMMARY BY HOST:PORT" << endl;
@@ -142,6 +223,7 @@ class Debugger
                 
                 if (it->second.size() > 1)
                 {
+                    cout << "  ⚠️  MULTIPLE SERVERS ON SAME HOST:PORT!" << endl;
                     cout << "  Additional servers: ";
                     for (size_t i = 1; i < it->second.size(); i++)
                         cout << "Server Block [" << it->second[i] + 1 << "] ";
@@ -149,6 +231,16 @@ class Debugger
                 }
             }
             cout << "==========================================" << endl;
+        }
+
+        // ✅ NEW: Print everything including maps
+        static void printCompleteDebugInfo(const vector<ServerNode> &servNodes, 
+                                         const map<string, ServerNode> &hostServMap,
+                                         const map<string, ServerNode> &servNameServMap)
+        {
+            printServerConfig(servNodes);
+            printHostServMap(hostServMap);
+            printServNameServMap(servNameServMap);
         }
 
         // Helper function for to_string since it might not be available in all C++ versions
@@ -159,8 +251,6 @@ class Debugger
             os << value;
             return os.str();
         }
-
 };
-
 
 #endif

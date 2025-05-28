@@ -1,6 +1,20 @@
 #include "../includes/webserv.hpp"
 #include "../includes/Debugger.hpp"
 
+string getStatusMessage(unsigned short code) 
+{
+    switch (code) {
+        case 400: return "Bad Request";
+        case 401: return "Unauthorized";
+        case 403: return "Forbidden"; 
+        case 404: return "Not Found";
+        case 500: return "Internal Server Error";
+        case 502: return "Bad Gateway";
+        case 503: return "Service Unavailable";
+        default: return "Unknown Error";
+    }
+}
+
 void WebServ::GET_METHODE(Request req)
 {
     const char *testResponse =
@@ -16,12 +30,14 @@ void WebServ::GET_METHODE(Request req)
 
 }
 
-void WebServ::POST_METHODE(Request req)
+void WebServ::POST_METHODE(Request req, ServerNode servNode)
 {
+    short responseCode;
+    string responseText;
+    string responseBody;
     vector <string> start_line = req.getStartLine();
     ServerNode serv;
     string &location = req.getResource();
-    cout << "location -> " << location << endl;
     map <string, string> &headers = req.getHeaders();
     string key = "host";
     Debugger::printMap("headers", headers);
@@ -52,21 +68,65 @@ void WebServ::POST_METHODE(Request req)
 
 }
 
-void WebServ::answer_req(Request req)
+void WebServ::answer_req(Request req, set <int> servSockets, ServerNode &servNode)
 {
-
     if (req.getReqType() == GET)
         GET_METHODE(req);
     else if (req.getReqType() == POST)
-        POST_METHODE(req);
+        POST_METHODE(req, servNode);
     // else if (req.getReqType() == DELETE)
     //     DELETE_METHODE(req);
 
 }
 
-int WebServ::parse_request(int cfd)
+void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
 {
+    string errorRes;
+    const char *generalErrorResponse =
+        "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 13\r\n"
+        "\r\n"
+        "Server Error";
+    if (exists(servNode.errorNodes, errCode)) 
+    {
+        string errorFileStr = servNode.errorNodes.find(errCode)->second;
+        cout << errorFileStr << endl;
+        if (!validPath(errorFileStr) || !checkFile(errorFileStr, O_RDONLY))
+        {
+            send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
+        }
+        else
+        {
+            ifstream errorFile;
+            errorFile.open(errorFileStr.c_str());
+            if (errorFile.fail())
+            {
+                cerr << "Error happened opening the file" << endl;
+                send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
+                return ;
+            }
+            string htmlErrFileStr, line;
+            while (getline(errorFile, line))
+            {
+                htmlErrFileStr += line + "\r\n";
+            }
 
+            errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
+            errorRes +=  "Content-Type: text/html\r\n";
+            errorRes +=  "Content-Length: " + ushortToStr(htmlErrFileStr.size()) + "\r\n\r\n";
+            errorRes += htmlErrFileStr;
+            send(clientfd, errorRes.c_str(), errorRes.length(), 0);
+        }
+    }
+    else
+    {
+        send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
+    }
+}
+
+int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
+{
     string line;
     Request req;
 
@@ -79,33 +139,85 @@ int WebServ::parse_request(int cfd)
         cerr << "[ " << line << " ]" << "wtf" << endl;
         return ERROR;
     }
-    cout << line << endl;
     req.setStartLine(line);
     if (req.isStartLineValid() == 1)
     {
         cout << "invalid Request" << endl;
         return ERROR;
     }
-    while(getline(read, line))
+    while(getline(read, line, '\r'))
     {
         if(line.empty())
         {
             break;
         }
         req.setHeaders(line);
-        cout << line << endl;
     }
     while(getline(read, line))
         req.setBody(line);
     cout << "*********************************************" << endl;
 
+    string host = req.headers["host"];
+
+    string hostPort = host;
+    hostPort += ":";
+    hostPort += ushortToStr(servNode.port);
+
+    if (!exists(hostServMap, hostPort))
+    {
+        sendErrToClient(cfd, 500, servNode);
+        return 0;
+    }
 
 
-    answer_req(req);
-    read.close();
+    // answer_req(req, servSockets, servNode);
+    // read.close();
     return 0;
 }
 
+int bindAndGetSock(struct addrinfo *&res)
+{
+    struct addrinfo *temp = res;
+    int sock;
+
+    while (temp)
+    {
+        sock = socket(temp->ai_family, temp->ai_socktype, temp->ai_protocol);
+        if (sock == -1)
+            continue;
+        int flag = 1;
+        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
+        {
+            cerr << "setsockopt error " << endl;
+            return -1;
+        }
+        if (bind(sock, temp->ai_addr, temp->ai_addrlen) == 0)
+            break;
+        close(sock);
+        temp = temp->ai_next;
+    }
+    if (temp == NULL)
+        return -1;
+    return sock;
+}
+
+// Convert port to string
+string ushortToStr(unsigned short port)
+{
+    stringstream ss;
+    ss << port;
+    string portStr = ss.str();
+    return portStr;
+}
+
+void setupHints(struct addrinfo &hints)
+{
+    memset(&hints, 0, sizeof(hints)); // lets make our own memset cause forbidden
+    hints.ai_family = AF_INET;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+}
 
 // here we will fill the start line, headers and body
 bool fillRequest(ofstream &outputFile, int new_sock)
@@ -118,9 +230,7 @@ bool fillRequest(ofstream &outputFile, int new_sock)
     {
         buff[res] = '\0';
         outputFile.write(buff, res);
-        outputFile.write(buff, res);
         res = recv(new_sock, buff, BUFFERSIZE, 0);
-        cout << "recv -> " << res << endl;
     }
     if (res > 0)
         outputFile.write(buff, res);
@@ -154,95 +264,86 @@ bool fillRequest(ofstream &outputFile, int new_sock)
 
 int WebServ::server()
 {
+    // Debugger::printCompleteDebugInfo(servNodes, hostServMap, servNameServMap);
     std::map<std::string, ServerNode>::iterator servIt = hostServMap.begin();
-    int maxEvents = 1024;
     struct epoll_event ev;
-    struct epoll_event events[maxEvents];
+    struct addrinfo *res;
+    set <int> servSockets;
+    map <int, ServerNode> servSocketMap;
     int sock;
-
+    int epollfd;
+    struct addrinfo hints;
     // setup the server
-    while (servIt != hostServMap.end())
+    epollfd = epoll_create1(0);
+    if (epollfd == -1)
+        {cout << "epoll_create1 failed" << endl; criticalErr = true; return ERROR;}
+    while (servIt != hostServMap.end()) // for every server in the config file
     {
-        struct addrinfo hints;
-        struct addrinfo *res;
-        memset(&hints, 0, sizeof(hints)); // lets make our own memset cause forbidden
-        hints.ai_family = AF_INET;
-        hints.ai_protocol = SOCK_STREAM;
         ServerNode serv = servIt->second;
-        unsigned short port = serv.port;
-        string host  = serv.host;
-        
-        sockaddr_in ss;
-        ss.sin_family = AF_INET;
-        ss.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        ss.sin_port = htons(port);
-        if (getaddrinfo(host.c_str(), "http" ,&hints, &res) == -1)
-            {cout << "getaddrinfo failed" << endl; criticalErr = true; return ERROR;}
-        
-        struct addrinfo *temp = res;
-        while (temp)
-        {
-            temp = temp->ai_next;
-            sock = socket(temp->ai_family, temp->ai_socktype, temp->ai_protocol);
-            if (sock == -1)
-                continue;
-            if (bind(sock, temp->ai_addr, temp->ai_addrlen) == 0)
-                break;
-            close(sock);
-        }
-        freeaddrinfo(res);
-        if (temp == NULL)
+        setupHints(hints);
+        string host = serv.host;
+        string portStr = ushortToStr(serv.port);
+        if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res) == -1)
+            {cout << "could not getaddrinfo.. aborting." << endl; criticalErr = true; freeaddrinfo(res); ; return ERROR;}
+        sock = bindAndGetSock(res);
+        if (sock == -1)
             {cout << "could not bind.. aborting." << endl; criticalErr = true; return ERROR;}
-        int epollfd = epoll_create1(0);
+        listen(sock, 10);
+        freeaddrinfo(res);
         ev.events = EPOLLIN;
         ev.data.fd = sock;
+        servSockets.insert(sock);
+        servSocketMap[sock] = servIt->second;
         epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev);
+        servIt++;
     }
+    serverLoop(epollfd, ev, servSockets, servSocketMap);
     return 0;
 }
 
-
-int WebServ::serverAsma()
+int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSockets, map <int, ServerNode> &servSocketMap)
 {
-    sockaddr_in ss;
-    ss.sin_family = AF_INET;
-    ss.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    ss.sin_port = htons(9999);
-    int sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock < 0)
-        cout << "socket() failed" << endl;
-    int flag = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
-        cout << "error :/" << endl;
-    int res = bind(sock, (struct sockaddr *)&ss, sizeof ss);
-    if (res < 0)
-    {
-        cout << "bind() failed socket : " << sock << endl;
-        return ERROR;
-    }
-    res = listen(sock, 1);
-    cout << "server is listening at PORT => " << 9999 << " |  http://localhost:9999" << endl;
-    if (res < 0)
-    {
-        cout << "listen() failed" << endl;
-        return ERROR;
-    }
-    socklen_t len;
+
+    int maxEvents = 1024;
+    struct epoll_event events[maxEvents];
+    socklen_t clientAddrSize;
+    struct sockaddr clientAddr;
+    map <int, int> clientServMap;
     while (1)
     {
-        int new_sock = accept(sock, (struct sockaddr *)&ss, &len);
-        if (new_sock < 0)
+        int nfds = epoll_wait(epollfd, events, maxEvents, -1);
+        for (int i = 0 ; i < nfds; i++)
         {
-            cout << "accept() didn't accept" << endl;
-            return ERROR;
+            int readyFd = events[i].data.fd;
+            if (exists(servSockets, readyFd))
+            {
+                // its  a  server, which means we have a new client, add it to the clients being monitored
+                int client = accept(readyFd, &clientAddr, &clientAddrSize);  // check if fails
+                clientServMap[client] = readyFd;
+                ev.events = EPOLLIN;
+                ev.data.fd = client;
+                epoll_ctl(epollfd, EPOLL_CTL_ADD, client, &ev); // check if fails
+            }
+            else
+            {
+                // its a client that we were monitoring (added him in the block above)  (new fd so we must remeber him)
+                ofstream write1("Request");
+                int servFd = clientServMap[readyFd];
+                ServerNode serv = servSocketMap[servFd];
+                fillRequest(write1, readyFd);
+                write1.close();
+                // Debugger::printServerNode(serv);
+                parse_request(readyFd, servSockets, serv);
+                clientServMap.erase(readyFd);
+                epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
+                close(readyFd);
+            }
         }
-        ofstream write1("Request");
-        fillRequest(write1, new_sock);
-        write1.close();
-        if (parse_request(new_sock))
-            return 100;
-        close(new_sock);
-   }
-    close(sock);
-    return 0;
+    }
 }
+
+
+
+
+
+

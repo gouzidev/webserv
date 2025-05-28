@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <algorithm>
+#include <stdio.h>
+#include <stdlib.h>
 // others
 
 
@@ -110,7 +112,8 @@ class WebServ
     private:
         bool    criticalErr;
         vector <ServerNode> servNodes;
-        map <string, ServerNode> hostServMap;
+        map <string, ServerNode> hostServMap; // this map host:port to some server node
+        map <string, ServerNode> servNameServMap; // this map servName:port to some server node
     public:
         WebServ(char *confName);
         WebServ(string filename);
@@ -124,16 +127,18 @@ class WebServ
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
-        
-        void POST_METHODE(Request req);
-        void answer_req(Request req);
-        int parse_request(int fd);
+        void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
+        void POST_METHODE(Request req, ServerNode servNode);
+        void answer_req(Request req, set <int> activeSockets, ServerNode &servNode);
+        int parse_request(int fd, set <int> activeSockets, ServerNode &servNode);
         int server();
+        int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
         int serverAsma();
         // void readFile(ifstream file);
 };
 
 std::vector<std::string> split (const std::string &s, char delim);
+string trimWSpaces(string &text);
 string trimSpaces(string &text);
 bool startsWith(string str, string sub);
 bool    isStrEq(string a, string b);
@@ -141,14 +146,21 @@ vector<string> split(string &str, char delim);
 bool    strAllDigit(string s);
 bool    checkFile(string filename, int perm);
 bool    checkDir(string dirname, int dirStat);
-
+bool validPath(string path);
+string ushortToStr(unsigned short port);
 
 bool exists(map <string, string> &m, string key);
 
 template <typename T>
 bool exists(map <T, T> &m, T key)
 {
-    return m.find(key) == m.end();
+    return m.find(key) != m.end();
+};
+
+template <typename T1, typename T2>
+bool exists(map <T1, T2> &m, T1 key)
+{
+    return m.find(key) != m.end();
 };
 
 template <typename T>

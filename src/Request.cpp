@@ -67,6 +67,8 @@ void Request::setHeaders(string line) //needs checking for headers syntax
     key = line.substr(0, sepPos);
     val = line.substr(sepPos + 1);
 
+    key = trimWSpaces(key);
+    val = trimWSpaces(val);
     // lower case the header key (the key is case insensitive):
     transform(key.begin(), key.end(), key.begin(), ::tolower);
     pair <string, string> p = make_pair(key, val);
