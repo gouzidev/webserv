@@ -4,6 +4,19 @@
         "*.php": "php",
         "*.blade.php": "blade",
         "iosfwd": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "optional": "cpp",
+        "string": "cpp",
+        "format": "cpp",
+        "fstream": "cpp",
+        "sstream": "cpp",
+        "unordered_map": "cpp",
+        "string_view": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "vector": "cpp",
+        "initializer_list": "cpp",
+        "span": "cpp",
+        "text_encoding": "cpp"
     }
 }

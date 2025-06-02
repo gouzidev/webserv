@@ -1,6 +1,6 @@
 CC = c++
 
-FLAGS = -Wall -Wextra  -std=c++98 -g3 -fsanitize=address #-Werror
+FLAGS = -Wall -Wextra  -std=c++98 -g3
 
 SRC_DIR = src
 OBJ_DIR = obj

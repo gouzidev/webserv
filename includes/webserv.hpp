@@ -60,7 +60,7 @@ class Request
         vector <string> start_line; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
-        vector <string> body; //possible update for large files in post
+        vector <string> body; // possible update for large files in post
     public :
         int cfd; // client fd
         void setStartLine(string);
@@ -98,7 +98,8 @@ class ServerNode
     public :
         ServerNode();
         unsigned short port;
-        string host;
+        string hostStr;
+        string hostIp;
         string root;
         set <string> serverNames;
         vector <LocationNode> locationNodes;
@@ -114,6 +115,9 @@ class WebServ
         vector <ServerNode> servNodes;
         map <string, ServerNode> hostServMap; // this map host:port to some server node
         map <string, ServerNode> servNameServMap; // this map servName:port to some server node
+
+
+        map < string, string> db; // email password db to manage users
     public:
         WebServ(char *confName);
         WebServ(string filename);

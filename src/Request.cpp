@@ -70,12 +70,16 @@ void Request::setHeaders(string line) //needs checking for headers syntax
     key = trimWSpaces(key);
     val = trimWSpaces(val);
     // lower case the header key (the key is case insensitive):
-    transform(key.begin(), key.end(), key.begin(), ::tolower);
+    transform(key.begin(), key.end(), key.begin(), ::tolower); // Field names are case-insensitive rfc 4.2 msg headers
     pair <string, string> p = make_pair(key, val);
     headers.insert(p);
 }
 
-void Request::setBody(string line)
+// for the body parsing : If a message is received with both a
+    //  Transfer-Encoding header field and a Content-Length header field,
+    //  the latter MUST be ignored
+
+void Request::setBody(string line) // must handle checked body if its in the headers, chunked according to the rfc is sending the number of bytes then sebding the bytes, when sending 0, indicates that its done :  // Send data as it's generated: send("5\r\n");        // Chunk size: 5 bytes,   send("Hello\r\n");    // Data: "Hello",   send("7\r\n");        // Chunk size: 7 bytes,    send(" World!\r\n");  // Data: " World!",    send("0\r\n\r\n");    // End chunks
 {
     body.push_back(line);
 }
@@ -89,6 +93,7 @@ int Request::isStartLineValid()
 {
     if (start_line.size() != 3)
         return ERROR;
+    transform(start_line[0].begin(), start_line[0].end(), start_line[0].begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
     if (start_line[0] == "GET")
     {
         cout << "we got get" << endl;
