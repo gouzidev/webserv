@@ -2,6 +2,9 @@
 #define WEBSERV_HPP
 
 
+#include <errno.h>  // strictly forbidden, must remove later 
+
+
 // containers
 #include <map>
 #include <set>

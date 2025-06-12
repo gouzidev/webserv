@@ -203,9 +203,7 @@ void WebServ::POST_METHODE(Request req, ServerNode servNode)
 
     if (contentType == "application/x-www-form-urlencoded")
     {
-        
         handleLogin(req, serv);
-        exit(1);
     }
     const char *successResponse =
     "HTTP/1.1 404 OK\r\n"
@@ -471,14 +469,16 @@ int WebServ::server()
         sock = bindAndGetSock(res);
         if (sock == -1)
             {cout << "could not bind.. aborting." << endl; criticalErr = true; return ERROR;}
-        listen(sock, 10);
+        if (listen(sock, 10) == -1)
+            {cout << "could not listen.. aborting." << endl; criticalErr = true; return ERROR;}
         cout << "Server listening on " << host << ":" << portStr << endl;
         freeaddrinfo(res);
         ev.events = EPOLLIN;
         ev.data.fd = sock;
         servSockets.insert(sock);
         servSocketMap[sock] = servIt->second;
-        epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev);
+        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev) == -1)
+            {cout << "epoll_ctl failed" << endl; criticalErr = true; return ERROR;}
         servIt++;
     }
     serverLoop(epollfd, ev, servSockets, servSocketMap);
@@ -487,7 +487,6 @@ int WebServ::server()
 
 int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSockets, map <int, ServerNode> &servSocketMap)
 {
-
     int maxEvents = 1024;
     struct epoll_event events[maxEvents];
     socklen_t clientAddrSize;
@@ -496,6 +495,12 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
     while (1)
     {
         int nfds = epoll_wait(epollfd, events, maxEvents, -1);
+        if (nfds == -1)
+        {
+            cerr << "epoll_wait failed" << endl;
+            criticalErr = true;
+            return ERROR;
+        }
         for (int i = 0 ; i < nfds; i++)
         {
             int readyFd = events[i].data.fd;
@@ -503,6 +508,31 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
             {
                 // its  a  server, which means we have a new client, add it to the clients being monitored
                 int client = accept(readyFd, &clientAddr, &clientAddrSize);  // check if fails
+                if (client == -1)
+                {
+                    switch(errno) {
+                        case EAGAIN:
+                            cout << "No pending connections (non-blocking)" << endl;
+                            break;
+                        case EINTR:
+                            cout << "Interrupted system call" << endl;
+                            break;
+                        case EMFILE:
+                            cout << "Process file descriptor limit reached" << endl;
+                            break;
+                        case ENFILE:
+                            cout << "System file descriptor limit reached" << endl;
+                            break;
+                        case ENOTSOCK:
+                            cout << "Not a socket" << endl;
+                            break;
+                        case EOPNOTSUPP:
+                            cout << "Socket not listening" << endl;
+                            break;
+                    }
+                    cerr << "accept failed" << endl;
+                    continue; // continue to the next iteration
+                }
                 clientServMap[client] = readyFd;
                 ev.events = EPOLLIN;
                 ev.data.fd = client;
