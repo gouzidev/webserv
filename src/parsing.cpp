@@ -55,19 +55,22 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
     {
         for (size_t i = 1; i < tokens.size(); i++)
         {
-            if (locationNode.possibleMethods.find(tokens[i]) == locationNode.possibleMethods.end())
+            
+            string method = tokens[i];
+            transform(method.begin(), method.end(), method.begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
+            if (locationNode.possibleMethods.find(method) == locationNode.possibleMethods.end())
             {
-                cerr << "syntax error, unknown method '" << tokens[i] << "' at line: " << lineNum << endl;
+                cerr << "syntax error, unknown method '" << method << "' at line: " << lineNum << endl;
                 criticalErr = true;
                 return ;
             }
-            if (locationNode.methods.find(tokens[i]) != locationNode.methods.end())
+            if (locationNode.methods.find(method) != locationNode.methods.end())
             {
-                cerr << "syntax error, duplicate method '" << tokens[i] << "' at line: " << lineNum << endl;
+                cerr << "syntax error, duplicate method '" << method << "' at line: " << lineNum << endl;
                 criticalErr = true;
                 return ;
             }
-            locationNode.methods.insert(tokens[i]);
+            locationNode.methods.insert(method);
         }
     }
     else if (tokens[0] == "index")
@@ -337,13 +340,15 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
             cerr << "host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' at line: " << lineNum << endl;
             criticalErr = true;
         }
-        if (servNode.host != "")
+        if (servNode.hostStr != "")
         {
             cerr << "config error, can't have more than 1 host at line: " << lineNum << endl;
             criticalErr = true;
         }
         if (validHost(tokens[1], lineNum))
-            servNode.host = tokens[1];
+        {
+            servNode.hostStr = tokens[1];
+        }
         else
             criticalErr = true;
     }
@@ -507,7 +512,7 @@ void WebServ::validateParsing()
             criticalErr = true;
             return ;
         }
-        if (servNode.host == "")
+        if (servNode.hostStr == "")
         {
             cerr << "no host block provided" << endl;
             criticalErr = true;
@@ -529,12 +534,11 @@ void WebServ::validateParsing()
         for (set <string>::iterator it = servNames.begin() ; it != servNames.end(); it++)
         {
             string servName = *it;
-            cout << "servName -> " << servName << endl;
             string servNamePort = servName + ":" + ushortToStr(servNode.port);
             if (servNameServMap.find(servNamePort) != servNameServMap.end())
             {
                 ServerNode foundServ = servNameServMap.find(servNamePort)->second;
-                if (foundServ.host == servNode.host)
+                if (foundServ.hostStr == servNode.hostStr)
                 {
                     cerr << "duplicate server name for the same port: " << servNamePort << endl;
                     criticalErr = true;
@@ -543,7 +547,7 @@ void WebServ::validateParsing()
             }
             servNameServMap[servNamePort] = servNode;
         }
-        hostServMap[servNode.host + ":" + ushortToStr(servNode.port)] = servNode;
+        hostServMap[servNode.hostStr + ":" + ushortToStr(servNode.port)] = servNode;
         // ports.insert(servNode.port);
         i++;
     }

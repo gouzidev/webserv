@@ -34,6 +34,7 @@ string getStatusMessage(unsigned short code)
         case 401: return "Unauthorized";
         case 403: return "Forbidden"; 
         case 404: return "Not Found";
+        case 405: return "Method Not Allowed";
         case 500: return "Internal Server Error";
         case 502: return "Bad Gateway";
         case 503: return "Service Unavailable";
@@ -94,6 +95,125 @@ void WebServ::GET_METHODE(Request req)
 //         "bad request!";
 //         send(req.cfd, testResponse, strlen(testResponse), 0);
 // }
+
+// the resource will be starting with a slash
+// this function will return the location of the resource in the server node, ex : 
+    // GET /auth/login HTTP/1.1
+    // location -> /auth
+string getLocation(string resource, ServerNode &servNode)
+{
+    string location = resource;
+    size_t i = 1;
+    for (; i < resource.size(); i++)
+    {
+        if (resource[i] == '/')
+            break;
+    }
+    location = resource.substr(0, i);
+    if (!exists(servNode.locationDict, location))
+    {
+        string defaultLocation = "/";
+        if (exists(servNode.locationDict, defaultLocation))
+            return defaultLocation;
+    }
+    cout << "location for the request is -> " << location << endl;
+    return location;
+}
+
+
+string getErrorResponse(unsigned short errorCode, string body = "")
+{
+    string statusMsg = getStatusMessage(errorCode);
+    string errorRes;
+    errorRes += "HTTP/1.1 " + ushortToStr(errorCode) + " " + statusMsg + " \r\n";
+    errorRes +=  "Content-Type: text/html\r\n";
+    if (body != "")
+    {
+        errorRes +=  "Content-Length: " + ushortToStr(statusMsg.size()) + "\r\n\r\n";
+        errorRes += statusMsg;
+    }
+    else
+    {
+        errorRes +=  "Content-Length: " + ushortToStr(body.size()) + "\r\n\r\n";
+        errorRes += body;
+    }
+}
+
+
+// void handleLogin(Request &req, ServerNode &serv)
+// {
+//     Debugger::printVec("request body", req.body);
+//     string body = req.body[0];
+
+//     if (body.find("email") == body.npos)
+//     {
+//         getErrorResponse();
+//     }
+// }
+
+void WebServ::POST_METHODE(Request req, ServerNode servNode)
+{
+    short responseCode;
+    string responseText;
+    string responseBody;
+    vector <string> start_line = req.getStartLine();
+    ServerNode serv;
+    string &location = req.getResource();
+    map <string, string> &headers = req.getHeaders();
+    string key = "host";
+    // Debugger::printMap("headers", headers);
+    if (!exists(headers, "content-type"))
+    {
+        cerr << "send a host and content-type mf" << endl;
+        const char *testResponse =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 13\r\n"
+        "\r\n"
+        "Hello, World!";
+       send(req.cfd, testResponse, strlen(testResponse), 0);
+       return ;
+    }
+
+    string rootFolder = servNode.root;
+
+    string errorRes;
+    
+    string locationTarget = getLocation(req.resource, servNode); // will get "/" if the location is not in the server
+
+    if (!exists(servNode.locationDict, locationTarget)) // doesnt exist
+    {
+        errorRes  = getErrorResponse(404); // method not allowed 
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
+
+
+    LocationNode locationNode = servNode.locationDict.find(locationTarget)->second;
+    if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
+    {
+        errorRes  = getErrorResponse(405); // method not allowed 
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
+
+    // handleLogin(req, serv); // here i will check the req body for the email and pw and check the db
+    const char *successResponse =
+    "HTTP/1.1 404 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 12\r\n"
+    "\r\n"
+    "Successfull!";
+    send(req.cfd, successResponse, strlen(successResponse), 0);
+
+    Debugger::printVec("request body", req.body);
+    const char *testResponse =
+    "HTTP/1.1 404 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 12\r\n"
+    "\r\n"
+    "bad request!";
+    send(req.cfd, testResponse, strlen(testResponse), 0);}
 
 
 //     // cerr << testResponse;
@@ -158,6 +278,15 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
     }
 }
 
+string getHostPort(string host, unsigned short port)
+{
+    if (host.find (":") == string::npos)
+    {
+        host += ":" + ushortToStr(port);
+    }
+    return host;
+}
+
 int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
 {
     (void)servSockets;
@@ -167,14 +296,22 @@ int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
     req.cfd = cfd;
     ifstream read("Request");
     cout << "*********************************************" << endl;
-    getline(read, line);
+    
     if (read.fail())
     {
         cerr << "[ " << line << " ]" << "wtf" << endl;
         return ERROR;
     }
+    line = "";
+    while (line.empty()) // this reading with while loop is bcs in the rfc it says "servers SHOULD ignore any empty line(s) received where a Request-Line is expected. In other words, in the server is reading the protocol stream at the beginning of a message and receives a CRLF first, it should ignore the CRLF."
+    {
+        if (read.eof())
+            return ERROR;
+        getline(read, line);
+    }
     req.setStartLine(line);
-    if (req.isStartLineValid() == 1)
+    // Debugger::printVec("req.start_line", req.start_line);
+    if (req.isStartLineValid() == ERROR)
     {
         cout << "invalid Request start line" << endl;
         return ERROR;
@@ -187,25 +324,30 @@ int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
         }
         req.setHeaders(line);
     }
+    if (!exists(req.headers, "host"))
+    {
+        cout << "no host ===> "  << endl;
+        Debugger::printMap("req.headers", req.headers);
+        sendErrToClient(cfd, 400, servNode);
+        return ERROR;
+    }
     while(getline(read, line))
         req.setBody(line);
     cout << "*********************************************" << endl;
 
-    string host = req.headers["host"];
+    string hostPort = getHostPort(req.headers["host"], servNode.port);
+    // Debugger::printServerNode(servNode);
+    //    501 (Not Implemented) if the method is
+    //    unrecognized or not implemented by the origin server
 
-    string hostPort = host;
-    hostPort += ":";
-    hostPort += ushortToStr(servNode.port);
-
+    cout << "hostPort: " << hostPort << endl;
     if (!exists(hostServMap, hostPort))
     {
         sendErrToClient(cfd, 500, servNode);
         return 0;
     }
-
-
-    // answer_req(req, servSockets, servNode);
-    // read.close();
+    answer_req(req, servSockets, servNode);
+    read.close();
     return 0;
 }
 
@@ -315,14 +457,18 @@ int WebServ::server()
     {
         ServerNode serv = servIt->second;
         setupHints(hints);
-        string host = serv.host;
+        string host = serv.hostStr;
         string portStr = ushortToStr(serv.port);
         if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res) == -1) //to understand
             {cout << "could not getaddrinfo.. aborting." << endl; criticalErr = true; freeaddrinfo(res); ; return ERROR;}
         sock = bindAndGetSock(res);
         if (sock == -1)
             {cout << "could not bind.. aborting." << endl; criticalErr = true; return ERROR;}
-        listen(sock, 10); // check listen fails
+// <<<<<<< HEAD
+//         listen(sock, 10); // check listen fails
+// =======
+        listen(sock, 10);
+        cout << "Server listening on " << host << ":" << portStr << endl;
         freeaddrinfo(res);
         ev.events = EPOLLIN;
         ev.data.fd = sock;
@@ -366,7 +512,6 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                 ServerNode serv = servSocketMap[servFd];
                 fillRequest(write1, readyFd);
                 write1.close();
-                // Debugger::printServerNode(serv);
                 parse_request(readyFd, servSockets, serv);
                 clientServMap.erase(readyFd);
                 epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
