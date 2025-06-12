@@ -1,6 +1,6 @@
 CC = c++
 
-FLAGS = -Wall -Wextra -Werror -std=c++98 -g3 -fsanitize=address
+FLAGS = -Wall -Wextra  -std=c++98 -g3
 
 SRC_DIR = src
 OBJ_DIR = obj
@@ -9,6 +9,7 @@ FILES = $(SRC_DIR)/webserv.cpp \
 		$(SRC_DIR)/parsing.cpp \
 		$(SRC_DIR)/string.cpp \
 		$(SRC_DIR)/Request.cpp \
+		$(SRC_DIR)/shortcuts.cpp \
 		$(SRC_DIR)/server.cpp
 
 OBJ = $(FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

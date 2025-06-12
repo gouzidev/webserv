@@ -3,11 +3,14 @@
 set <string> LocationNode::possibleCgiExts;
 set <string> LocationNode::possibleMethods;
 
+
+
 ServerNode::ServerNode()
 {
     port = 0;
     clientMaxBodySize = 0;
-    host = "";
+    // host = "";
+    hostStr = "";
     root = "";
 }
 
@@ -42,15 +45,6 @@ WebServ::WebServ(string filename)
     if (!criticalErr)
         server();
 }
-
-// void WebServ::readFile(ifstream file)
-// {
-//     string line;
-//     while (getline(file, line))
-//     {
-
-//     }
-// }
 
 int main(int ac, char **av)
 {
