@@ -14,9 +14,10 @@ bool    checkDir(string dirname, int dirStat)
 {
     return access(dirname.c_str(), dirStat) == 0;
 }
-
+ 
 bool validHost(string hostStr, size_t &lineNum)
 {
+    (void)lineNum;
     vector <string> ipVec;
     ipVec = split(hostStr, '.');
     // for (size_t i = 0; i < ipVec.size(); i++)

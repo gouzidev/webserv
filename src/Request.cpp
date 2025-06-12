@@ -2,8 +2,9 @@
 
 void Request::setStartLine(string line)
 {
+    
     start_line = split(line, ' ');
-    string location = start_line[1];
+    string location = start_line[1]; // GET /login   HTTP/1.1
     size_t posOfSep = location.find_first_of('?');
     if (posOfSep != location.npos)
     {
@@ -15,6 +16,12 @@ void Request::setStartLine(string line)
     }
     else
         resource = location;
+    if (checkDir(resource, R_OK) == 0)
+        resource_type = DIR;
+    else if (checkFile(resource, R_OK) == 0)
+        resource_type = FILE;
+    else
+        resource_type = OTHER;
 }
 
 void Request::fillQuery(string queryStr)
@@ -87,6 +94,8 @@ int Request::getReqType()
 
 int Request::isStartLineValid()
 {
+    if (resource_type == OTHER)
+        return 1;
     if (start_line.size() != 3)
         return ERROR;
     if (start_line[0] == "GET")

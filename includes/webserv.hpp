@@ -43,7 +43,10 @@ using namespace std;
 #define GET 0
 #define POST 1
 #define DELETE 2
-#define other 3
+#define OTHER 3
+
+#define DIR 0
+#define FILE 1
 
 #define BUFFERSIZE 1024
 
@@ -51,16 +54,29 @@ using namespace std;
 
 typedef int REQUEST;
 
+class Response
+{
+    public :
+        string fullResponse;
+        string status_line;
+        map <string, string> headers;
+        vector <char> body;
+        void setStatusLine();
+        void setHeaders();
+        void setBody();
+};
+
 class Request
 {
     public :
-
+        int resource_type;// dir or file
         REQUEST req_type;
         string resource; // the resource is the path after the method in the request
         vector <string> start_line; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
         vector <string> body; //possible update for large files in post
+        
     public :
         int cfd; // client fd
         void setStartLine(string);
@@ -168,4 +184,5 @@ bool exists(set <T> s, T v)
 {
     return s.find(v) != s.end();
 }
+
 #endif

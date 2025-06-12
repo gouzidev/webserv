@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "*.dbclient-js": "javascript",
-        "*.php": "php",
-        "*.blade.php": "blade",
-        "iosfwd": "cpp",
-        "ostream": "cpp"
-    }
-}

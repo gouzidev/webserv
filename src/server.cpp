@@ -1,6 +1,32 @@
 #include "../includes/webserv.hpp"
 #include "../includes/Debugger.hpp"
 
+string readFromFile(string path) // for html files
+{
+    cout << "hello" << endl;
+    try
+    {
+        std::ifstream file(path.c_str());
+        if (file)
+        {
+            string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+            while(content.find('\n') != string::npos)
+            {
+                int i = content.find('\n');
+                content.replace(i, 1, "\r\n");
+            }
+            return content;
+        }
+        else
+            throw 404;
+    }
+    catch (...)
+    {
+        cout << "err" << endl;
+    }
+    return "";
+}
+
 string getStatusMessage(unsigned short code) 
 {
     switch (code) {
@@ -23,57 +49,65 @@ void WebServ::GET_METHODE(Request req)
     "Content-Length: 13\r\n"
     "\r\n"
     "Hello, World!";
+    string requestedFile = readFromFile(req.resource);
 
-    send(req.cfd, testResponse, strlen(testResponse), 0);
-
-    // cerr << testResponse;
-
-}
-
-void WebServ::POST_METHODE(Request req, ServerNode servNode)
-{
-    short responseCode;
-    string responseText;
-    string responseBody;
-    vector <string> start_line = req.getStartLine();
-    ServerNode serv;
-    string &location = req.getResource();
-    map <string, string> &headers = req.getHeaders();
-    string key = "host";
-    Debugger::printMap("headers", headers);
-    if (!exists(headers, "host") || !exists(headers, "content-type"))
-    {
-        cerr << "send a host and content-type mf" << endl;
-        const char *testResponse =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Hello, World!";
-       send(req.cfd, testResponse, strlen(testResponse), 0);
-    }
-    else
-    {
-        const char *testResponse =
-        "HTTP/1.1 404 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 12\r\n"
-        "\r\n"
-        "bad request!";
-        send(req.cfd, testResponse, strlen(testResponse), 0);
-}
-
+    
+    Response resp;
+    
+    resp.fullResponse = testResponse + requestedFile;
+    
+    send(req.cfd, resp.fullResponse.c_str(), resp.fullResponse.size(), 0);
 
     // cerr << testResponse;
 
 }
+
+// void WebServ::POST_METHODE(Request req, ServerNode servNode)
+// {
+//     short responseCode;
+//     string responseText;
+//     string responseBody;
+//     vector <string> start_line = req.getStartLine();
+//     ServerNode serv;
+//     string &location = req.getResource();
+//     map <string, string> &headers = req.getHeaders();
+//     string key = "host";
+//     Debugger::printMap("headers", headers);
+//     if (!exists(headers, "host") || !exists(headers, "content-type"))
+//     {
+//         cerr << "send a host and content-type mf" << endl;
+//         const char *testResponse =
+//         "HTTP/1.1 200 OK\r\n"
+//         "Content-Type: text/plain\r\n"
+//         "Content-Length: 13\r\n"
+//         "\r\n"
+//         "Hello, World!";
+//        send(req.cfd, testResponse, strlen(testResponse), 0);
+//     }
+//     else
+//     {
+//         const char *testResponse =
+//         "HTTP/1.1 404 OK\r\n"
+//         "Content-Type: text/plain\r\n"
+//         "Content-Length: 12\r\n"
+//         "\r\n"
+//         "bad request!";
+//         send(req.cfd, testResponse, strlen(testResponse), 0);
+// }
+
+
+//     // cerr << testResponse;
+
+// }
 
 void WebServ::answer_req(Request req, set <int> servSockets, ServerNode &servNode)
 {
+    (void)servSockets;
+    (void)servNode;
     if (req.getReqType() == GET)
         GET_METHODE(req);
-    else if (req.getReqType() == POST)
-        POST_METHODE(req, servNode);
+    // else if (req.getReqType() == POST)
+    //     POST_METHODE(req, servNode);
     // else if (req.getReqType() == DELETE)
     //     DELETE_METHODE(req);
 
@@ -88,7 +122,7 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
         "Content-Length: 13\r\n"
         "\r\n"
         "Server Error";
-    if (exists(servNode.errorNodes, errCode)) 
+    if (exists(servNode.errorNodes, errCode))
     {
         string errorFileStr = servNode.errorNodes.find(errCode)->second;
         cout << errorFileStr << endl;
@@ -111,7 +145,6 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
             {
                 htmlErrFileStr += line + "\r\n";
             }
-
             errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
             errorRes +=  "Content-Type: text/html\r\n";
             errorRes +=  "Content-Length: " + ushortToStr(htmlErrFileStr.size()) + "\r\n\r\n";
@@ -127,6 +160,7 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
 
 int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
 {
+    (void)servSockets;
     string line;
     Request req;
 
@@ -142,7 +176,7 @@ int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
     req.setStartLine(line);
     if (req.isStartLineValid() == 1)
     {
-        cout << "invalid Request" << endl;
+        cout << "invalid Request start line" << endl;
         return ERROR;
     }
     while(getline(read, line, '\r'))
@@ -283,12 +317,12 @@ int WebServ::server()
         setupHints(hints);
         string host = serv.host;
         string portStr = ushortToStr(serv.port);
-        if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res) == -1)
+        if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res) == -1) //to understand
             {cout << "could not getaddrinfo.. aborting." << endl; criticalErr = true; freeaddrinfo(res); ; return ERROR;}
         sock = bindAndGetSock(res);
         if (sock == -1)
             {cout << "could not bind.. aborting." << endl; criticalErr = true; return ERROR;}
-        listen(sock, 10);
+        listen(sock, 10); // check listen fails
         freeaddrinfo(res);
         ev.events = EPOLLIN;
         ev.data.fd = sock;
@@ -311,10 +345,10 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
     map <int, int> clientServMap;
     while (1)
     {
-        int nfds = epoll_wait(epollfd, events, maxEvents, -1);
+        int nfds = epoll_wait(epollfd, events, maxEvents, -1); //  -> ret 1 
         for (int i = 0 ; i < nfds; i++)
         {
-            int readyFd = events[i].data.fd;
+            int readyFd = events[i].data.fd; // server fd
             if (exists(servSockets, readyFd))
             {
                 // its  a  server, which means we have a new client, add it to the clients being monitored
@@ -324,7 +358,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                 ev.data.fd = client;
                 epoll_ctl(epollfd, EPOLL_CTL_ADD, client, &ev); // check if fails
             }
-            else
+            else // client fd    [3,  4,  7]
             {
                 // its a client that we were monitoring (added him in the block above)  (new fd so we must remeber him)
                 ofstream write1("Request");
@@ -341,9 +375,3 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
         }
     }
 }
-
-
-
-
-
-
