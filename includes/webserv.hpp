@@ -51,6 +51,19 @@ using namespace std;
 
 typedef int REQUEST;
 
+class Response
+{
+    public :
+        string fullResponse;
+        string status_line;
+        map <string, string> headers;
+        vector <char> body;
+        void setStatusLine();
+        void setHeaders();
+        void setBody();
+};
+
+
 class Request
 {
     public :

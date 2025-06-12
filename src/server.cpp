@@ -1,6 +1,33 @@
 #include "../includes/webserv.hpp"
 #include "../includes/Debugger.hpp"
 
+string readFromFile(string path) // for html files
+{
+    cout << "hello" << endl;
+    try
+    {
+        std::ifstream file(path.c_str());
+        if (file)
+        {
+            string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+            while(content.find('\n') != string::npos)
+            {
+                int i = content.find('\n');
+                content.replace(i, 1, "\r\n");
+            }
+            return content;
+        }
+        else
+            throw 404;
+    }
+    catch (...)
+    {
+        cout << "err" << endl;
+    }
+    return "";
+}
+
+
 string getStatusMessage(unsigned short code) 
 {
     switch (code) {
@@ -24,8 +51,14 @@ void WebServ::GET_METHODE(Request req)
     "Content-Length: 13\r\n"
     "\r\n"
     "Hello, World!";
+    string requestedFile = readFromFile(req.resource);
 
-    send(req.cfd, testResponse, strlen(testResponse), 0);
+    
+    Response resp;
+    
+    resp.fullResponse = testResponse + requestedFile;
+    
+    send(req.cfd, resp.fullResponse.c_str(), resp.fullResponse.size(), 0);
 
     // cerr << testResponse;
 
