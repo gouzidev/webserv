@@ -1,8 +1,8 @@
-GET /login HTTP/1.1
+POST /login HTTP/1.1
 Host: 127.0.0.1
 User-Agent: PostmanRuntime/7.44.0
 Accept: */*
-Postman-Token: d070eb92-c56a-4308-a712-51285f029fb2
+Postman-Token: 2d6ef1d3-bbb0-436f-9d6c-c81d52e34900
 Accept-Encoding: gzip, deflate, br
 Connection: keep-alive
 Content-Type: application/x-www-form-urlencoded

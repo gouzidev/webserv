@@ -92,6 +92,8 @@ string getLocation(string resource, ServerNode &servNode)
 
 void urlFormParser(string body, map<string, string> &queryParms)
 {
+    cout << "body -<> " << body << endl;
+    return ;
     string temp = "";
     string key = "";
     size_t i = 0;
@@ -140,8 +142,8 @@ string getErrorResponse(unsigned short errorCode, string body = "")
 
 void handleLogin(Request &req, ServerNode &serv)
 {
-    Debugger::printVec("request body", req.body);
-    string body = req.body[0];
+    
+    string body = req.body;
 
     
     // if (body.find("email=") == body.npos || body.find("password=") == body.npos)
@@ -213,7 +215,7 @@ void WebServ::POST_METHODE(Request req, ServerNode servNode)
     "Successfull!";
     send(req.cfd, successResponse, strlen(successResponse), 0);
 
-    Debugger::printVec("request body", req.body);
+    cout << "BODY -> " << req.body << endl;
     const char *testResponse =
     "HTTP/1.1 404 OK\r\n"
     "Content-Type: text/plain\r\n"
@@ -284,6 +286,13 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
     }
 }
 
+string removeTrailingCR(string str)
+{
+    if (!str.empty() && str[str.size() - 1] == '\r')
+        str = str.substr(0, str.size() - 1);
+    return str;
+}
+
 string getHostPort(string host, unsigned short port)
 {
     if (host.find (":") == string::npos)
@@ -308,27 +317,47 @@ int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
         return ERROR;
     }
     line = "";
-    while (line.empty()) // this reading with while loop is bcs in the rfc it says "servers SHOULD ignore any empty line(s) received where a Request-Line is expected. In other words, in the server is reading the protocol stream at the beginning of a message and receives a CRLF first, it should ignore the CRLF."
+    // rfc: if the server find CRLF first
+        // at the beginning it should ignore the it."
+    while (line.empty())
     {
-        if (read.eof())
+        if (read.eof() || read.fail())
+        {
+            criticalErr = true;
+            cerr << "Error reading request" << endl;
             return ERROR;
+        }
+
         getline(read, line);
     }
+    line = removeTrailingCR(line);
     req.setStartLine(line);
-    // Debugger::printVec("req.start_line", req.start_line);
     if (req.isStartLineValid() == ERROR)
     {
+        criticalErr = true;
         cout << "invalid Request" << endl;
         return ERROR;
     }
-    while(getline(read, line, '\r'))
+    while (getline(read, line))
     {
-        if(line.empty())
+        if (read.eof() || read.fail())
+        {
+            criticalErr = true;
+            cerr << "Error reading request" << endl;
+            return ERROR;
+        }
+        line = removeTrailingCR(line);
+        if (line.empty())
         {
             break;
         }
         req.setHeaders(line);
     }
+
+    // done parsing ********************
+
+
+
     if (!exists(req.headers, "host"))
     {
         cout << "no host ===> "  << endl;
@@ -336,8 +365,19 @@ int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
         sendErrToClient(cfd, 400, servNode);
         return ERROR;
     }
-    while(getline(read, line))
+    cout << "line [" << line << "]" << endl;
+    
+    while (getline(read, line))
+    {
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
+        if (line.empty())
+        {
+            break;
+        }
+        cout << "body [" << line << "]" << endl;
         req.setBody(line);
+    }
     cout << "*********************************************" << endl;
 
     string hostPort = getHostPort(req.headers["host"], servNode.port);
@@ -489,7 +529,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
 {
     int maxEvents = 1024;
     struct epoll_event events[maxEvents];
-    socklen_t clientAddrSize;
+    socklen_t clientAddrSize = sizeof(struct sockaddr);
     struct sockaddr clientAddr;
     map <int, int> clientServMap;
     while (1)

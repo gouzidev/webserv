@@ -81,7 +81,7 @@ void Request::setHeaders(string line) //needs checking for headers syntax
 
 void Request::setBody(string line) // must handle checked body if its in the headers, chunked according to the rfc is sending the number of bytes then sebding the bytes, when sending 0, indicates that its done :  // Send data as it's generated: send("5\r\n");        // Chunk size: 5 bytes,   send("Hello\r\n");    // Data: "Hello",   send("7\r\n");        // Chunk size: 7 bytes,    send(" World!\r\n");  // Data: " World!",    send("0\r\n\r\n");    // End chunks
 {
-    body.push_back(line);
+    body += line;
 }
 
 int Request::getReqType()

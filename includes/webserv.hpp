@@ -76,7 +76,7 @@ class Request
         vector <string> start_line; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
-        vector <string> body; // possible update for large files in post
+        string body; // possible update for large files in post
     public :
         int cfd; // client fd
         void setStartLine(string);
