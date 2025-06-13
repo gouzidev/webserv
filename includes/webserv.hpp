@@ -76,7 +76,7 @@ class Request
         vector <string> start_line; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
-        vector <string> body; // possible update for large files in post
+        string body; // possible update for large files in post
     public :
         int cfd; // client fd
         void setStartLine(string);
@@ -122,7 +122,6 @@ class ServerNode
         map <string, LocationNode> locationDict;
         map <unsigned short, string> errorNodes;
         long long clientMaxBodySize;
-
 };
 class WebServ
 {
@@ -143,7 +142,7 @@ class WebServ
         void handleServerBlock(ServerNode &servNode, vector <string> &tokens, size_t &lineNum);
         void handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum);
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
-        void GET_METHODE(Request req);
+        void GET_METHODE(Request req, ServerNode serverNode);
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);

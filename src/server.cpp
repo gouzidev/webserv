@@ -3,26 +3,17 @@
 
 string readFromFile(string path) // for html files
 {
-    cout << "hello" << endl;
-    try
+    cout << "hellotesr" << endl;
+    std::ifstream file(path.c_str());
+    if (file)
     {
-        std::ifstream file(path.c_str());
-        if (file)
+        string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+        while(content.find('\n') != string::npos)
         {
-            string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
-            while(content.find('\n') != string::npos)
-            {
-                int i = content.find('\n');
-                content.replace(i, 1, "\r\n");
-            }
-            return content;
+            int i = content.find('\n');
+            content.replace(i, 1, "\r\n");
         }
-        else
-            throw 404;
-    }
-    catch (...)
-    {
-        cout << "err" << endl;
+        return content;
     }
     return "";
 }
@@ -42,33 +33,6 @@ string getStatusMessage(unsigned short code)
         default: return "Unknown Error";
     }
 }
-
-void WebServ::GET_METHODE(Request req)
-{
-    const char *testResponse =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 13\r\n"
-    "\r\n"
-    "Hello, World!";
-    string requestedFile = readFromFile(req.resource);
-
-    
-    Response resp;
-    
-    resp.fullResponse = testResponse + requestedFile;
-    
-    send(req.cfd, resp.fullResponse.c_str(), resp.fullResponse.size(), 0);
-
-    // cerr << testResponse;
-
-}
-
-
-// the resource will be starting with a slash
-// this function will return the location of the resource in the server node, ex : 
-    // GET /auth/login HTTP/1.1
-    // location -> /auth
 string getLocation(string resource, ServerNode &servNode)
 {
     string location = resource;
@@ -88,6 +52,12 @@ string getLocation(string resource, ServerNode &servNode)
     cout << "location for the request is -> " << location << endl;
     return location;
 }
+
+
+// the resource will be starting with a slash
+// this function will return the location of the resource in the server node, ex : 
+// GET /auth/login HTTP/1.1
+// location -> /auth
 
 
 void urlFormParser(string body, map<string, string> &queryParms)
@@ -137,11 +107,36 @@ string getErrorResponse(unsigned short errorCode, string body = "")
     }
 }
 
+void WebServ::GET_METHODE(Request req, ServerNode servNode)
+{
+    string target = req.getResource();
+    string location = getLocation(target, servNode);
+    LocationNode node = servNode.locationDict.find(location)->second;
+    if (!exists(node.methods, string("GET")))
+    {
+        string errorRes  = getErrorResponse(404); // method not allowed 
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
+    cout << "location is [ " << location << " ]" << endl;
+    const char *testResponse =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 13\r\n"
+    "\r\n";
+    // "Hello, World!";
+    string requestedFile = readFromFile(req.resource);
+    Response resp;
+    resp.fullResponse = testResponse + requestedFile;
+    cout << "response is [ " << resp.fullResponse << " ]" << endl;
+    send(req.cfd, resp.fullResponse.c_str(), resp.fullResponse.size(), 0);
+    // cerr << testResponse;
+}
 
 void handleLogin(Request &req, ServerNode &serv)
 {
-    Debugger::printVec("request body", req.body);
-    string body = req.body[0];
+    // Debugger::printVec("request body", req.body);
+    string body = req.body;
 
     
     // if (body.find("email=") == body.npos || body.find("password=") == body.npos)
@@ -213,7 +208,7 @@ void WebServ::POST_METHODE(Request req, ServerNode servNode)
     "Successfull!";
     send(req.cfd, successResponse, strlen(successResponse), 0);
 
-    Debugger::printVec("request body", req.body);
+    // Debugger::printVec("request body", req.body);
     const char *testResponse =
     "HTTP/1.1 404 OK\r\n"
     "Content-Type: text/plain\r\n"
@@ -230,7 +225,7 @@ void WebServ::POST_METHODE(Request req, ServerNode servNode)
 void WebServ::answer_req(Request req, set <int> servSockets, ServerNode &servNode)
 {
     if (req.getReqType() == GET)
-        GET_METHODE(req);
+        GET_METHODE(req, servNode);
     else if (req.getReqType() == POST)
         POST_METHODE(req, servNode);
     // else if (req.getReqType() == DELETE)
