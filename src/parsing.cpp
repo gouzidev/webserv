@@ -1,5 +1,19 @@
-#include "../../includes/webserv.hpp"
-#include "../../includes/Debugger.hpp"
+#include "../includes/webserv.hpp"
+#include "../includes/Debugger.hpp"
+
+bool    checkFile(string filename, int perm)
+{
+    int fd = open(filename.c_str(), perm);
+    if (fd == -1)
+        return false;
+    close (fd);
+    return true;
+}
+
+bool    checkDir(string dirname, int dirStat)
+{
+    return access(dirname.c_str(), dirStat) == 0;
+}
 
 bool validHost(string hostStr, size_t &lineNum)
 {

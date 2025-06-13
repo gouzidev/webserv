@@ -26,7 +26,7 @@ LocationNode::LocationNode()
     autoIndex = true;
     root = "";
     path = "";
-    upload_path = "";
+    uploadPath = "";
 }
 
 WebServ::WebServ(char *filename)

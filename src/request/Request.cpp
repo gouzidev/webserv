@@ -3,8 +3,8 @@
 
 void Request::setStartLine(string line)
 {
-    start_line = split(line, ' ');
-    string location = start_line[1];
+    startLine = split(line, ' ');
+    string location = startLine[1];
     size_t posOfSep = location.find_first_of('?');
     if (posOfSep != location.npos)
     {
@@ -45,7 +45,7 @@ void Request::fillQuery(string queryStr)
 
 vector <string> & Request::getStartLine()
 {
-    return start_line;
+    return startLine;
 }
 
 map  <string ,string> & Request::getHeaders()
@@ -53,7 +53,7 @@ map  <string ,string> & Request::getHeaders()
     return headers;
 }
 
-int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
+int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 {
     string line;
     Request req;
@@ -142,7 +142,7 @@ int WebServ::parse_request(int cfd, set <int> servSockets, ServerNode &servNode)
         sendErrToClient(cfd, 500, servNode);
         return 0;
     }
-    answer_req(req, servSockets, servNode);
+    answerReq(req, servSockets, servNode);
     read.close();
     return 0;
 }
@@ -197,12 +197,12 @@ string removeTrailingCR(string str)
     return str;
 }
 
-void WebServ::answer_req(Request req, set <int> servSockets, ServerNode &servNode)
+void WebServ::answerReq(Request req, set <int> servSockets, ServerNode &servNode)
 {
     if (req.getReqType() == GET)
-        GET_METHODE(req, servNode);
+        getMethode(req, servNode);
     else if (req.getReqType() == POST)
-        POST_METHODE(req, servNode);
+        postMethode(req, servNode);
     // else if (req.getReqType() == DELETE)
     //     DELETE_METHODE(req);
 
@@ -242,7 +242,7 @@ void Request::setBody(string line) // must handle checked body if its in the hea
 
 int Request::getReqType()
 {
-    return req_type;
+    return reqType;
 }
 
 string getLocation(string resource, ServerNode &servNode)
@@ -303,28 +303,28 @@ void urlFormParser(string body, map<string, string> &queryParms)
 
 int Request::isStartLineValid()
 {
-    if (start_line.size() != 3)
+    if (startLine.size() != 3)
         return ERROR;
-    transform(start_line[0].begin(), start_line[0].end(), start_line[0].begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
-    if (start_line[0] == "GET")
+    transform(startLine[0].begin(), startLine[0].end(), startLine[0].begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
+    if (startLine[0] == "GET")
     {
         cout << "we got get" << endl;
-        req_type = GET;
+        reqType = GET;
     }
-    else if (start_line[0] == "POST")
-        req_type = POST;
-    else if (start_line[0] == "DELETE")
-        req_type = DELETE;
+    else if (startLine[0] == "POST")
+        reqType = POST;
+    else if (startLine[0] == "DELETE")
+        reqType = DELETE;
     else
         return ERROR;
-    if (start_line[1].find("/") != 0)
+    if (startLine[1].find("/") != 0)
     {
         cout << "invalid path" << endl;
         return ERROR;
     }
-    if (start_line[2].find("HTTP/1.1") == string::npos)
+    if (startLine[2].find("HTTP/1.1") == string::npos)
     {
-        cerr << "[ " << start_line[2] << " ] " << "invalid http ver" << endl;
+        cerr << "[ " << startLine[2] << " ] " << "invalid http ver" << endl;
         return ERROR;
     }
     return 0;

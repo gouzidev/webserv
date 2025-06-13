@@ -1,7 +1,6 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
 
-
 void handleLogin(Request &req, ServerNode &serv)
 {
     string body = req.body;
@@ -17,12 +16,12 @@ void handleLogin(Request &req, ServerNode &serv)
     string pw;
 }
 
-void WebServ::POST_METHODE(Request req, ServerNode servNode)
+void WebServ::postMethode(Request req, ServerNode servNode)
 {
     short responseCode;
     string responseText;
     string responseBody;
-    vector <string> start_line = req.getStartLine();
+    vector <string> startLine = req.getStartLine();
     ServerNode serv;
     string &location = req.getResource();
     map <string, string> &headers = req.getHeaders();

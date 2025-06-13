@@ -152,7 +152,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                 ServerNode serv = servSocketMap[servFd];
                 fillRequest(write1, readyFd);
                 write1.close();
-                parse_request(readyFd, servSockets, serv);
+                parseRequest(readyFd, servSockets, serv);
                 clientServMap.erase(readyFd);
                 epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
                 close(readyFd);

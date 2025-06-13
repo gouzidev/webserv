@@ -51,13 +51,13 @@ class Debugger
             if (locNode.redirect.first != 0)
                 cout << spaces << "  Redirect: " << locNode.redirect.first << " -> " << locNode.redirect.second << endl;
             
-            if (!locNode.upload_path.empty())
-                cout << spaces << "  Upload Path: " << locNode.upload_path << endl;
+            if (!locNode.uploadPath.empty())
+                cout << spaces << "  Upload Path: " << locNode.uploadPath << endl;
             
-            if (!locNode.cgi_exts.empty())
+            if (!locNode.cgiExts.empty())
             {
                 cout << spaces << "  CGI Extensions:" << endl;
-                for (map<string, string>::const_iterator it = locNode.cgi_exts.begin(); it != locNode.cgi_exts.end(); ++it)
+                for (map<string, string>::const_iterator it = locNode.cgiExts.begin(); it != locNode.cgiExts.end(); ++it)
                     cout << spaces << "    " << it->first << " -> " << it->second << endl;
             }
             

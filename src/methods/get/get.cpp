@@ -2,7 +2,7 @@
 #include "../../../includes/Debugger.hpp"
 
 
-void WebServ::GET_METHODE(Request req, ServerNode servNode)
+void WebServ::getMethode(Request req, ServerNode servNode)
 {
     string target = req.getResource();
     string location = getLocation(target, servNode);

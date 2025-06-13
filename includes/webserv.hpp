@@ -58,7 +58,7 @@ class Response
 {
     public :
         string fullResponse;
-        string status_line;
+        string statusLine;
         map <string, string> headers;
         vector <char> body;
         void setStatusLine();
@@ -71,9 +71,9 @@ class Request
 {
     public :
 
-        REQUEST req_type;
+        REQUEST reqType;
         string resource; // the resource is the path after the method in the request
-        vector <string> start_line; //possible update
+        vector <string> startLine; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
         string body; // possible update for large files in post
@@ -105,8 +105,8 @@ class LocationNode
         string root;
         vector <string> index;
         bool   autoIndex;
-        string upload_path;
-        map <string, string> cgi_exts;
+        string uploadPath;
+        map <string, string> cgiExts;
 };
 
 class ServerNode
@@ -142,14 +142,14 @@ class WebServ
         void handleServerBlock(ServerNode &servNode, vector <string> &tokens, size_t &lineNum);
         void handleLocationLine(LocationNode &locationNode, vector <string> &tokens, size_t &lineNum);
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
-        void GET_METHODE(Request req, ServerNode serverNode);
+        void getMethode(Request req, ServerNode serverNode);
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
-        void POST_METHODE(Request req, ServerNode servNode);
-        void answer_req(Request req, set <int> activeSockets, ServerNode &servNode);
-        int parse_request(int fd, set <int> activeSockets, ServerNode &servNode);
+        void postMethode(Request req, ServerNode servNode);
+        void answerReq(Request req, set <int> activeSockets, ServerNode &servNode);
+        int parseRequest(int fd, set <int> activeSockets, ServerNode &servNode);
         int server();
         int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
         int serverAsma();
