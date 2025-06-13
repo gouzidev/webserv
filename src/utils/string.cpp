@@ -1,4 +1,4 @@
-#include "../includes/webserv.hpp"
+#include "../../includes/webserv.hpp"
 
 bool    strAllDigit(string s)
 {
@@ -37,7 +37,6 @@ string trimSpaces(string text)
         return copy;
 }
 
-
 string trimWSpaces(string &text)
 {
         const char *ws = "\t\n\r\f\v ";
@@ -46,7 +45,6 @@ string trimWSpaces(string &text)
         copy.erase(0, copy.find_first_not_of(ws));
         return copy;
 }
-
 
 bool    isStrEq(string a, string b)
 {

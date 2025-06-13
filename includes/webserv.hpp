@@ -168,6 +168,23 @@ bool    checkDir(string dirname, int dirStat);
 bool validPath(string path);
 string ushortToStr(unsigned short port);
 
+string removeTrailingCR(string str);
+string getHostPort(string host, unsigned short port);
+
+bool fillRequest(ofstream &outputFile, int new_sock);
+
+void urlFormParser(string body, map<string, string> &queryParms);
+
+string getLocation(string resource, ServerNode &servNode);
+
+string getErrorResponse(unsigned short errorCode, string body);
+
+string readFromFile(string path); // for html files
+
+string getStatusMessage(unsigned short code);
+
+vector<string> splitNoSpace(string &str, char delim);
+
 bool exists(map <string, string> &m, string key);
 
 template <typename T>

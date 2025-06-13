@@ -1,14 +1,11 @@
-<<<<<<< HEAD
-=======
 POST /login HTTP/1.1
 Host: 127.0.0.1
 User-Agent: PostmanRuntime/7.44.0
 Accept: */*
-Postman-Token: 2d6ef1d3-bbb0-436f-9d6c-c81d52e34900
+Postman-Token: 0e03d92a-177e-4481-9d43-7eb0c188f39f
 Accept-Encoding: gzip, deflate, br
 Connection: keep-alive
 Content-Type: application/x-www-form-urlencoded
 Content-Length: 44
 
 email=salahgouzi11%40gmail.com&password=1234
->>>>>>> 9d99fe74f1fee12db0b33508de8cb844e37944db
