@@ -123,6 +123,26 @@ class ServerNode
         map <unsigned short, string> errorNodes;
         long long clientMaxBodySize;
 };
+
+class User
+{
+    private : 
+        string email;
+        string password;
+    public: 
+        User();
+        User(string email, string password);
+        const string &getEmail();
+        const string &getPassword();
+};
+
+// class Auth
+// {
+//     public:
+//         Auth();
+
+// };
+
 class WebServ
 {
     private:
@@ -130,8 +150,8 @@ class WebServ
         vector <ServerNode> servNodes;
         map <string, ServerNode> hostServMap; // this map host:port to some server node
         map <string, ServerNode> servNameServMap; // this map servName:port to some server node
-
-
+        bool logged;
+        User loggedUser;
         map < string, string> db; // email password db to manage users
     public:
         WebServ(char *confName);
@@ -152,8 +172,8 @@ class WebServ
         int parseRequest(int fd, set <int> activeSockets, ServerNode &servNode);
         int server();
         int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
-        int serverAsma();
-        // void readFile(ifstream file);
+        void urlFormParser(string body, map<string, string> &queryParms);
+        void handleLogin(Request &req, ServerNode &serv);
 };
 
 std::vector<std::string> split (const std::string &s, char delim);
@@ -173,7 +193,7 @@ string getHostPort(string host, unsigned short port);
 
 bool fillRequest(ofstream &outputFile, int new_sock);
 
-void urlFormParser(string body, map<string, string> &queryParms);
+
 
 string getLocation(string resource, ServerNode &servNode);
 

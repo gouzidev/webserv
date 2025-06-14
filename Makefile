@@ -16,6 +16,7 @@ FILES = $(SRC_DIR)/webserv.cpp \
         $(SRC_DIR)/utils/convert.cpp \
         $(SRC_DIR)/utils/path.cpp \
         $(SRC_DIR)/utils/string.cpp \
+        $(SRC_DIR)/utils/User.cpp \
         $(SRC_DIR)/server/server.cpp
 
 

@@ -1,19 +1,69 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
 
-void handleLogin(Request &req, ServerNode &serv)
+void WebServ::handleLogin(Request &req, ServerNode &serv)
 {
-    string body = req.body;
+    const char *generalErrorResponse =
+    "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 13\r\n"
+    "\r\n"
+    "Server Error";
 
-    
-    // if (body.find("email=") == body.npos || body.find("password=") == body.npos)
-    // {
-    //     getErrorResponse(400, "please provide an email and password");
-    // }
+    string body = req.body;
+    if (body.find("email=") == body.npos || body.find("password=") == body.npos)
+    {
+        getErrorResponse(400, "please provide an email and password");
+    }
+    cout << "[" << body << "]" << endl;
     map < string , string > queryParams;
     urlFormParser(body, queryParams);
-    string email;
-    string pw;
+    if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
+    {
+        sendErrToClient(req.cfd, 400, serv);
+        return ;
+    }
+    string email = queryParams["email"];
+    string password = queryParams["password"];
+
+    cout << "received email: " << email << endl;
+    cout << "received password: " << password << endl;
+    if (!exists(db, email))
+    {
+        cout << "email not found in db" << endl;
+        sendErrToClient(req.cfd, 404, serv);
+        return ;
+    }
+    string dbPassword = db[email];
+    if (dbPassword != password)
+    {
+        cout << "password does not match" << endl;
+        sendErrToClient(req.cfd, 403, serv);
+        return ;
+    }
+    cout << "user logged in successfully" << endl;
+    logged = true;
+    loggedUser = User(email, password);
+
+    ifstream dashboardFile;
+    dashboardFile.open("/home/sgouzi/prj/webserv/www/auth/dashboard.html");
+    if (dashboardFile.fail())
+    {
+        cerr << "Error happened opening the file of dashboard" << endl;
+        send(req.cfd, generalErrorResponse, strlen(generalErrorResponse), 0);
+        return ;
+    }
+    string line, dashboardContent = "";
+    while (getline(dashboardFile, line))
+    {
+        dashboardContent += line + "\r\n";
+    }
+    string response;
+    response += "HTTP/1.1 " + ushortToStr(200) + " " + getStatusMessage(200) + " \r\n";
+    response +=  "Content-Type: text/html\r\n";
+    response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
+    response += dashboardContent;
+    send(req.cfd, response.c_str(), response.length(), 0);
 }
 
 void WebServ::postMethode(Request req, ServerNode servNode)

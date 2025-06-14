@@ -6,6 +6,7 @@ string readFromFile(string path) // for html files
     std::ifstream file(path.c_str());
     if (file)
     {
+        cout << "Reading file: " << path << endl;
         string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
         while(content.find('\n') != string::npos)
         {
@@ -13,6 +14,11 @@ string readFromFile(string path) // for html files
             content.replace(i, 1, "\r\n");
         }
         return content;
+    }
+    else
+    {
+        cout << "Error opening file: " << path << endl;
+        return "";
     }
     return "";
 }
@@ -48,11 +54,13 @@ string getErrorResponse(unsigned short errorCode, string body)
         errorRes +=  "Content-Length: " + ushortToStr(body.size()) + "\r\n\r\n";
         errorRes += body;
     }
+    return errorRes;
 }
 
 
 void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
 {
+    cout << "Sending error response to client: " << errCode  << "   for client " << clientfd << endl;;
     string errorRes;
     const char *generalErrorResponse =
         "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n"
@@ -62,6 +70,7 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
         "Server Error";
     if (exists(servNode.errorNodes, errCode)) 
     {
+        cout << "Error code found in error nodes, sending specific error response" << endl;
         string errorFileStr = servNode.errorNodes.find(errCode)->second;
         cout << errorFileStr << endl;
         if (!validPath(errorFileStr) || !checkFile(errorFileStr, O_RDONLY))
@@ -93,6 +102,8 @@ void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &
     }
     else
     {
+        cout << "Error code not found in error nodes, sending general error response" << endl;
+        cout << "sending -> " << generalErrorResponse << endl;
         send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
     }
 }

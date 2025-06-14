@@ -32,6 +32,7 @@ LocationNode::LocationNode()
 WebServ::WebServ(char *filename)
 {
     criticalErr = false;
+    db["salahgouzi11@gmail.com"] = "1234";
     parsing(filename);
     if (!criticalErr)
         server();
@@ -40,6 +41,7 @@ WebServ::WebServ(char *filename)
 WebServ::WebServ(string filename)
 {
     criticalErr = false;
+    db["salahgouzi11@gmail.com"] = "1234";
     char *filename2 = const_cast<char *> (filename.c_str());
     parsing(filename2);
     if (!criticalErr)

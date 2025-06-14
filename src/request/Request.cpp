@@ -269,34 +269,68 @@ string getLocation(string resource, ServerNode &servNode)
 // this function will return the location of the resource in the server node, ex : 
 // GET /auth/login HTTP/1.1
 // location -> /auth
-void urlFormParser(string body, map<string, string> &queryParms)
+
+int hexCharToInt(char c) {
+    
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;   // A-F
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;   // a-f
+    else
+        return c - '0';        // 0-9
+}
+
+char decodeHex(string &str, size_t &idx)
 {
-    cout << "body ---->>> " << body << endl;
-    return ;
+    char decoded = '%';
+    if (idx + 2 < str.size())
+    {
+        int digit1 = hexCharToInt(str[idx + 1]);
+        int digit2 = hexCharToInt(str[idx + 2]);
+        if (digit1 >= 0 && digit2 >= 0) {
+            int asciiValue = digit1 * 16 + digit2;
+            decoded = (char)asciiValue;
+            idx += 2;
+        } else {
+            decoded = str[idx]; // Invalid hex, keep the %
+        }
+    }
+    else
+        decoded = str[idx];
+    return decoded;
+}
+
+void WebServ::urlFormParser(string str, map <string, string> &queryParms)
+{
     string temp = "";
     string key = "";
     size_t i = 0;
-    while (i < body.size())
+    while (i < str.size())
     {
-        if (body[i] == '=')
+        if (str[i] == '=')
         {
             key = temp;
             temp = "";
         }
-        else if (body[i] == '&')
+        else if (str[i] == '&')
         {
             queryParms[key] = temp;
             cout << "key: " << key << " value: " << temp << endl;
             key = "";
             temp = "";
         }
+        else if (str[i] == '%')
+        {
+            temp += decodeHex(str, i);
+        }
         else
         {
-            temp += body[i];
+            temp += str[i];
         }
         i++;
     }
-    cout << "done " << endl;
+    if (!key.empty())
+        queryParms[key] = temp;
     Debugger::printMap("queryParms", queryParms);
 }
 
