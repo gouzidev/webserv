@@ -4,6 +4,7 @@
         "*.php": "php",
         "*.blade.php": "blade",
         "ostream": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "optional": "cpp"
     }
 }

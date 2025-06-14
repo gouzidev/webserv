@@ -128,31 +128,37 @@ class User
 {
     private : 
         string email;
+        string firstName;
+        string lastName;
         string password;
     public: 
         User();
         User(string email, string password);
-        const string &getEmail();
-        const string &getPassword();
+        User(string fName, string lName, string email, string password);
+        const string &getEmail() const;
+        const string &getFirstName() const;
+        const string &getLastName() const;
+        const string &getPassword() const;
+
+        void setEmail(string str);
+        void setFirstName(string str);
+        void setLastName(string str);
+        void setPassword(string str);
 };
 
-// class Auth
-// {
-//     public:
-//         Auth();
 
-// };
 
 class WebServ
 {
     private:
+        class Auth;
         bool    criticalErr;
         vector <ServerNode> servNodes;
         map <string, ServerNode> hostServMap; // this map host:port to some server node
         map <string, ServerNode> servNameServMap; // this map servName:port to some server node
         bool logged;
         User loggedUser;
-        map < string, string> db; // email password db to manage users
+        map < string, User> users; //  map of email to user
     public:
         WebServ(char *confName);
         WebServ(string filename);

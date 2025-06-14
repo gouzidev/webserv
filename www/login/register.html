@@ -352,20 +352,6 @@
                 <div class="error-message" id="confirmPasswordError">Passwords do not match</div>
             </div>
 
-            <div class="checkbox-group">
-                <input 
-                    type="checkbox" 
-                    id="terms" 
-                    name="terms" 
-                    class="checkbox-input"
-                    required
-                >
-                <label for="terms" class="checkbox-label">
-                    I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>
-                </label>
-            </div>
-            <div class="error-message" id="termsError">Please accept the terms and conditions</div>
-
             <button type="submit" class="register-button" id="submitBtn">
                 Create Account
                 <span class="loading" id="loading"></span>
@@ -397,7 +383,6 @@
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const confirmPasswordInput = document.getElementById('confirmPassword');
-        const termsInput = document.getElementById('terms');
         
         // Error elements
         const firstNameError = document.getElementById('firstNameError');
@@ -516,12 +501,6 @@
                 isValid = false;
             } else {
                 confirmPasswordInput.style.borderColor = '#27ae60';
-            }
-            
-            // Validate terms
-            if (!termsInput.checked) {
-                termsError.style.display = 'block';
-                isValid = false;
             }
             
             return isValid;

@@ -28,13 +28,13 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
 
     cout << "received email: " << email << endl;
     cout << "received password: " << password << endl;
-    if (!exists(db, email))
+    if (!exists(users, email))
     {
-        cout << "email not found in db" << endl;
+        cout << "email not found in users" << endl;
         sendErrToClient(req.cfd, 404, serv);
         return ;
     }
-    string dbPassword = db[email];
+    string dbPassword = users[email].getPassword();
     if (dbPassword != password)
     {
         cout << "password does not match" << endl;
@@ -43,7 +43,7 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     }
     cout << "user logged in successfully" << endl;
     logged = true;
-    loggedUser = User(email, password);
+    loggedUser = users[email];
 
     ifstream dashboardFile;
     dashboardFile.open("/home/sgouzi/prj/webserv/www/auth/dashboard.html");
