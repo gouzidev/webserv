@@ -98,6 +98,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
     socklen_t clientAddrSize = sizeof(struct sockaddr);
     struct sockaddr clientAddr;
     map <int, int> clientServMap;
+    time_t lastCleanup = time(0);
     while (1)
     {
         int nfds = epoll_wait(epollfd, events, maxEvents, -1);
@@ -157,6 +158,14 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                 epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
                 close(readyFd);
             }
+        }
+
+
+        time_t now = time(0);
+        if (now - lastCleanup > 300)
+        {
+            auth->cleanUpSessions();
+            lastCleanup = now;
         }
     }
 }

@@ -1,6 +1,8 @@
 #ifndef WEBSERV_HPP
 #define WEBSERV_HPP
 
+#include "Auth.hpp"
+
 
 #include <errno.h>  // strictly forbidden, must remove later 
 
@@ -82,6 +84,7 @@ class Request
         void setStartLine(string);
         void setHeaders(string line);
         void setBody(string line);
+        string getSessionKey();
         int isStartLineValid();
         int getReqType();
         string & getResource();
@@ -127,7 +130,10 @@ class ServerNode
 class User
 {
     private : 
+        static unsigned int userCount;
+        unsigned int id;
         string email;
+        string userName;
         string firstName;
         string lastName;
         string password;
@@ -135,6 +141,7 @@ class User
         User();
         User(string email, string password);
         User(string fName, string lName, string email, string password);
+        User(string fName, string lName, string userName, string email, string password);
         const string &getEmail() const;
         const string &getFirstName() const;
         const string &getLastName() const;
@@ -146,22 +153,39 @@ class User
         void setPassword(string str);
 };
 
+class Session
+{
+    private:
+        User &user;
+        string key;
+        long int expiredAt; // in seconds
+        long int createdAt; // in seconds
+    public:
+        Session(User &user);
+        User &getUser();
+        string &getKey();
+        long int const &getExpiredAt() const;
+        long int const &getCreatedAt() const;
+        string generateSessionKey(const string &email);
+        Session &operator=(const Session &session);
+};
 
 
 class WebServ
 {
     private:
-        class Auth;
         bool    criticalErr;
         vector <ServerNode> servNodes;
         map <string, ServerNode> hostServMap; // this map host:port to some server node
         map <string, ServerNode> servNameServMap; // this map servName:port to some server node
         bool logged;
         User loggedUser;
-        map < string, User> users; //  map of email to user
+        Auth* auth; // auth instance (will manage the login and users)
     public:
         WebServ(char *confName);
+        ~WebServ();
         WebServ(string filename);
+        char *generalErrorResponse;
         vector <ServerNode> parsing(char *filename);
         ServerNode parseServer(ifstream &configFile, size_t &lineNum);
         void handleServerLine(ServerNode &servNode, ifstream &configFile, vector <string> &tokens, string &line, size_t &lineNum);
@@ -172,7 +196,6 @@ class WebServ
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
-        void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
         void postMethode(Request req, ServerNode servNode);
         void answerReq(Request req, set <int> activeSockets, ServerNode &servNode);
         int parseRequest(int fd, set <int> activeSockets, ServerNode &servNode);
@@ -180,8 +203,12 @@ class WebServ
         int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
         void handleLogin(Request &req, ServerNode &serv);
+        void handleSignup(Request &req, ServerNode &serv);
+        void handleLogout(Request &req, ServerNode &serv);
 };
 
+
+void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
 std::vector<std::string> split (const std::string &s, char delim);
 string trimWSpaces(string &text);
 string trimSpaces(string &text);
@@ -212,6 +239,8 @@ string getStatusMessage(unsigned short code);
 vector<string> splitNoSpace(string &str, char delim);
 
 bool exists(map <string, string> &m, string key);
+
+bool strHas(string str, string sub);
 
 template <typename T>
 bool exists(map <T, T> &m, T key)

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebServ - Register</title>
+    <title>WebServ - Sign Up</title>
     <style>
         * {
             margin: 0;
@@ -21,7 +21,7 @@
             padding: 20px;
         }
 
-        .register-container {
+        .signup-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
@@ -32,12 +32,12 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .register-header {
+        .signup-header {
             text-align: center;
             margin-bottom: 30px;
         }
 
-        .register-title {
+        .signup-title {
             color: #333;
             font-size: 2.5rem;
             font-weight: 700;
@@ -48,7 +48,7 @@
             background-clip: text;
         }
 
-        .register-subtitle {
+        .signup-subtitle {
             color: #666;
             font-size: 1rem;
             font-weight: 400;
@@ -90,7 +90,7 @@
             color: #aaa;
         }
 
-        .register-button {
+        .signup-button {
             width: 100%;
             padding: 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -106,12 +106,12 @@
             margin-top: 10px;
         }
 
-        .register-button:hover {
+        .signup-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
         }
 
-        .register-button:active {
+        .signup-button:active {
             transform: translateY(0);
         }
 
@@ -176,12 +176,12 @@
         .strong { background: #27ae60; }
 
         @media (max-width: 480px) {
-            .register-container {
+            .signup-container {
                 margin: 10px;
                 padding: 30px 25px;
             }
             
-            .register-title {
+            .signup-title {
                 font-size: 2rem;
             }
         }
@@ -255,13 +255,13 @@
     </style>
 </head>
 <body>
-    <div class="register-container">
-        <div class="register-header">
-            <h1 class="register-title">Join WebServ</h1>
-            <p class="register-subtitle">Create your account to get started.</p>
+    <div class="signup-container">
+        <div class="signup-header">
+            <h1 class="signup-title">Join WebServ</h1>
+            <p class="signup-subtitle">Create your account to get started.</p>
         </div>
 
-        <form method="POST" action="http://127.0.0.1:8080/register" id="registerForm">
+        <form method="POST" action="http://127.0.0.1:8080/signup" id="signupForm">
             <div class="form-row">
                 <div class="form-group">
                     <label for="firstName" class="form-label">First Name</label>
@@ -270,6 +270,7 @@
                         id="firstName" 
                         name="firstName" 
                         class="form-input" 
+                        value="asma"
                         placeholder="John"
                         required
                     >
@@ -283,6 +284,7 @@
                         type="text" 
                         id="lastName" 
                         name="lastName" 
+                        value="koraichi"
                         class="form-input" 
                         placeholder="Doe"
                         required
@@ -293,12 +295,13 @@
             </div>
 
             <div class="form-group">
-                <label for="username" class="form-label">Username</label>
+                <label for="userName" class="form-label">Username</label>
                 <input 
                     type="text" 
-                    id="username" 
-                    name="username" 
+                    id="userName" 
+                    name="userName" 
                     class="form-input" 
+                    value="akoraich"
                     placeholder="johndoe"
                     required
                 >
@@ -313,7 +316,8 @@
                     id="email" 
                     name="email" 
                     class="form-input" 
-                    placeholder="john@example.com"
+                    placeholder="akoraich@example.com"
+                    value="akoraich@example.com"
                     required
                 >
                 <span class="input-icon">📧</span>
@@ -327,6 +331,7 @@
                     id="password" 
                     name="password" 
                     class="form-input" 
+                    value="password123"
                     placeholder="Enter a strong password"
                     required
                 >
@@ -345,6 +350,7 @@
                     id="confirmPassword" 
                     name="confirmPassword" 
                     class="form-input" 
+                    value="password123"
                     placeholder="Confirm your password"
                     required
                 >
@@ -352,7 +358,7 @@
                 <div class="error-message" id="confirmPasswordError">Passwords do not match</div>
             </div>
 
-            <button type="submit" class="register-button" id="submitBtn">
+            <button type="submit" class="signup-button" id="submitBtn">
                 Create Account
                 <span class="loading" id="loading"></span>
             </button>
@@ -372,14 +378,14 @@
     </div>
 
     <script>
-        const registerForm = document.getElementById('registerForm');
+        const signupForm = document.getElementById('signupForm');
         const submitBtn = document.getElementById('submitBtn');
         const loading = document.getElementById('loading');
         
         // Form inputs
         const firstNameInput = document.getElementById('firstName');
         const lastNameInput = document.getElementById('lastName');
-        const usernameInput = document.getElementById('username');
+        const usernameInput = document.getElementById('userName');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const confirmPasswordInput = document.getElementById('confirmPassword');
@@ -405,8 +411,8 @@
             return re.test(email);
         }
 
-        function validateUsername(username) {
-            return username.length >= 3 && username.length <= 20;
+        function validateUsername(userName) {
+            return userName.length >= 3 && userName.length <= 20;
         }
 
         function validatePassword(password) {
@@ -467,7 +473,7 @@
                 lastNameInput.style.borderColor = '#27ae60';
             }
             
-            // Validate username
+            // Validate userName
             if (!validateUsername(usernameInput.value)) {
                 usernameError.style.display = 'block';
                 usernameInput.style.borderColor = '#e74c3c';
@@ -563,7 +569,7 @@
         });
 
         // Form submission
-        registerForm.addEventListener('submit', function(e) {
+        signupForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
             if (!validateForm()) {
@@ -590,8 +596,8 @@
                 // Actually submit the form after showing success
                 setTimeout(() => {
                     this.submit();
-                }, 1500);
-            }, 2000);
+                }, 200);
+            }, 500);
         });
 
         // Add interactive effects

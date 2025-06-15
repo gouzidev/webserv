@@ -17,7 +17,9 @@ FILES = $(SRC_DIR)/webserv.cpp \
         $(SRC_DIR)/utils/path.cpp \
         $(SRC_DIR)/utils/string.cpp \
         $(SRC_DIR)/utils/User.cpp \
-        $(SRC_DIR)/server/server.cpp
+        $(SRC_DIR)/server/server.cpp \
+        $(SRC_DIR)/server/Auth.cpp \
+        $(SRC_DIR)/server/Session.cpp
 
 
 OBJ = $(FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

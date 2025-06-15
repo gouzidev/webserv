@@ -1,10 +1,34 @@
-#include "../includes/webserv.hpp"
+#ifndef AUTH_HPP
+#define AUTH_HPP
 
-class WebServ::Auth
+using namespace std;
+
+#include "../includes/webserv.hpp"
+#include <map>
+#include <string>
+
+class User;
+class Session;
+class Request;
+class ServerNode;
+class WebServ;
+
+
+class Auth
 {
     public:
-        void login(Request &req, ServerNode &serv);
-        
+        char *generalErrorResponse;
+        void login(int cfd, string email, string password, ServerNode &serv);
+        void signup(int cfd, string fName, string lName, string userName, string email, string password, ServerNode &serv);
+        void logout(int cfd, string sessionKey, ServerNode &serv);
+        void cleanUpSessions();
+        void redirectToLogin(int cfd, int errorCode);
         Auth();
+        map < string, User> &getUsers();
+    private: 
+        map < string, User> users;
+        map <string, Session> sessions;
 
 };
+
+#endif

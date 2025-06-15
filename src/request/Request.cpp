@@ -331,9 +331,7 @@ void WebServ::urlFormParser(string str, map <string, string> &queryParms)
     }
     if (!key.empty())
         queryParms[key] = temp;
-    Debugger::printMap("queryParms", queryParms);
 }
-
 
 int Request::isStartLineValid()
 {

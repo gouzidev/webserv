@@ -3,7 +3,7 @@
 set <string> LocationNode::possibleCgiExts;
 set <string> LocationNode::possibleMethods;
 
-
+unsigned int User::userCount;
 
 ServerNode::ServerNode()
 {
@@ -29,11 +29,15 @@ LocationNode::LocationNode()
     uploadPath = "";
 }
 
+
 WebServ::WebServ(char *filename)
 {
+    generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";
+   
     criticalErr = false;
-    User admin("salah", "gouzi", "salahgouzi11@gmail.com", "1234");
-    users[admin.getEmail()] = admin;
+    auth = new Auth();
+    
+    
     parsing(filename);
     if (!criticalErr)
         server();
@@ -41,13 +45,33 @@ WebServ::WebServ(char *filename)
 
 WebServ::WebServ(string filename)
 {
+    generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";
     criticalErr = false;
     User admin("salah", "gouzi", "salahgouzi11@gmail.com", "1234");
-    users[admin.getEmail()] = admin;
+    auth = new Auth();
     char *filename2 = const_cast<char *> (filename.c_str());
     parsing(filename2);
     if (!criticalErr)
         server();
+}
+
+WebServ::~WebServ()
+{
+    delete auth;
+}
+
+string Request::getSessionKey()
+{
+    if (!exists(headers, "cookie")) // its stored in lowercase
+        return "";
+    string cookie = headers["cookie"];
+
+    if (!strHas(cookie, "sessionId="))
+        return "";
+    
+    size_t pos = cookie.find('=');
+    string sessionKey = cookie.substr(pos + 1);
+    return sessionKey;
 }
 
 int main(int ac, char **av)

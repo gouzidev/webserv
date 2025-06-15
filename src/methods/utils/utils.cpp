@@ -30,6 +30,7 @@ string getStatusMessage(unsigned short code)
         case 401: return "Unauthorized";
         case 403: return "Forbidden"; 
         case 404: return "Not Found";
+        case 409: return "Conflict";
         case 405: return "Method Not Allowed";
         case 500: return "Internal Server Error";
         case 502: return "Bad Gateway";
@@ -58,7 +59,7 @@ string getErrorResponse(unsigned short errorCode, string body)
 }
 
 
-void WebServ::sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
+void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
 {
     cout << "Sending error response to client: " << errCode  << "   for client " << clientfd << endl;;
     string errorRes;

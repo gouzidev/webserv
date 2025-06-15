@@ -3,19 +3,15 @@
 
 void WebServ::handleLogin(Request &req, ServerNode &serv)
 {
-    const char *generalErrorResponse =
-    "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 13\r\n"
-    "\r\n"
-    "Server Error";
+    string errorRes;
 
     string body = req.body;
-    if (body.find("email=") == body.npos || body.find("password=") == body.npos)
+    if (!strHas(body, "email=") || !strHas(body, "password="))
     {
-        getErrorResponse(400, "please provide an email and password");
+        errorRes = getErrorResponse(400, "please provide an email and password");
+        send(req.cfd, errorRes.c_str(), strlen(errorRes.c_str()), 0);
+        return ;
     }
-    cout << "[" << body << "]" << endl;
     map < string , string > queryParams;
     urlFormParser(body, queryParams);
     if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
@@ -26,45 +22,51 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     string email = queryParams["email"];
     string password = queryParams["password"];
 
-    cout << "received email: " << email << endl;
-    cout << "received password: " << password << endl;
-    if (!exists(users, email))
-    {
-        cout << "email not found in users" << endl;
-        sendErrToClient(req.cfd, 404, serv);
-        return ;
-    }
-    string dbPassword = users[email].getPassword();
-    if (dbPassword != password)
-    {
-        cout << "password does not match" << endl;
-        sendErrToClient(req.cfd, 403, serv);
-        return ;
-    }
-    cout << "user logged in successfully" << endl;
-    logged = true;
-    loggedUser = users[email];
-
-    ifstream dashboardFile;
-    dashboardFile.open("/home/sgouzi/prj/webserv/www/auth/dashboard.html");
-    if (dashboardFile.fail())
-    {
-        cerr << "Error happened opening the file of dashboard" << endl;
-        send(req.cfd, generalErrorResponse, strlen(generalErrorResponse), 0);
-        return ;
-    }
-    string line, dashboardContent = "";
-    while (getline(dashboardFile, line))
-    {
-        dashboardContent += line + "\r\n";
-    }
-    string response;
-    response += "HTTP/1.1 " + ushortToStr(200) + " " + getStatusMessage(200) + " \r\n";
-    response +=  "Content-Type: text/html\r\n";
-    response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
-    response += dashboardContent;
-    send(req.cfd, response.c_str(), response.length(), 0);
+    auth->login(req.cfd, email, password, serv);
 }
+
+void WebServ::handleSignup(Request &req, ServerNode &serv)
+{
+    string errorRes;
+
+    string body = req.body;
+    if (!strHas(body, "firstName=") || !strHas(body, "lastName=")
+        || !strHas(body, "email=") || !strHas(body, "password="))
+    {
+        errorRes = getErrorResponse(400, "please provide an email and password");
+        send(req.cfd, errorRes.c_str(), strlen(errorRes.c_str()), 0);
+        return ;
+    }
+    map < string , string > queryParams;
+    urlFormParser(body, queryParams);
+    if (!exists(queryParams, string("firstName")) || !exists(queryParams, string("lastName"))
+        || !exists(queryParams, string("email")) || !exists(queryParams, string("password"))
+        )
+    {
+        sendErrToClient(req.cfd, 400, serv);
+        return ;
+    }
+    string userName;
+    if (exists(queryParams, "userName"))
+        userName = queryParams["userName"];
+    string fName = queryParams["firstName"];
+    string lName = queryParams["lastName"];
+    string email = queryParams["email"];
+    string password = queryParams["password"];
+
+    auth->signup(req.cfd, fName, userName, lName, email, password, serv);
+}
+
+
+void WebServ::handleLogout(Request &req, ServerNode &serv)
+{
+    string errorRes;
+
+    string sessionKey = req.getSessionKey();
+    
+    auth->logout(req.cfd, sessionKey, serv);
+}
+
 
 void WebServ::postMethode(Request req, ServerNode servNode)
 {
@@ -115,24 +117,30 @@ void WebServ::postMethode(Request req, ServerNode servNode)
 
     if (contentType == "application/x-www-form-urlencoded")
     {
-        handleLogin(req, serv);
+        cout << "locationTarget -> " << locationTarget << endl;
+        if (locationTarget == "/login")
+            handleLogin(req, serv);
+        else if (locationTarget == "/signup")
+            handleSignup(req, serv);
+        else if (locationTarget == "/logout")
+            handleLogout(req, serv);
     }
-    const char *successResponse =
-    "HTTP/1.1 404 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 12\r\n"
-    "\r\n"
-    "Successfull!";
-    send(req.cfd, successResponse, strlen(successResponse), 0);
+    // const char *successResponse =
+    // "HTTP/1.1 404 OK\r\n"
+    // "Content-Type: text/plain\r\n"
+    // "Content-Length: 12\r\n"
+    // "\r\n"
+    // "Successfull!";
+    // send(req.cfd, successResponse, strlen(successResponse), 0);
 
-    cout << "BODY -> " << req.body << endl;
-    const char *testResponse =
-    "HTTP/1.1 404 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 12\r\n"
-    "\r\n"
-    "bad request!";
-    send(req.cfd, testResponse, strlen(testResponse), 0);
+    // cout << "BODY -> " << req.body << endl;
+    // const char *testResponse =
+    // "HTTP/1.1 404 OK\r\n"
+    // "Content-Type: text/plain\r\n"
+    // "Content-Length: 12\r\n"
+    // "\r\n"
+    // "bad request!";
+    // send(req.cfd, testResponse, strlen(testResponse), 0);
 
 
     // cerr << testResponse;
