@@ -16,8 +16,6 @@ User::User(string email, string password)
     this->email = email;
     this->password = password;
     userCount++;
-    cout << "User with data : " << email << " created with id: " << id << endl;
-    cout << "User count is now: " << userCount << endl;
 }
 
 User::User(string fName, string lName, string email, string password)
@@ -29,8 +27,6 @@ User::User(string fName, string lName, string email, string password)
     this->email = email;
     this->password = password;
     userCount++;
-    cout << "User with data : " << fName << " " << lName << " " << email << " " << password << " created with id: " << id << endl;
-    cout << "User count is now: " << userCount << endl;
 }
 
 User::User(string fName, string lName, string userName, string email, string password)
@@ -42,8 +38,6 @@ User::User(string fName, string lName, string userName, string email, string pas
     this->email = email;
     this->password = password;
     userCount++;
-    cout << "User with data : " << fName << " " << lName << " " << email << " " << password << " created with id: " << id << endl;
-    cout << "User count is now: " << userCount << endl;
 }
 
 const string &User::getEmail() const

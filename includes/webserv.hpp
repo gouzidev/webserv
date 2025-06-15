@@ -108,7 +108,8 @@ class LocationNode
         string root;
         vector <string> index;
         bool   autoIndex;
-        string uploadPath;
+        string uploadDir;
+        long long clientMaxBodySize;
         map <string, string> cgiExts;
 };
 
@@ -205,6 +206,7 @@ class WebServ
         void handleLogin(Request &req, ServerNode &serv);
         void handleSignup(Request &req, ServerNode &serv);
         void handleLogout(Request &req, ServerNode &serv);
+        void handleUplaod(Request &req, ServerNode &servNode, LocationNode &locationNode);
 };
 
 

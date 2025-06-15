@@ -150,7 +150,7 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
             criticalErr = true;
             return ;
         }
-        if (locationNode.uploadPath != "")
+        if (locationNode.uploadDir != "")
         {
             cerr << "config error, can't have more than 1 upload_dir at line: " << lineNum << endl;
             criticalErr = true;
@@ -162,7 +162,35 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
             criticalErr = true;
             return ;
         }
-        locationNode.uploadPath = tokens[1];
+        locationNode.uploadDir = tokens[1];
+    }
+    else if (tokens[0] == "client_max_body_size")
+    {
+        if (tokens.size() != 2 || tokens[1].size() < 1)
+        {
+            cerr << "client_max_body_size syntax is wrong please provide a size in megabytes at line': " << lineNum << endl;
+            criticalErr = true;
+        }
+        if (locationNode.clientMaxBodySize != 0)
+        {
+            cerr << "config error, can't have more than 1 client_max_body_size at line: " << lineNum << endl;
+            criticalErr = true;
+            return ;
+        }
+        char last = tokens[1][tokens[1].size() - 1];
+        if (last != 'm' && last != 'M')
+        {
+            cerr << "client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m) at line': " << lineNum << endl;
+            criticalErr = true;
+        }
+        string clientMaxSizeStr = tokens[1].substr(0, tokens[1].size() - 1);
+        if (!strAllDigit(clientMaxSizeStr))
+        {
+            cerr << "client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m)' at line: " << lineNum << endl;
+            criticalErr = true;
+        }
+        istringstream clientMaxSize (clientMaxSizeStr);
+        clientMaxSize >> locationNode.clientMaxBodySize;
     }
     else if (tokens[0] == "cgi_path")
     {

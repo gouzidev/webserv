@@ -60,8 +60,6 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 
     req.cfd = cfd;
     ifstream read("Request");
-    cout << "*********************************************" << endl;
-    
     if (read.fail())
     {
         cerr << "[ " << line << " ]" << "wtf" << endl;
@@ -111,32 +109,22 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 
     if (!exists(req.headers, "host"))
     {
-        cout << "no host ===> "  << endl;
         Debugger::printMap("req.headers", req.headers);
         sendErrToClient(cfd, 400, servNode);
         return ERROR;
     }
-    cout << "line [" << line << "]" << endl;
-    
     while (getline(read, line))
     {
         if (!line.empty() && line[line.size() - 1] == '\r')
             line.erase(line.size() - 1);
-        if (line.empty())
+        req.setBody(line);
+        cout << "body [" << line << "]" << endl;
+        if (read.eof())
         {
             break;
         }
-        cout << "body [" << line << "]" << endl;
-        req.setBody(line);
     }
-    cout << "*********************************************" << endl;
-
     string hostPort = getHostPort(req.headers["host"], servNode.port);
-    // Debugger::printServerNode(servNode);
-    //    501 (Not Implemented) if the method is
-    //    unrecognized or not implemented by the origin server
-
-    cout << "hostPort: " << hostPort << endl;
     if (!exists(hostServMap, hostPort))
     {
         sendErrToClient(cfd, 500, servNode);
@@ -166,7 +154,6 @@ bool fillRequest(ofstream &outputFile, int new_sock)
 
     ifstream read("Request");
     string line;
-    cout << "*********************************************" << endl;
     getline(read, line);
     if (read.fail())
     {
@@ -184,8 +171,6 @@ bool fillRequest(ofstream &outputFile, int new_sock)
     }
     while(getline(read, line))
         cout << (line);
-    cout << "*********************************************" << endl;
-
     return (1);
 
 }
@@ -261,7 +246,6 @@ string getLocation(string resource, ServerNode &servNode)
         if (exists(servNode.locationDict, defaultLocation))
             return defaultLocation;
     }
-    cout << "location for the request is -> " << location << endl;
     return location;
 }
 

@@ -4,7 +4,9 @@
         "*.php": "php",
         "*.blade.php": "blade",
         "ostream": "cpp",
+        "iosfwd": "cpp",
         "string": "cpp",
-        "optional": "cpp"
+        "iostream": "cpp",
+        "format": "cpp"
     }
 }
