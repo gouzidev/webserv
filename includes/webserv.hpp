@@ -50,7 +50,9 @@ using namespace std;
 #define DELETE 2
 #define other 3
 
-#define BUFFERSIZE 1024
+
+
+#define BUFFSIZE 64000
 
 #define ERROR  1
 

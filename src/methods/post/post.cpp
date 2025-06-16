@@ -60,12 +60,10 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
 
 void WebServ::handleLogout(Request &req, ServerNode &serv)
 {
-    string errorRes;
-
     string sessionKey = req.getSessionKey();
-    
     auth->logout(req.cfd, sessionKey, serv);
 }
+
 
 void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &locationNode)
 {
@@ -81,6 +79,8 @@ void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &loc
     string &contentType = req.headers["content-type"];
     size_t pos = contentType.find("=");
     boundary = contentType.substr(pos + 1);
+    string body = req.body;
+    
 }
 
 void WebServ::postMethode(Request req, ServerNode servNode)

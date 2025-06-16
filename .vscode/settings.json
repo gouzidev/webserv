@@ -7,6 +7,9 @@
         "iosfwd": "cpp",
         "string": "cpp",
         "iostream": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "unordered_map": "cpp",
+        "string_view": "cpp",
+        "fstream": "cpp"
     }
 }

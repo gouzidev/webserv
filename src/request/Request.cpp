@@ -118,7 +118,7 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
         if (!line.empty() && line[line.size() - 1] == '\r')
             line.erase(line.size() - 1);
         req.setBody(line);
-        cout << "body [" << line << "]" << endl;
+        // cout << "body [" << line << "]" << endl;
         if (read.eof())
         {
             break;
@@ -139,38 +139,38 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 bool fillRequest(ofstream &outputFile, int new_sock)
 {
     int res;
-    char buff[BUFFERSIZE + 1];
+    char buff[BUFFSIZE + 1];
 
-    res = recv(new_sock, buff, BUFFERSIZE, 0);
-    while (res > 0 && res == BUFFERSIZE)
+    res = recv(new_sock, buff, BUFFSIZE, 0);
+    while (res > 0 && res == BUFFSIZE)
     {
         buff[res] = '\0';
         outputFile.write(buff, res);
-        res = recv(new_sock, buff, BUFFERSIZE, 0);
+        res = recv(new_sock, buff, BUFFSIZE, 0);
     }
     if (res > 0)
         outputFile.write(buff, res);
     outputFile.close();
 
-    ifstream read("Request");
-    string line;
-    getline(read, line);
-    if (read.fail())
-    {
-        cerr << "[ " << line << " ]" << endl;
-        return ERROR;
-    }
-    cout << line << endl;
-    while (getline(read, line))
-    {
-        if(line.empty())
-        {
-            break;
-        }
-        cout << line << endl;
-    }
-    while(getline(read, line))
-        cout << (line);
+    // ifstream read("Request");
+    // string line;
+    // getline(read, line);
+    // if (read.fail())
+    // {
+    //     cerr << "[ " << line << " ]" << endl;
+    //     return ERROR;
+    // }
+    // cout << line << endl;
+    // while (getline(read, line))
+    // {
+    //     if(line.empty())
+    //     {
+    //         break;
+    //     }
+    //     cout << line << endl;
+    // }
+    // while(getline(read, line))
+    //     cout << (line);
     return (1);
 
 }
