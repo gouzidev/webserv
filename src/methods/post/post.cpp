@@ -60,13 +60,28 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
 
 void WebServ::handleLogout(Request &req, ServerNode &serv)
 {
-    string errorRes;
-
     string sessionKey = req.getSessionKey();
-    
     auth->logout(req.cfd, sessionKey, serv);
 }
 
+
+void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &locationNode)
+{
+    string errorRes;
+    if (locationNode.uploadDir == "")
+    {
+        errorRes  = getErrorResponse(405, ""); // method not allowed 
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+        // error (no upload path provided)
+    }
+    string boundary;
+    string &contentType = req.headers["content-type"];
+    size_t pos = contentType.find("=");
+    boundary = contentType.substr(pos + 1);
+    string body = req.body;
+    
+}
 
 void WebServ::postMethode(Request req, ServerNode servNode)
 {
@@ -82,14 +97,9 @@ void WebServ::postMethode(Request req, ServerNode servNode)
     if (!exists(headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;
-        const char *testResponse =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Hello, World!";
-       send(req.cfd, testResponse, strlen(testResponse), 0);
-       return ;
+        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
+        send(req.cfd, testResponse, strlen(testResponse), 0);
+        return ;
     }
 
     string contentType = headers.find("content-type")->second;
@@ -115,7 +125,7 @@ void WebServ::postMethode(Request req, ServerNode servNode)
         return ;
     }
 
-    if (contentType == "application/x-www-form-urlencoded")
+    if (contentType == "application/x-www-form-urlencoded") // handle form post request
     {
         cout << "locationTarget -> " << locationTarget << endl;
         if (locationTarget == "/login")
@@ -124,6 +134,22 @@ void WebServ::postMethode(Request req, ServerNode servNode)
             handleSignup(req, serv);
         else if (locationTarget == "/logout")
             handleLogout(req, serv);
+    }   
+    else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
+    {
+        handleUplaod(req, servNode, locationNode);
+    }
+    else
+    {
+        cout << "content type is not supported for post request" << endl;
+        const char *successResponse =
+        "HTTP/1.1 404 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 12\r\n"
+        "\r\n"
+        "Successfull!";
+        send(req.cfd, successResponse, strlen(successResponse), 0);
+
     }
     // const char *successResponse =
     // "HTTP/1.1 404 OK\r\n"

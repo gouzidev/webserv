@@ -60,8 +60,6 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 
     req.cfd = cfd;
     ifstream read("Request");
-    cout << "*********************************************" << endl;
-    
     if (read.fail())
     {
         cerr << "[ " << line << " ]" << "wtf" << endl;
@@ -111,32 +109,22 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 
     if (!exists(req.headers, "host"))
     {
-        cout << "no host ===> "  << endl;
         Debugger::printMap("req.headers", req.headers);
         sendErrToClient(cfd, 400, servNode);
         return ERROR;
     }
-    cout << "line [" << line << "]" << endl;
-    
     while (getline(read, line))
     {
         if (!line.empty() && line[line.size() - 1] == '\r')
             line.erase(line.size() - 1);
-        if (line.empty())
+        req.setBody(line);
+        // cout << "body [" << line << "]" << endl;
+        if (read.eof())
         {
             break;
         }
-        cout << "body [" << line << "]" << endl;
-        req.setBody(line);
     }
-    cout << "*********************************************" << endl;
-
     string hostPort = getHostPort(req.headers["host"], servNode.port);
-    // Debugger::printServerNode(servNode);
-    //    501 (Not Implemented) if the method is
-    //    unrecognized or not implemented by the origin server
-
-    cout << "hostPort: " << hostPort << endl;
     if (!exists(hostServMap, hostPort))
     {
         sendErrToClient(cfd, 500, servNode);
@@ -151,41 +139,38 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
 bool fillRequest(ofstream &outputFile, int new_sock)
 {
     int res;
-    char buff[BUFFERSIZE + 1];
+    char buff[BUFFSIZE + 1];
 
-    res = recv(new_sock, buff, BUFFERSIZE, 0);
-    while (res > 0 && res == BUFFERSIZE)
+    res = recv(new_sock, buff, BUFFSIZE, 0);
+    while (res > 0 && res == BUFFSIZE)
     {
         buff[res] = '\0';
         outputFile.write(buff, res);
-        res = recv(new_sock, buff, BUFFERSIZE, 0);
+        res = recv(new_sock, buff, BUFFSIZE, 0);
     }
     if (res > 0)
         outputFile.write(buff, res);
     outputFile.close();
 
-    ifstream read("Request");
-    string line;
-    cout << "*********************************************" << endl;
-    getline(read, line);
-    if (read.fail())
-    {
-        cerr << "[ " << line << " ]" << endl;
-        return ERROR;
-    }
-    cout << line << endl;
-    while (getline(read, line))
-    {
-        if(line.empty())
-        {
-            break;
-        }
-        cout << line << endl;
-    }
-    while(getline(read, line))
-        cout << (line);
-    cout << "*********************************************" << endl;
-
+    // ifstream read("Request");
+    // string line;
+    // getline(read, line);
+    // if (read.fail())
+    // {
+    //     cerr << "[ " << line << " ]" << endl;
+    //     return ERROR;
+    // }
+    // cout << line << endl;
+    // while (getline(read, line))
+    // {
+    //     if(line.empty())
+    //     {
+    //         break;
+    //     }
+    //     cout << line << endl;
+    // }
+    // while(getline(read, line))
+    //     cout << (line);
     return (1);
 
 }
@@ -261,7 +246,6 @@ string getLocation(string resource, ServerNode &servNode)
         if (exists(servNode.locationDict, defaultLocation))
             return defaultLocation;
     }
-    cout << "location for the request is -> " << location << endl;
     return location;
 }
 

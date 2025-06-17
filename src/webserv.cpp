@@ -26,7 +26,8 @@ LocationNode::LocationNode()
     autoIndex = true;
     root = "";
     path = "";
-    uploadPath = "";
+    uploadDir = "";
+    clientMaxBodySize = 0;
 }
 
 

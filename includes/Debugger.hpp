@@ -51,8 +51,8 @@ class Debugger
             if (locNode.redirect.first != 0)
                 cout << spaces << "  Redirect: " << locNode.redirect.first << " -> " << locNode.redirect.second << endl;
             
-            if (!locNode.uploadPath.empty())
-                cout << spaces << "  Upload Path: " << locNode.uploadPath << endl;
+            if (!locNode.uploadDir.empty())
+                cout << spaces << "  Upload Path: " << locNode.uploadDir << endl;
             
             if (!locNode.cgiExts.empty())
             {

@@ -12,6 +12,45 @@ void setupHints(struct addrinfo &hints)
 }
 
 
+bool isLarge(char *buff, size_t buffSize, bool &error)
+{
+    buff[buffSize] = '\0';
+    string buffStr = string(buff, buffSize);
+    cout  << "buff substr: " << buffStr.substr(0, 100) << endl; // print only the first 100 chars for debugging
+    size_t startPos = buffStr.find("Content-Length:");
+    if (startPos == string::npos)
+        error = true;
+    else
+    {
+        size_t endPos = buffStr.find("\r\n", startPos);
+        string contentLenStr = buffStr.substr(startPos + 15, endPos - startPos - 15);
+        contentLenStr = trimWSpaces(contentLenStr);
+        if (!strAllDigit(contentLenStr))
+        {
+            cout << "Error, Content-Length '" << contentLenStr << "' not a number" << endl;
+            error = true;
+            return false;
+        }
+
+        istringstream contentLenStream (contentLenStr);
+        if (contentLenStream.fail())
+        {
+            cout << "Error, Content-Length is not a number (fail)" << endl;
+            error = true;
+            return false;
+        }
+
+        long contentLen;
+        contentLenStream >> contentLen;
+        cout << "Content-Length is " << contentLen << endl;
+        if (contentLen > 5000000) // 5m
+            return true;
+        return false;
+    }
+    return false;
+}
+
+
 int bindAndGetSock(struct addrinfo *&res)
 {
     struct addrinfo *temp = res;
@@ -93,6 +132,7 @@ int WebServ::server()
 
 int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSockets, map <int, ServerNode> &servSocketMap)
 {
+    bool error;
     int maxEvents = 1024;
     struct epoll_event events[maxEvents];
     socklen_t clientAddrSize = sizeof(struct sockaddr);
@@ -148,14 +188,35 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
             else
             {
                 // its a client that we were monitoring (added him in the block above)  (new fd so we must remeber him)
-                ofstream write1("Request");
-                int servFd = clientServMap[readyFd];
-                ServerNode serv = servSocketMap[servFd];
-                fillRequest(write1, readyFd);
-                write1.close();
-                parseRequest(readyFd, servSockets, serv);
-                clientServMap.erase(readyFd);
-                epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
+                char peek[BUFFSIZE + 1]; // 64k byte
+                ssize_t bytesRead = recv(readyFd, peek, BUFFSIZE, 0);
+                if (bytesRead == -1)
+                {
+                    error = true;
+                    cout << "recv failed, closing connection" << endl;
+                }
+                else if (bytesRead < BUFFSIZE || !isLarge(peek, BUFFSIZE, error))
+                {
+                    cout << "Request received, processing..." << endl;
+                    cout << "Bytes read: " << bytesRead << endl;
+                    ofstream write1("Request");
+                    int servFd = clientServMap[readyFd];
+                    ServerNode serv = servSocketMap[servFd];
+                    write1.write(peek, bytesRead);
+                    fillRequest(write1, readyFd);
+                    parseRequest(readyFd, servSockets, serv);
+                    clientServMap.erase(readyFd);
+                    epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
+                    write1.close();
+                    close(readyFd);
+                }
+                else
+                {
+                    cout << "Request too large, closing connection" << endl;
+                    ofstream write1("Request");
+                    write1 << "HTTP/1.1 413 Payload Too Large\r\n\r\n";
+                    write1.close();
+                }
                 close(readyFd);
             }
         }
