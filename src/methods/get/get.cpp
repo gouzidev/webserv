@@ -1,15 +1,32 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
 
+bool isPathValid(string path)
+{
+    
+    return true;
+}
 
 void WebServ::getMethode(Request req, ServerNode servNode)
 {
     string target = req.getResource();
     string location = getLocation(target, servNode);
+    if(isPathValid(req.resource) != 0)
+    {
+        string errorRes  = getErrorResponse(400, "");
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
+    if (!exists(servNode.locationDict, location))
+    {
+        string errorRes  = getErrorResponse(404, "");
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
     LocationNode node = servNode.locationDict.find(location)->second;
     if (!exists(node.methods, string("GET")))
     {
-        string errorRes  = getErrorResponse(404, ""); // method not allowed 
+        string errorRes  = getErrorResponse(405, ""); 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }

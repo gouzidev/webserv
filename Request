@@ -1,22 +1,8 @@
-POST /logout HTTP/1.1
+GET / HTTP/1.1
+User-Agent: PostmanRuntime/7.44.0
+Accept: */*
+Postman-Token: 5d85224e-5504-4285-8ee3-587bc5547f1c
 Host: 127.0.0.1:8080
+Accept-Encoding: gzip, deflate, br
 Connection: keep-alive
-Content-Length: 0
-Cache-Control: max-age=0
-sec-ch-ua: "Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"
-sec-ch-ua-mobile: ?0
-sec-ch-ua-platform: "Linux"
-Origin: http://127.0.0.1:8080
-Content-Type: application/x-www-form-urlencoded
-Upgrade-Insecure-Requests: 1
-User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36
-Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
-Sec-Fetch-Site: same-origin
-Sec-Fetch-Mode: navigate
-Sec-Fetch-User: ?1
-Sec-Fetch-Dest: document
-Referer: http://127.0.0.1:8080/signup
-Accept-Encoding: gzip, deflate, br, zstd
-Accept-Language: en-US,en;q=0.9,ar;q=0.8
-Cookie: sessionId=16576261802162474177_1749995770_1279477435
 

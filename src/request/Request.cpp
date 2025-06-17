@@ -270,8 +270,8 @@ string getLocation(string resource, ServerNode &servNode)
 // GET /auth/login HTTP/1.1
 // location -> /auth
 
-int hexCharToInt(char c) {
-    
+int hexCharToInt(char c)
+{
     if (c >= 'A' && c <= 'F')
         return c - 'A' + 10;   // A-F
     if (c >= 'a' && c <= 'f')
