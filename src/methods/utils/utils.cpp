@@ -3,16 +3,22 @@
 
 string readFromFile(string path) // for html files
 {
+    // (void)path;
+    string content;
+    // char path_[] = "/home/akoraich/ourwebserve/www/asma.html";
     std::ifstream file(path.c_str());
     if (file)
     {
+        string line;
         cout << "Reading file: " << path << endl;
-        string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
-        while(content.find('\n') != string::npos)
+        while (getline(file, line))
         {
-            int i = content.find('\n');
-            content.replace(i, 1, "\r\n");
+            cout << "line is " << line << endl;
+            cout << "last char is [" << line[line.size() - 1] << "]" << endl;
+           content += line + "\r\n";
         }
+        cout << "content is " << content << endl;
+        file.close();
         return content;
     }
     else

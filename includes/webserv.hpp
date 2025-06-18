@@ -65,8 +65,8 @@ class Response
         string statusLine;
         map <string, string> headers;
         vector <char> body;
-        void setStatusLine();
-        void setHeaders();
+        void setStatusLine(string sttsLine);
+        void setHeaders(string header);
         void setBody();
 };
 
@@ -74,7 +74,7 @@ class Response
 class Request
 {
     public :
-
+        Response resp;
         REQUEST reqType;
         string resource; // the resource is the path after the method in the request
         vector <string> startLine; //possible update
