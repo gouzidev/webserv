@@ -1,5 +1,6 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
+#include "../../../includes/Exceptions.hpp"
 #include <sstream>
 // bool isPathValid(string path)
 // {
@@ -57,7 +58,7 @@ bool checkIndex(LocationNode node, Request req)
             return 0;
         }
     }
-    return 1;
+    throw ConfigException("couldnt fild the index", 500);
 }
 
 void WebServ::getMethode(Request req, ServerNode servNode)
@@ -77,12 +78,22 @@ void WebServ::getMethode(Request req, ServerNode servNode)
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
-    if (node.index.empty() == true || checkIndex(node, req) == 1)
+    try
     {
-        if(node.autoIndex == true)
-            dirList();
-        // else error 403/404
+        if (node.index.empty() == true || checkIndex(node, req) == 1)
+        {
+            if(node.autoIndex == true)
+                dirList();
+            // else error 403/404
+        }
     }
+    catch(ConfigException& e)
+    {
+        sendErrToClient(req.cfd, 500, req.serv);
+        std::cerr << e.what() << '\n';
+    }
+    
+
 }
     // cout << "location is [ " << location << " ]" << endl;
     // const char *testResponse =

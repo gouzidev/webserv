@@ -80,6 +80,7 @@ class Request
         vector <string> startLine; //possible update
         map <string, string> headers;
         map <string, string> queryParams;
+        ServerNode &serv; // a server that the request belongs to
         string body; // possible update for large files in post
     public :
         int cfd; // client fd
@@ -94,7 +95,9 @@ class Request
         void fillQuery(string queryStr);
         vector <string> & getStartLine();
         map  <string ,string> & getHeaders();
+        bool fillHeaders(int fd, string &rest);
         vector <string> & getBody();
+        Request(ServerNode &serv);
 };
 
 class LocationNode
@@ -199,9 +202,9 @@ class WebServ
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
-        void postMethode(Request req, ServerNode servNode);
-        void answerReq(Request req, set <int> activeSockets, ServerNode &servNode);
-        int parseRequest(int fd, set <int> activeSockets, ServerNode &servNode);
+        void postMethode(Request &req, ServerNode &servNode);
+        void answerReq(Request &req, set <int> &activeSockets, ServerNode &servNode);
+        int parseRequest(int fd, set <int> &activeSockets, ServerNode &servNode);
         int server();
         int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);

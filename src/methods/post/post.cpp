@@ -83,7 +83,7 @@ void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &loc
     
 }
 
-void WebServ::postMethode(Request req, ServerNode servNode)
+void WebServ::postMethode(Request &req, ServerNode &servNode)
 {
     short responseCode;
     string responseText;
@@ -115,7 +115,6 @@ void WebServ::postMethode(Request req, ServerNode servNode)
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
-
 
     LocationNode locationNode = servNode.locationDict.find(locationTarget)->second;
     if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
