@@ -1,5 +1,11 @@
 #include "../../includes/webserv.hpp"
 #include "../../includes/Debugger.hpp"
+#include "../../includes/Exceptions.hpp"
+
+Request::Request(ServerNode &serv) : serv(serv)
+{
+
+}
 
 void Request::setStartLine(string line)
 {
@@ -11,7 +17,7 @@ void Request::setStartLine(string line)
         resource = location.substr(0, posOfSep);
         string queryStr = location.substr(posOfSep + 1);
         if (queryStr.size() < 1)
-            return ;
+            throw RequestException("bad location block in start line", 400, serv);
         fillQuery(queryStr);
     }
     else
@@ -53,10 +59,10 @@ map  <string ,string> & Request::getHeaders()
     return headers;
 }
 
-int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
+int WebServ::parseRequest(int cfd, set <int> &servSockets, ServerNode &servNode)
 {
     string line;
-    Request req;
+    Request req(servNode);
 
     req.cfd = cfd;
     ifstream read("Request");
@@ -76,7 +82,6 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
             cerr << "Error reading request" << endl;
             return ERROR;
         }
-
         getline(read, line);
     }
     line = removeTrailingCR(line);
@@ -127,6 +132,7 @@ int WebServ::parseRequest(int cfd, set <int> servSockets, ServerNode &servNode)
     string hostPort = getHostPort(req.headers["host"], servNode.port);
     if (!exists(hostServMap, hostPort))
     {
+        cout << "Error, host:port not found in hostServMap" << endl;
         sendErrToClient(cfd, 500, servNode);
         return 0;
     }
@@ -182,7 +188,7 @@ string removeTrailingCR(string str)
     return str;
 }
 
-void WebServ::answerReq(Request req, set <int> servSockets, ServerNode &servNode)
+void WebServ::answerReq(Request &req, set <int> &servSockets, ServerNode &servNode)
 {
     if (req.getReqType() == GET)
         getMethode(req, servNode);
@@ -320,28 +326,24 @@ void WebServ::urlFormParser(string str, map <string, string> &queryParms)
 int Request::isStartLineValid()
 {
     if (startLine.size() != 3)
-        return ERROR;
+        throw RequestException("start line syntax is incorrect", 400, serv);
     transform(startLine[0].begin(), startLine[0].end(), startLine[0].begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
     if (startLine[0] == "GET")
-    {
-        cout << "we got get" << endl;
         reqType = GET;
-    }
     else if (startLine[0] == "POST")
         reqType = POST;
     else if (startLine[0] == "DELETE")
         reqType = DELETE;
     else
-        return ERROR;
+        throw RequestException("start line is errornous, unidentified request type", 400, serv);
     if (startLine[1].find("/") != 0)
     {
         cout << "invalid path" << endl;
-        return ERROR;
+        throw RequestException("start line is errornous, invalid path", 400, serv);
     }
     if (startLine[2].find("HTTP/1.1") == string::npos)
     {
-        cerr << "[ " << startLine[2] << " ] " << "invalid http ver" << endl;
-        return ERROR;
+        throw RequestException("start line is errornous, missing HTTP/1.1", 400, serv);
     }
     return 0;
 }
