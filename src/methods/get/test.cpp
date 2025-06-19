@@ -469,7 +469,7 @@ private:
         response.headers["Date"] = HttpUtils::get_current_time_rfc1123();
         response.headers["Server"] = "WebServe/1.0";
         response.headers["Content-Type"] = HttpUtils::get_mime_type(file_path);
-        response.headers["Content-Length"] = std::to_string(content.length());
+        response.headers["Content-Length"] = std::toString(content.length());
         response.headers["Connection"] = "keep-alive";
         response.body = content;
         
@@ -507,7 +507,7 @@ private:
         response.headers["Date"] = HttpUtils::get_current_time_rfc1123();
         response.headers["Server"] = "WebServe/1.0";
         response.headers["Content-Type"] = "text/html";
-        response.headers["Content-Length"] = std::to_string(html.str().length());
+        response.headers["Content-Length"] = std::toString(html.str().length());
         response.headers["Connection"] = "keep-alive";
         response.body = html.str();
         
@@ -531,7 +531,7 @@ private:
                 content_stream << file.rdbuf();
                 response.body = content_stream.str();
                 response.headers["Content-Type"] = "text/html";
-                response.headers["Content-Length"] = std::to_string(response.body.length());
+                response.headers["Content-Length"] = std::toString(response.body.length());
                 return response;
             }
         }
@@ -545,7 +545,7 @@ private:
         
         response.body = default_error.str();
         response.headers["Content-Type"] = "text/html";
-        response.headers["Content-Length"] = std::to_string(response.body.length());
+        response.headers["Content-Length"] = std::toString(response.body.length());
         
         return response;
     }

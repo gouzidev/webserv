@@ -25,7 +25,6 @@ class ConfigException:  public WebServException
 {
     public :
         ConfigException(const string &msg, short errorCode);
-        short getRrrorCode();
 };
 
 class RequestException:  public WebServException
@@ -44,7 +43,7 @@ class HeaderException:  public WebServException
         HeaderException(const string &msg, short errorCode, ServerNode &serv);
 };
 
-class ServerException:  WebServException
+class ServerException:  public WebServException
 {
     public :
         ServerException(const string &msg, short errorCode);

@@ -64,17 +64,14 @@ int bindAndGetSock(struct addrinfo *&res)
             continue;
         int flag = 1;
         if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
-        {
-            cerr << "setsockopt error " << endl;
-            return -1;
-        }
+            throw NetworkException("setsockopt failed", 500);
         if (bind(sock, temp->ai_addr, temp->ai_addrlen) == 0)
             break;
         close(sock);
         temp = temp->ai_next;
     }
     if (temp == NULL)
-        return -1;
+        throw NetworkException("bind failed", 500);
     return sock;
 }
 
@@ -103,20 +100,21 @@ int WebServ::server()
     // setup the server
     epollfd = epoll_create1(0);
     if (epollfd == -1)
-        {cout << "epoll_create1 failed" << endl; criticalErr = true; return ERROR;}
+        throw NetworkException("epoll_create1 failed", 500);
     while (servIt != hostServMap.end()) // for every server in the config file
     {
         ServerNode serv = servIt->second;
         setupHints(hints);
-        string host = serv.hostStr;
+        string host = serv.hostIp;
         string portStr = ushortToStr(serv.port);
         if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res) == -1)
-            {cout << "could not getaddrinfo.. aborting." << endl; criticalErr = true; freeaddrinfo(res); ; return ERROR;}
+        {
+            freeaddrinfo(res);
+            throw NetworkException("getaddrinfo failed", 500);
+        }
         sock = bindAndGetSock(res);
-        if (sock == -1)
-            {cout << "could not bind.. aborting." << endl; criticalErr = true; return ERROR;}
         if (listen(sock, 10) == -1)
-            {cout << "could not listen.. aborting." << endl; criticalErr = true; return ERROR;}
+            throw NetworkException("listen failed", 500);
         cout << "Server listening on " << host << ":" << portStr << endl;
         freeaddrinfo(res);
         ev.events = EPOLLIN;
@@ -124,7 +122,7 @@ int WebServ::server()
         servSockets.insert(sock);
         servSocketMap[sock] = servIt->second;
         if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev) == -1)
-            {cout << "epoll_ctl failed" << endl; criticalErr = true; return ERROR;}
+            throw NetworkException("epoll_ctl failed", 500);
         servIt++;
     }
     serverLoop(epollfd, ev, servSockets, servSocketMap);
@@ -317,7 +315,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         
                         if (req.getReqType() == POST)
                         {
-                            if (exists(req.headers, "content-length"))
+                            if (!exists(req.headers, "content-length"))
                             {
                                 cout << "wtf4" << endl;
                                 sendErrToClient(req.cfd, 400, serv);
@@ -355,45 +353,13 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                     }
                     catch (WebServException &webservException)
                     {
+                        cout << "WebServException caught: " << webservException.what() << endl;
                         std::cerr << webservException.what() << '\n';
                         close(readyFd);
                         clientServMap.erase(readyFd);
                         epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL); //
                         continue; // continue to the next iteration
                     }
-                    
-                    
-                    
-                    // its a client that we were monitoring (added him in the block above) (new fd so we must remeber him)
-
-                    // cout << "rest is -> '" << rest << "'" << endl;
-    
-                    // else if (bytesRead < BUFFSIZE) // done (read (in past) all data)
-                    // {
-                    //     cout << "Request received, processing..." << endl;
-                    //     cout << "Bytes read: " << bytesRead << endl;
-                    //     ofstream write1("Request");
-                    //     int servFd = clientServMap[readyFd];
-                    //     ServerNode serv = servSocketMap[servFd];
-                    //     write1.write(peek, bytesRead);
-                    //     fillRequest(write1, readyFd);
-                    //     parseRequest(readyFd, servSockets, serv);
-                    //     clientServMap.erase(readyFd);
-                    //     epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);  // check if fails
-                    //     write1.close();
-                    //     close(readyFd);
-                    // }
-                    
-                    // else // request is larger then BUFFSIZE so we must while loop recv
-                    // {
-                    //     cout << "Request too large, closing connection" << endl;
-                    //     ofstream write1("Request");
-                    //     write1 << "HTTP/1.1 413 Payload Too Large\r\n\r\n";
-                    //     write1.close();
-                    // }
-                    // close(readyFd);
-    
-    
                 }
             }
     
@@ -405,9 +371,12 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                 lastCleanup = now;
             }
         }
+        // handle epoll_wait error
         catch(const std::exception& e)
         {
+            cout << "Exception caught in server loop: " << e.what() << endl;
             std::cerr << e.what() << '\n';
+            return ERROR;
         }
         
 
