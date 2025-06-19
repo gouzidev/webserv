@@ -10,7 +10,7 @@ ServerNode::ServerNode()
     port = 0;
     clientMaxBodySize = 0;
     // host = "";
-    hostStr = "";
+    hostIp = "";
     root = "";
 }
 

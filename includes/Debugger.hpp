@@ -73,7 +73,7 @@ class Debugger
         {
             cout << "\n🌐 SERVER NODE" << endl;
             cout << "===========================================" << endl;
-            cout << "Host: " << servNode.hostStr << endl;
+            cout << "Host: " << servNode.hostIp << endl;
             cout << "Port: " << servNode.port << endl;
             cout << "Root: " << servNode.root << endl;
             
@@ -122,7 +122,7 @@ class Debugger
             {
                 cout << "\n🔑 Key: \"" << it->first << "\"" << endl;
                 cout << "   └─ Maps to server with:" << endl;
-                cout << "      • Host: " << it->second.hostStr << endl;
+                cout << "      • Host: " << it->second.hostIp << endl;
                 cout << "      • Port: " << it->second.port << endl;
                 cout << "      • Root: " << it->second.root << endl;
                 cout << "      • Server Names: ";
@@ -145,7 +145,7 @@ class Debugger
             {
                 cout << "\n🔑 Key: \"" << it->first << "\"" << endl;
                 cout << "   └─ Maps to server with:" << endl;
-                cout << "      • Host: " << it->second.hostStr << endl;
+                cout << "      • Host: " << it->second.hostIp << endl;
                 cout << "      • Port: " << it->second.port << endl;
                 cout << "      • Root: " << it->second.root << endl;
             }
@@ -164,7 +164,7 @@ class Debugger
             for (size_t i = 0; i < servNodes.size(); i++)
             {
                 const ServerNode &node = servNodes[i];
-                string hostPort = node.hostStr + ":" + toString(node.port);
+                string hostPort = node.hostIp + ":" + toString(node.port);
                 
                 cout << "Server " << (i + 1) << ":" << endl;
                 cout << "  • Host:Port = " << hostPort << endl;
@@ -212,7 +212,7 @@ class Debugger
             
             for (size_t i = 0; i < servNodes.size(); i++)
             {
-                string hostPort = servNodes[i].hostStr + ":" + toString(servNodes[i].port);
+                string hostPort = servNodes[i].hostIp + ":" + toString(servNodes[i].port);
                 hostPortMap[hostPort].push_back(i);
             }
             

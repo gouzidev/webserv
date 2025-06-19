@@ -43,7 +43,7 @@ class HeaderException:  public WebServException
         HeaderException(const string &msg, short errorCode, ServerNode &serv);
 };
 
-class ServerException:  WebServException
+class ServerException:  public WebServException
 {
     public :
         ServerException(const string &msg, short errorCode);

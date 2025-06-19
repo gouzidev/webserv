@@ -4,23 +4,17 @@
 
 bool validHost(string hostStr, size_t &lineNum)
 {
+    if (hostStr == "localhost")
+        return true;
     vector <string> ipVec;
     ipVec = split(hostStr, '.');
-    // for (size_t i = 0; i < ipVec.size(); i++)
-    // {
-    //     if (!strAllDigit(ipVec[i]))
-    //     {
-    //         cerr << "host syntax is wrong, 'host ip must be all digits' at line: " << lineNum << endl;
-    //         return false;
-    //     }
-    // }
-    // if (ipVec.size() != 4 )
-    // {
-    //     cerr << "host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' at line: " << lineNum << endl;
-    //     return false;
-    // } 
-
-    // just for now, every host will be a valid host
+    for (size_t i = 0; i < ipVec.size(); i++)
+    {
+        if (!strAllDigit(ipVec[i]))
+            throw ConfigException("host syntax is wrong, 'host ip must be all digits' or 'localhost' at line: " + toString(lineNum), 400);
+    }
+    if (ipVec.size() != 4 )
+        throw ConfigException("host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' or 'localhost' at line: " + toString(lineNum), 400);
     return true;
 }
 
@@ -223,13 +217,15 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
     else if (tokens[0] == "host")
     {
         if (tokens.size() != 2)
-            throw ConfigException("host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' at line: " + toString(lineNum), 400);
-        if (servNode.hostStr != "")
+            throw ConfigException("host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' or 'localahost' at line: " + toString(lineNum), 400);
+        if (servNode.hostIp != "")
             throw ConfigException("config error, can't have more than 1 host at line: " + toString(lineNum), 400);
-        if (validHost(tokens[1], lineNum))
-            servNode.hostStr = tokens[1];
+        if (!validHost(tokens[1], lineNum))
+            throw ConfigException("host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' or 'localahost' at line: " + toString(lineNum), 400);
+        if (tokens[1] == "localhost")
+            servNode.hostIp = "127.0.0.1";
         else
-            throw ConfigException("host syntax is wrong, 'host [xxx.xxx.xxx.xxx]' at line: " + toString(lineNum), 400);
+            servNode.hostIp = tokens[1];
     }
     else if (tokens[0] == "server_names")
     {
@@ -325,7 +321,7 @@ void WebServ::validateParsing()
         // }
         if (servNode.port == 0)
             throw ConfigException("no listen block provided", 400);
-        if (servNode.hostStr == "")
+        if (servNode.hostIp == "")
             throw ConfigException("no host block provided", 400);
         for (size_t i = 0; i < servNode.locationNodes.size(); i++)
         {
@@ -342,12 +338,12 @@ void WebServ::validateParsing()
             if (servNameServMap.find(servNamePort) != servNameServMap.end())
             {
                 ServerNode foundServ = servNameServMap.find(servNamePort)->second;
-                if (foundServ.hostStr == servNode.hostStr)
+                if (foundServ.hostIp == servNode.hostIp)
                     throw ConfigException("duplicate server name for the same port: " + servNamePort + " isn't valid", 400);
             }
             servNameServMap[servNamePort] = servNode;
         }
-        hostServMap[servNode.hostStr + ":" + ushortToStr(servNode.port)] = servNode;
+        hostServMap[servNode.hostIp + ":" + ushortToStr(servNode.port)] = servNode;
         i++;
     }
     

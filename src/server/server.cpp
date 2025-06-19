@@ -105,7 +105,7 @@ int WebServ::server()
     {
         ServerNode serv = servIt->second;
         setupHints(hints);
-        string host = serv.hostStr;
+        string host = serv.hostIp;
         string portStr = ushortToStr(serv.port);
         if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res) == -1)
         {
@@ -351,6 +351,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                     }
                     catch (WebServException &webservException)
                     {
+                        cout << "WebServException caught: " << webservException.what() << endl;
                         std::cerr << webservException.what() << '\n';
                         close(readyFd);
                         clientServMap.erase(readyFd);
@@ -371,6 +372,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
         // handle epoll_wait error
         catch(const std::exception& e)
         {
+            cout << "Exception caught in server loop: " << e.what() << endl;
             std::cerr << e.what() << '\n';
             return ERROR;
         }

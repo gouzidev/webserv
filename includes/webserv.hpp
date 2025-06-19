@@ -123,7 +123,6 @@ class ServerNode
     public :
         ServerNode();
         unsigned short port;
-        string hostStr;
         string hostIp;
         string root;
         set <string> serverNames;
