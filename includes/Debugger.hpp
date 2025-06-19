@@ -23,7 +23,7 @@ class Debugger
             cout << "--------------------------------------------------------------------------" << endl;;
             cout << varName << ": " << endl << "----";
             for (it = m.begin(); it != m.end(); it++)
-                cout << it->first << " -> " << it->second << "  ";
+                cout << it->first << " -> " << it->second << endl;
             cout << "--------------------------------------------------------------------------" << endl;;
             cout << endl;
             cout << endl;

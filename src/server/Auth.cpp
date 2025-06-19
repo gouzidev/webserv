@@ -5,6 +5,7 @@ Auth::Auth()
 {
     generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";
     User admin("salah", "gouzi", "salahgouzi11@gmail.com", "1234");
+    User asma("asma", "koraichi", "asma@gmail.com", "1234");
     users[admin.getEmail()] = admin;
 }
 

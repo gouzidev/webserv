@@ -144,21 +144,32 @@ string readLine(int fd, bool &error)
     
     bytesRead = recv(fd, &c, 1, 0);
     if (bytesRead <= 0)
+    {
+        cout << "hello 149" << endl;
         throw NetworkException("recv failed", 500);
+    }
     while (bytesRead > 0)
     {
         if (c == '\r')
         {
             bytesRead = recv(fd, &c, 1, 0);
             if (bytesRead < 0)
+            {
+                cout << "hello 158" << endl;
+                
                 throw NetworkException("recv failed", 500);
+            }
             if (c == '\n')
                 break;
         }
         line += c;
         bytesRead = recv(fd, &c, 1, 0);
         if (bytesRead < 0)
+        {
+            cout << "hello 169" << endl;
+            
             throw NetworkException("recv failed", 500);
+        }
     }
     return line;
 }
@@ -281,16 +292,17 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                 {
                     try
                     {
-                        string startLine = readLine(readyFd, error);
                         string rest;
                         int servFd = clientServMap[readyFd];
+                        string startLine = readLine(readyFd, error);
                         ServerNode serv = servSocketMap[servFd];
                         Request req(serv);
                         req.cfd = readyFd;
                         req.setStartLine(startLine);
+                        cout << "start line is [ " << startLine << " ]" << endl;
                         req.isStartLineValid();
                         req.fillHeaders(readyFd, rest);
-        
+                        Debugger::printMap("headers\n", req.headers);
                         if (!exists(req.headers, "host"))
                         {
                             sendErrToClient(req.cfd, 400, serv);
@@ -323,7 +335,11 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                                 throw RequestException("content length is too large for the server", 413, serv);
                             }
                             req.body = rest;
-                            answerReq(req, servSockets, serv);
+                            postMethode(req, serv);
+                        }
+                        if (req.getReqType() == GET)
+                        {
+                            getMethode(req, serv);
                         }
                     }
 
