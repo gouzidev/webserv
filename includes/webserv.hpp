@@ -249,6 +249,14 @@ bool exists(map <string, string> &m, string key);
 
 bool strHas(string str, string sub);
 
+// converts T types to strings, T could be int, float, double, etc.
+template<typename T>
+string toString(T value) {
+    std::ostringstream oss;
+    oss << value;
+    return oss.str();
+}
+
 template <typename T>
 bool exists(map <T, T> &m, T key)
 {

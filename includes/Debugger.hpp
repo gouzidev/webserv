@@ -164,7 +164,7 @@ class Debugger
             for (size_t i = 0; i < servNodes.size(); i++)
             {
                 const ServerNode &node = servNodes[i];
-                string hostPort = node.hostStr + ":" + to_string(node.port);
+                string hostPort = node.hostStr + ":" + toString(node.port);
                 
                 cout << "Server " << (i + 1) << ":" << endl;
                 cout << "  • Host:Port = " << hostPort << endl;
@@ -212,7 +212,7 @@ class Debugger
             
             for (size_t i = 0; i < servNodes.size(); i++)
             {
-                string hostPort = servNodes[i].hostStr + ":" + to_string(servNodes[i].port);
+                string hostPort = servNodes[i].hostStr + ":" + toString(servNodes[i].port);
                 hostPortMap[hostPort].push_back(i);
             }
             
@@ -243,9 +243,9 @@ class Debugger
             printServNameServMap(servNameServMap);
         }
 
-        // Helper function for to_string since it might not be available in all C++ versions
+        // Helper function for toString since it might not be available in all C++ versions
         template <typename T>
-        static string to_string(T value)
+        static string toString(T value)
         {
             ostringstream os;
             os << value;

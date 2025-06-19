@@ -37,11 +37,15 @@ WebServ::WebServ(char *filename)
    
     criticalErr = false;
     auth = new Auth();
-    
-    
-    parsing(filename);
-    if (!criticalErr)
+    try
+    {
+        parsing(filename);
         server();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
 }
 
 WebServ::WebServ(string filename)
@@ -51,9 +55,16 @@ WebServ::WebServ(string filename)
     User admin("salah", "gouzi", "salahgouzi11@gmail.com", "1234");
     auth = new Auth();
     char *filename2 = const_cast<char *> (filename.c_str());
-    parsing(filename2);
-    if (!criticalErr)
+    try
+    {
+        parsing(filename2);
         server();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    
 }
 
 WebServ::~WebServ()

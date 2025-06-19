@@ -25,7 +25,6 @@ class ConfigException:  public WebServException
 {
     public :
         ConfigException(const string &msg, short errorCode);
-        short getRrrorCode();
 };
 
 class RequestException:  public WebServException
