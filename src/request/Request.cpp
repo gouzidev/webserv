@@ -115,6 +115,7 @@ int WebServ::parseRequest(int cfd, set <int> &servSockets, ServerNode &servNode)
     if (!exists(req.headers, "host"))
     {
         Debugger::printMap("req.headers", req.headers);
+        cout << "wtf2" << endl;
         sendErrToClient(cfd, 400, servNode);
         return ERROR;
     }

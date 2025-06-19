@@ -99,7 +99,6 @@ void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
             {
                 htmlErrFileStr += line + "\r\n";
             }
-
             errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
             errorRes +=  "Content-Type: text/html\r\n";
             errorRes +=  "Content-Length: " + ushortToStr(htmlErrFileStr.size()) + "\r\n\r\n";

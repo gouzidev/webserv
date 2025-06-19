@@ -141,7 +141,7 @@ string readLine(int fd, bool &error)
     string line = "";
     char c;
     size_t bytesRead = 1;
-    
+
     bytesRead = recv(fd, &c, 1, 0);
     if (bytesRead <= 0)
     {
@@ -156,7 +156,6 @@ string readLine(int fd, bool &error)
             if (bytesRead < 0)
             {
                 cout << "hello 158" << endl;
-                
                 throw NetworkException("recv failed", 500);
             }
             if (c == '\n')
@@ -305,6 +304,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         Debugger::printMap("headers\n", req.headers);
                         if (!exists(req.headers, "host"))
                         {
+                            cout << "wtf3" << endl;
                             sendErrToClient(req.cfd, 400, serv);
                             throw RequestException("could not find 'host' header", 400, serv);
                         }
@@ -319,6 +319,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         {
                             if (exists(req.headers, "content-length"))
                             {
+                                cout << "wtf4" << endl;
                                 sendErrToClient(req.cfd, 400, serv);
                                 throw RequestException("could not find 'content-length'", 400, serv);
                             }
@@ -326,6 +327,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                             cout << "Content-Length in bytes is " << contentLen  << endl;
                             if (error || contentLen < 0)
                             {
+                                cout << "wtf5" << endl;
                                 sendErrToClient(req.cfd, 400, serv);
                                 throw RequestException("content length is not valid", 400, serv);
                             }

@@ -16,6 +16,7 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     urlFormParser(body, queryParams);
     if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
     {
+        cout << "wtf0" << endl;
         sendErrToClient(req.cfd, 400, serv);
         return ;
     }
@@ -43,6 +44,7 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
         || !exists(queryParams, string("email")) || !exists(queryParams, string("password"))
         )
     {
+        cout << "wtf1" << endl;
         sendErrToClient(req.cfd, 400, serv);
         return ;
     }
