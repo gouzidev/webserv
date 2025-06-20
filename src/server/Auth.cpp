@@ -1,5 +1,6 @@
 #include "../../includes/webserv.hpp"
 #include "../../includes/Auth.hpp"
+#include "../../includes/Exceptions.hpp"
 
 Auth::Auth()
 {
@@ -7,21 +8,22 @@ Auth::Auth()
     User admin("salah", "gouzi", "salahgouzi11@gmail.com", "1234");
     User asma("asma", "koraichi", "asma@gmail.com", "1234");
     users[admin.getEmail()] = admin;
+    users[asma.getEmail()] = asma;
 }
 
-void Auth::login(int cfd, string email, string password, ServerNode &serv)
+void Auth::login(int cfd, string email, string password, Request &req)
 {
     if (!exists(users, email))
     {
         cout << "email not found in users" << endl;
-        sendErrToClient(cfd, 404, serv);
+        sendErrToClient(cfd, 404, req.serv);
         return ;
     }
     string dbPassword = users[email].getPassword();
     if (dbPassword != password)
     {
         cout << "password does not match" << endl;
-        sendErrToClient(cfd, 403, serv);
+        sendErrToClient(cfd, 403, req.serv);
         return ;
     }
     cout << "user logged in successfully" << endl;
@@ -54,12 +56,12 @@ void Auth::login(int cfd, string email, string password, ServerNode &serv)
 }
 
 
-void Auth::signup(int cfd, string fName, string lName, string userName, string email, string password, ServerNode &serv)
+void Auth::signup(int cfd, string fName, string lName, string userName, string email, string password, Request &req)
 {
     if (exists(users, email))
     {
         cout << "email already exists found in users" << endl;
-        sendErrToClient(cfd, 409, serv); // 409 conflict
+        sendErrToClient(cfd, 409, req.serv); // 409 conflict
         return ;
     }
 

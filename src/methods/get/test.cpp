@@ -598,7 +598,7 @@ server {
     client_max_body_size 10M;
     
     error_page 404 /home/asma/webserve/www/error/error404.html;
-    error_page 500 502 503 504 /home/asma/webserve/www/error/error500.html;
+    error_page 500 502 503 504 /home/asma/webserve/www/error/500.html;
     
     location / {
         root /home/asma/webserve/www;

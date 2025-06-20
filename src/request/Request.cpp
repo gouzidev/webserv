@@ -17,7 +17,7 @@ void Request::setStartLine(string line)
         resource = location.substr(0, posOfSep);
         string queryStr = location.substr(posOfSep + 1);
         if (queryStr.size() < 1)
-            throw RequestException("bad location block in start line", 400, serv);
+            throw RequestException("bad location block in start line", 400, *this);
         fillQuery(queryStr);
     }
     else
@@ -59,145 +59,11 @@ map  <string ,string> & Request::getHeaders()
     return headers;
 }
 
-int WebServ::parseRequest(int cfd, set <int> &servSockets, ServerNode &servNode)
-{
-    string line;
-    Request req(servNode);
-
-    req.cfd = cfd;
-    ifstream read("Request");
-    if (read.fail())
-    {
-        cerr << "[ " << line << " ]" << "wtf" << endl;
-        return ERROR;
-    }
-    line = "";
-    // rfc: if the server find CRLF first
-        // at the beginning it should ignore the it."
-    while (line.empty())
-    {
-        if (read.eof() || read.fail())
-        {
-            criticalErr = true;
-            cerr << "Error reading request" << endl;
-            return ERROR;
-        }
-        getline(read, line);
-    }
-    line = removeTrailingCR(line);
-    req.setStartLine(line);
-    if (req.isStartLineValid() == ERROR)
-    {
-        criticalErr = true;
-        cout << "invalid Request" << endl;
-        return ERROR;
-    }
-    while (getline(read, line))
-    {
-        if (read.eof() || read.fail())
-        {
-            criticalErr = true;
-            cerr << "Error reading request" << endl;
-            return ERROR;
-        }
-        line = removeTrailingCR(line);
-        if (line.empty())
-        {
-            break;
-        }
-        req.setHeaders(line);
-    }
-
-    // done parsing ********************
-
-
-
-    if (!exists(req.headers, "host"))
-    {
-        Debugger::printMap("req.headers", req.headers);
-        cout << "wtf2" << endl;
-        sendErrToClient(cfd, 400, servNode);
-        return ERROR;
-    }
-    while (getline(read, line))
-    {
-        if (!line.empty() && line[line.size() - 1] == '\r')
-            line.erase(line.size() - 1);
-        req.setBody(line);
-        // cout << "body [" << line << "]" << endl;
-        if (read.eof())
-        {
-            break;
-        }
-    }
-    string hostPort = getHostPort(req.headers["host"], servNode.port);
-    if (!exists(hostServMap, hostPort))
-    {
-        cout << "Error, host:port not found in hostServMap" << endl;
-        sendErrToClient(cfd, 500, servNode);
-        return 0;
-    }
-    answerReq(req, servSockets, servNode);
-    read.close();
-    return 0;
-}
-
-// here we will fill the start line, headers and body
-bool fillRequest(ofstream &outputFile, int new_sock)
-{
-    int res;
-    char buff[BUFFSIZE + 1];
-
-    res = recv(new_sock, buff, BUFFSIZE, 0);
-    while (res > 0 && res == BUFFSIZE)
-    {
-        buff[res] = '\0';
-        outputFile.write(buff, res);
-        res = recv(new_sock, buff, BUFFSIZE, 0);
-    }
-    if (res > 0)
-        outputFile.write(buff, res);
-    outputFile.close();
-
-    // ifstream read("Request");
-    // string line;
-    // getline(read, line);
-    // if (read.fail())
-    // {
-    //     cerr << "[ " << line << " ]" << endl;
-    //     return ERROR;
-    // }
-    // cout << line << endl;
-    // while (getline(read, line))
-    // {
-    //     if(line.empty())
-    //     {
-    //         break;
-    //     }
-    //     cout << line << endl;
-    // }
-    // while(getline(read, line))
-    //     cout << (line);
-    return (1);
-
-}
-
 string removeTrailingCR(string str)
 {
     if (!str.empty() && str[str.size() - 1] == '\r')
         str = str.substr(0, str.size() - 1);
     return str;
-}
-
-void WebServ::answerReq(Request &req, set <int> &servSockets, ServerNode &servNode)
-{
-    if (req.getReqType() == GET)
-        getMethode(req, servNode);
-    else if (req.getReqType() == POST)
-        postMethode(req, servNode);
-    // else if (req.getReqType() == DELETE)
-    //     DELETE_METHODE(req);
-
 }
 
 string & Request::getResource()
@@ -255,6 +121,7 @@ string getLocation(string resource, ServerNode &servNode)
     }
     return location;
 }
+
 
 // the resource will be starting with a slash
 // this function will return the location of the resource in the server node, ex : 
@@ -327,7 +194,7 @@ void WebServ::urlFormParser(string str, map <string, string> &queryParms)
 int Request::isStartLineValid()
 {
     if (startLine.size() != 3)
-        throw RequestException("start line syntax is incorrect", 400, serv);
+        throw RequestException("start line syntax is incorrect", 400, *this);
     transform(startLine[0].begin(), startLine[0].end(), startLine[0].begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
     if (startLine[0] == "GET")
         reqType = GET;
@@ -336,15 +203,15 @@ int Request::isStartLineValid()
     else if (startLine[0] == "DELETE")
         reqType = DELETE;
     else
-        throw RequestException("start line is errornous, unidentified request type", 400, serv);
+        throw RequestException("start line is errornous, unidentified request type", 400, *this);
     if (startLine[1].find("/") != 0)
     {
         cout << "invalid path" << endl;
-        throw RequestException("start line is errornous, invalid path", 400, serv);
+        throw RequestException("start line is errornous, invalid path", 400, *this);
     }
     if (startLine[2].find("HTTP/1.1") == string::npos)
     {
-        throw RequestException("start line is errornous, missing HTTP/1.1", 400, serv);
+        throw RequestException("start line is errornous, missing HTTP/1.1", 400, *this);
     }
     return 0;
 }

@@ -30,16 +30,20 @@ class ConfigException:  public WebServException
 class RequestException:  public WebServException
 {
     private:
-        ServerNode &serv;
+        Request &req;
     public :
-        RequestException(const string &msg, short errorCode, ServerNode &serv);
+        Request &getReq() const;
+        short getErrorCode() const;
+        RequestException(const string &msg, short errorCode, Request &req);
 };
 
 class HeaderException:  public WebServException
 {
     private:
-        ServerNode &serv;
+        Request &req;
     public :
+        Request &getReq() const;
+        short getErrorCode() const;
         HeaderException(const string &msg, short errorCode, ServerNode &serv);
 };
 

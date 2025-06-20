@@ -1,5 +1,6 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
+#include "../../../includes/Exceptions.hpp"
 
 void WebServ::handleLogin(Request &req, ServerNode &serv)
 {
@@ -23,7 +24,9 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     string email = queryParams["email"];
     string password = queryParams["password"];
 
-    auth->login(req.cfd, email, password, serv);
+    cout << "email: " << email << endl;
+    cout << "password: " << password << endl;
+    auth->login(req.cfd, email, password, req);
 }
 
 void WebServ::handleSignup(Request &req, ServerNode &serv)
@@ -44,7 +47,6 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
         || !exists(queryParams, string("email")) || !exists(queryParams, string("password"))
         )
     {
-        cout << "wtf1" << endl;
         sendErrToClient(req.cfd, 400, serv);
         return ;
     }
@@ -56,7 +58,7 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
     string email = queryParams["email"];
     string password = queryParams["password"];
 
-    auth->signup(req.cfd, fName, userName, lName, email, password, serv);
+    auth->signup(req.cfd, fName, userName, lName, email, password, req);
 }
 
 
@@ -85,6 +87,24 @@ void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &loc
     
 }
 
+long extractContentLen(Request &req, ServerNode &serv)
+{
+    cout << "here looking for content-length" << endl;
+    if (!exists(req.headers, "content-length"))
+        throw RequestException("could not find 'content-length' header", 400, req);
+    string contentLenStr = req.headers.find("content-length")->second;
+    contentLenStr = trimWSpaces(contentLenStr);
+    if (!strAllDigit(contentLenStr))
+        throw RequestException("content-length: '" + contentLenStr + "' is not a number", 400, req);
+
+    istringstream contentLenStream (contentLenStr);
+    if (contentLenStream.fail())
+        throw RequestException("failed to parse content-length: '" + contentLenStr + "' it is not a number", 400, req);
+    long contentLen;
+    contentLenStream >> contentLen;
+    return contentLen;
+}
+
 void WebServ::postMethode(Request &req, ServerNode &servNode)
 {
     short responseCode;
@@ -96,6 +116,23 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
     map <string, string> &headers = req.getHeaders();
     string key = "host";
     // Debugger::printMap("headers", headers);
+
+    if (!exists(req.headers, "content-length"))
+    {
+        // sendErrToClient(req.cfd, 400, serv);
+        throw RequestException("could not find 'content-length'", 400, req);
+    }
+    long contentLen = extractContentLen(req, serv);
+    if (contentLen < 0)
+    {
+        // sendErrToClient(req.cfd, 400, serv);
+        throw RequestException("content length is not valid", 400, req);
+    }
+    if (contentLen > 10000000)
+    {
+        // sendErrToClient(req.cfd, 413, serv);
+        throw RequestException("content length is too large for the server", 413, req);
+    }
     if (!exists(headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;

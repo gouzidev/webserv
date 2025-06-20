@@ -78,7 +78,11 @@ int bindAndGetSock(struct addrinfo *&res)
 
 string getHostPort(string host, unsigned short port)
 {
-    if (host.find (":") == string::npos)
+    size_t colPos = host.find(":");
+    string hostStr = host.substr(0, colPos);
+    if (hostStr == "localhost")
+        host = "127.0.0.1:" + ushortToStr(port);
+    if (colPos == string::npos)
     {
         host += ":" + ushortToStr(port);
     }
@@ -88,6 +92,7 @@ string getHostPort(string host, unsigned short port)
 
 int WebServ::server()
 {
+    // servNameServMap
     // Debugger::printCompleteDebugInfo(servNodes, hostServMap, servNameServMap);
     std::map<std::string, ServerNode>::iterator servIt = hostServMap.begin();
     struct epoll_event ev;
@@ -183,7 +188,7 @@ bool Request::fillHeaders(int fd, string &rest)
     string headersStr = string(buff, bytesRead);
     size_t endPos = headersStr.find("\r\n\r\n");
     if (endPos == string::npos)
-        throw RequestException("headers not found in request", 400, serv);
+        throw RequestException("headers not found in request", 400, *this);
     
     size_t i = 0;
     while (i < endPos)
@@ -222,23 +227,7 @@ bool Request::fillHeaders(int fd, string &rest)
     rest = headersStr.substr(endPos + 4); // +4 to skip \r\n\r\n
     return true;
 }
-long extractContentLen(Request &req, ServerNode &serv, bool &error)
-{
-    cout << "here looking for content-length" << endl;
-    if (!exists(req.headers, "content-length"))
-        throw RequestException("could not find 'content-length' header", 400, serv);
-    string contentLenStr = req.headers.find("content-length")->second;
-    contentLenStr = trimWSpaces(contentLenStr);
-    if (!strAllDigit(contentLenStr))
-        throw RequestException("content-length: '" + contentLenStr + "' is not a number", 400, serv);
 
-    istringstream contentLenStream (contentLenStr);
-    if (contentLenStream.fail())
-        throw RequestException("failed to parse content-length: '" + contentLenStr + "' it is not a number", 400, serv);
-    long contentLen;
-    contentLenStream >> contentLen;
-    return contentLen;
-}
 
 
 // steps :
@@ -296,68 +285,48 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         Request req(serv);
                         req.cfd = readyFd;
                         req.setStartLine(startLine);
-                        cout << "start line is [ " << startLine << " ]" << endl;
                         req.isStartLineValid();
                         req.fillHeaders(readyFd, rest);
+                        req.body = rest;
                         Debugger::printMap("headers\n", req.headers);
                         if (!exists(req.headers, "host"))
                         {
                             cout << "wtf3" << endl;
                             sendErrToClient(req.cfd, 400, serv);
-                            throw RequestException("could not find 'host' header", 400, serv);
+                            throw RequestException("could not find 'host' header", 400, req);
                         }
+                        cout << req.headers["host"] << endl;
                         string hostPort = getHostPort(req.headers["host"], serv.port);
                         if (!exists(hostServMap, hostPort))
-                        {
-                            sendErrToClient(req.cfd, 500, serv);
-                            throw ServerException("host:port not found in server config", 500);
-                        }
+                            throw RequestException("host:port not recognizable", 500, req);
                         
                         if (req.getReqType() == POST)
                         {
-                            if (!exists(req.headers, "content-length"))
-                            {
-                                cout << "wtf4" << endl;
-                                sendErrToClient(req.cfd, 400, serv);
-                                throw RequestException("could not find 'content-length'", 400, serv);
-                            }
-                            long contentLen = extractContentLen(req, serv, error);
-                            cout << "Content-Length in bytes is " << contentLen  << endl;
-                            if (error || contentLen < 0)
-                            {
-                                cout << "wtf5" << endl;
-                                sendErrToClient(req.cfd, 400, serv);
-                                throw RequestException("content length is not valid", 400, serv);
-                            }
-                            if (contentLen > 10000000)
-                            {
-                                sendErrToClient(req.cfd, 413, serv);
-                                throw RequestException("content length is too large for the server", 413, serv);
-                            }
-                            req.body = rest;
                             postMethode(req, serv);
+                            close(readyFd);
+                            clientServMap.erase(readyFd);
+                            epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);
+                            continue;
                         }
-                        if (req.getReqType() == GET)
+                        else if (req.getReqType() == GET)
                         {
                             getMethode(req, serv);
+                            close(readyFd);
+                            clientServMap.erase(readyFd);
+                            epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);
+                            continue;
                         }
                     }
 
                     catch (RequestException &requestException)
                     {
-                        std::cerr << requestException.what() << '\n';
-                        close(readyFd);
-                        clientServMap.erase(readyFd);
-                        epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL); //
-                        continue; // continue to the next iteration
-                    }
-                    catch (WebServException &webservException)
-                    {
-                        cout << "WebServException caught: " << webservException.what() << endl;
-                        std::cerr << webservException.what() << '\n';
-                        close(readyFd);
-                        clientServMap.erase(readyFd);
-                        epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL); //
+                        Request req = requestException.getReq();
+                        short errorCode = requestException.getErrorCode();
+                        cout << "RequestException caught: " << requestException.what() << endl;
+                        sendErrToClient(req.cfd, errorCode, req.serv);
+                        close(req.cfd);
+                        clientServMap.erase(req.cfd);
+                        epoll_ctl(epollfd, EPOLL_CTL_DEL, req.cfd, NULL);
                         continue; // continue to the next iteration
                     }
                 }

@@ -92,8 +92,6 @@ void WebServ::getMethode(Request req, ServerNode servNode)
         sendErrToClient(req.cfd, 500, req.serv);
         std::cerr << e.what() << '\n';
     }
-    
-
 }
     // cout << "location is [ " << location << " ]" << endl;
     // const char *testResponse =

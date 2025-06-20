@@ -202,8 +202,6 @@ class WebServ
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void postMethode(Request &req, ServerNode &servNode);
-        void answerReq(Request &req, set <int> &activeSockets, ServerNode &servNode);
-        int parseRequest(int fd, set <int> &activeSockets, ServerNode &servNode);
         int server();
         int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
@@ -229,8 +227,6 @@ string ushortToStr(unsigned short port);
 
 string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);
-
-bool fillRequest(ofstream &outputFile, int new_sock);
 
 
 

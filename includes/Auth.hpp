@@ -18,8 +18,8 @@ class Auth
 {
     public:
         char *generalErrorResponse;
-        void login(int cfd, string email, string password, ServerNode &serv);
-        void signup(int cfd, string fName, string lName, string userName, string email, string password, ServerNode &serv);
+        void login(int cfd, string email, string password, Request &req);
+        void signup(int cfd, string fName, string lName, string userName, string email, string password, Request &req);
         void logout(int cfd, string sessionKey, ServerNode &serv);
         void cleanUpSessions();
         void redirectToLogin(int cfd, int errorCode);
