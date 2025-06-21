@@ -186,6 +186,7 @@ bool Request::fillHeaders(int fd, string &rest)
         throw NetworkException("recv failed or headers are too large", 500);
     
     string headersStr = string(buff, bytesRead);
+    // cout << "Headers string: {{{" << headersStr << "}}}" <<  endl; // print only the first 100 chars for debugging
     size_t endPos = headersStr.find("\r\n\r\n");
     if (endPos == string::npos)
         throw RequestException("headers not found in request", 400, *this);
@@ -288,10 +289,8 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         req.isStartLineValid();
                         req.fillHeaders(readyFd, rest);
                         req.body = rest;
-                        Debugger::printMap("headers\n", req.headers);
                         if (!exists(req.headers, "host"))
                         {
-                            cout << "wtf3" << endl;
                             sendErrToClient(req.cfd, 400, serv);
                             throw RequestException("could not find 'host' header", 400, req);
                         }

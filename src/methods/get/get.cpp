@@ -27,7 +27,7 @@ void makeResponse(Request req, string fileContent)
     // "Content-Type: text/plain\r\n"
     // "Content-Length: " + strlen(File.c_str()) + "\r\n";
     req.resp.fullResponse = req.resp.statusLine + "Content-Type: text/html\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
-    cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
+    // cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
     send(req.cfd, req.resp.fullResponse.c_str(), req.resp.fullResponse.size(), 0);
     cerr << "done" << endl;
 }

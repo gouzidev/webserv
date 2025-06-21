@@ -13,11 +13,11 @@ string readFromFile(string path) // for html files
         cout << "Reading file: " << path << endl;
         while (getline(file, line))
         {
-            cout << "line is " << line << endl;
-            cout << "last char is [" << line[line.size() - 1] << "]" << endl;
+            // cout << "line is " << line << endl;
+            // cout << "last char is [" << line[line.size() - 1] << "]" << endl;
            content += line + "\r\n";
         }
-        cout << "content is " << content << endl;
+        // cout << "content is " << content << endl;
         file.close();
         return content;
     }

@@ -56,6 +56,12 @@ using namespace std;
 
 #define ERROR  1
 
+struct FileData
+{
+    string name;
+    string filename;
+}
+
 typedef int REQUEST;
 
 class Response
@@ -208,7 +214,7 @@ class WebServ
         void handleLogin(Request &req, ServerNode &serv);
         void handleSignup(Request &req, ServerNode &serv);
         void handleLogout(Request &req, ServerNode &serv);
-        void handleUplaod(Request &req, ServerNode &servNode, LocationNode &locationNode);
+        void handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode);
 };
 
 

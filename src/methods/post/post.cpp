@@ -61,15 +61,29 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
     auth->signup(req.cfd, fName, userName, lName, email, password, req);
 }
 
-
 void WebServ::handleLogout(Request &req, ServerNode &serv)
 {
     string sessionKey = req.getSessionKey();
     auth->logout(req.cfd, sessionKey, serv);
 }
 
+FileData extractFileData(string contentDisposition)
+{
+    FileData data;
+    size_t i = 0;
+    bool insideQuotes = false;
+    while (i < contentDisposition.size())
+    {
 
-void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &locationNode)
+            
+        if (!insideQuotes && contentDisposition.substr(i, 9) == "filename=")
+        {
+
+        }
+    }
+}
+
+void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode)
 {
     string errorRes;
     if (locationNode.uploadDir == "")
@@ -81,15 +95,23 @@ void WebServ::handleUplaod(Request &req, ServerNode &servNode, LocationNode &loc
     }
     string boundary;
     string &contentType = req.headers["content-type"];
-    size_t pos = contentType.find("=");
-    boundary = contentType.substr(pos + 1);
+    size_t boundaryPos = contentType.find("=");
+    boundary = contentType.substr(boundaryPos + 1);
     string body = req.body;
+
+    if (!startsWith(body, boundary))
+        // errorRes  = getErrorResponse(405, ""); // method not allowed 
+        sendErrToClient(req.cfd, 400, servNode);
+    
+    size_t cdPos = body.find("Content-Disposition:", boundary.size() + 1);
+    size_t nlPos = body.find("\n", cdPos); 
+    string contentDisposition = body.substr(cdPos, nlPos - cdPos);
+    cout << "content Dispo : " << contentDisposition << endl; 
     
 }
 
 long extractContentLen(Request &req, ServerNode &serv)
 {
-    cout << "here looking for content-length" << endl;
     if (!exists(req.headers, "content-length"))
         throw RequestException("could not find 'content-length' header", 400, req);
     string contentLenStr = req.headers.find("content-length")->second;
@@ -141,6 +163,7 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
         return ;
     }
 
+    cout << "body -> [[[[" << req.body << "]]]]" << endl;
     string contentType = headers.find("content-type")->second;
     string rootFolder = servNode.root;
 
@@ -175,7 +198,7 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
     }   
     else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
     {
-        handleUplaod(req, servNode, locationNode);
+        handleUplaod(req, contentLen, servNode, locationNode);
     }
     else
     {
