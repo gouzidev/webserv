@@ -64,10 +64,18 @@ string getErrorResponse(unsigned short errorCode, string body)
     return errorRes;
 }
 
+string getQuickResponse(short errCode, string fileStr)
+{
+    string res;
+    res += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
+    res +=  "Content-Type: text/html\r\n";
+    res +=  "Content-Length: " + ushortToStr(fileStr.size()) + "\r\n\r\n";
+    res += fileStr;
+    return res;
+}
 
 void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
 {
-    cout << "Sending error response to client: " << errCode  << "   for client " << clientfd << endl;;
     string errorRes;
     const char *generalErrorResponse =
         "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n"

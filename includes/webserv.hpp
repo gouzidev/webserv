@@ -60,7 +60,7 @@ struct FileData
 {
     string name;
     string filename;
-}
+};
 
 typedef int REQUEST;
 
@@ -101,7 +101,7 @@ class Request
         void fillQuery(string queryStr);
         vector <string> & getStartLine();
         map  <string ,string> & getHeaders();
-        bool fillHeaders(int fd, string &rest);
+        bool fillHeaders(int fd);
         vector <string> & getBody();
         Request(ServerNode &serv);
 };
@@ -219,10 +219,11 @@ class WebServ
 
 
 void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
+string getQuickResponse(short errCode, string fileStr);
 std::vector<std::string> split (const std::string &s, char delim);
 string trimWSpaces(string &text);
 string trimSpaces(string &text);
-bool startsWith(string str, string sub);
+bool startsWith(string &str, string sub);
 bool    isStrEq(string a, string b);
 vector<string> split(string &str, char delim);
 bool    strAllDigit(string s);

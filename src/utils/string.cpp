@@ -12,7 +12,7 @@ bool    strAllDigit(string s)
 	return true;
 }
 
-bool startsWith(string str, string sub)
+bool startsWith(string &str, string sub)
 {
 	if (str.size() < sub.size())
 		return false;

@@ -176,16 +176,17 @@ string readLine(int fd, bool &error)
     return line;
 }
 
-bool Request::fillHeaders(int fd, string &rest)
+bool Request::fillHeaders(int fd)
 {
     char buff[BUFFSIZE + 1];
     size_t bytesRead = recv(fd, buff, BUFFSIZE, 0);
     buff[bytesRead] = '\0';
     
     if (bytesRead == -1)
-        throw NetworkException("recv failed or headers are too large", 500);
+    throw NetworkException("recv failed or headers are too large", 500);
     
     string headersStr = string(buff, bytesRead);
+    cout << "Received headers: {{{{{" << headersStr << "}}}}}" << endl;
     // cout << "Headers string: {{{" << headersStr << "}}}" <<  endl; // print only the first 100 chars for debugging
     size_t endPos = headersStr.find("\r\n\r\n");
     if (endPos == string::npos)
@@ -224,8 +225,17 @@ bool Request::fillHeaders(int fd, string &rest)
         // Move to next line
         i = nextNlPos + 2;  // +2 to skip \r\n
     }
+    if (endPos + 4 < headersStr.size())
+    {
+        this->body = headersStr.substr(endPos + 4); // +4 to skip \r\n\r\n
+        cout << "Body: |||" << this->body << "|||" << endl; // print only the first 100 chars for debugging
+    }
+    else
+    {
+        this->body = "";
+        cout << "No body in request" << endl; // print only the first 100 chars for debugging
+    }
     
-    rest = headersStr.substr(endPos + 4); // +4 to skip \r\n\r\n
     return true;
 }
 
@@ -287,8 +297,12 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         req.cfd = readyFd;
                         req.setStartLine(startLine);
                         req.isStartLineValid();
-                        req.fillHeaders(readyFd, rest);
-                        req.body = rest;
+                        req.fillHeaders(readyFd);
+
+                        cout << "=== NEW REQUEST ===" << endl;
+                        cout << "Client FD: " << readyFd << endl;
+                        cout << "Time: " << time(0) << endl;
+                        cout << "===================" << endl;
                         if (!exists(req.headers, "host"))
                         {
                             sendErrToClient(req.cfd, 400, serv);
