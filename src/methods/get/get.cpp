@@ -43,7 +43,7 @@ vector<string> getDirs(string mainDir)
     if (!dir) return dirs;
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.') continue; // skip . and ..
+        if (entry->d_name[0] == '.') continue;
         std::string fullPath = mainDir + "/" + entry->d_name;
         struct stat st;
         if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
