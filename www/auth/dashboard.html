@@ -621,7 +621,6 @@
             })
             .then(data => {
                 console.log('Upload successful:', data);
-                alert('Files uploaded successfully!');
                 // Update the file list to show uploaded status
                 document.querySelectorAll('.file-item').forEach(item => {
                     const sizeElement = item.querySelector('.file-size');
@@ -638,7 +637,6 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Upload failed. Please try again.');
                 // Reset status
                 document.querySelectorAll('.file-item').forEach(item => {
                     const sizeElement = item.querySelector('.file-size');

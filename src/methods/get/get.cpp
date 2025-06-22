@@ -29,7 +29,6 @@ void makeResponse(Request req, string fileContent)
     req.resp.fullResponse = req.resp.statusLine + "Content-Type: text/html\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
     cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
     send(req.cfd, req.resp.fullResponse.c_str(), req.resp.fullResponse.size(), 0);
-    cerr << "done" << endl;
 }
 
 string createDirList()

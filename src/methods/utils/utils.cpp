@@ -10,7 +10,7 @@ string readFromFile(string path) // for html files
     if (file)
     {
         string line;
-        cout << "Reading file: " << path << endl;
+        // cout << "Reading file: " << path << endl;
         while (getline(file, line))
         {
             // cout << "line is " << line << endl;

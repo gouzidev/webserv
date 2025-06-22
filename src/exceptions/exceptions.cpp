@@ -1,7 +1,7 @@
 #include "../../includes/webserv.hpp"
 #include "../../includes/Exceptions.hpp"
 
-WebServException::WebServException(const string &msg, short errorCode)
+WebServException::WebServException(const string msg, short errorCode)
 {
     this->msg = msg;
     this->errorCode = errorCode;
@@ -25,7 +25,7 @@ NetworkException::NetworkException(const string &msg, short errorCode) : WebServ
 {
 }
 
-RequestException::RequestException(const string &msg, short errorCode, Request &req) : req(req), WebServException("request error: " + msg, errorCode)
+RequestException::RequestException(const string &msg, short errorCode, Request &req) : WebServException("request error: " + msg, errorCode), req(req)
 {
 }
 
@@ -39,7 +39,24 @@ short RequestException::getErrorCode() const
     return errorCode;
 }
 
-HeaderException::HeaderException(const string &msg, short errorCode, ServerNode &serv) : req(req), WebServException("header error: " + msg, errorCode)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+HeaderException::HeaderException(const string &msg, short errorCode, Request &request) : WebServException("header error: " + msg, errorCode), req(request)
 {
 }
 
@@ -52,6 +69,26 @@ short HeaderException::getErrorCode() const
 {
     return errorCode;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ConfigException::ConfigException(const string &msg, short errorCode) : WebServException("config error: " + msg, errorCode)
 {
