@@ -27,18 +27,51 @@ void makeResponse(Request req, string fileContent)
     // "Content-Type: text/plain\r\n"
     // "Content-Length: " + strlen(File.c_str()) + "\r\n";
     req.resp.fullResponse = req.resp.statusLine + "Content-Type: text/html\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
-    // cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
+    cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
     send(req.cfd, req.resp.fullResponse.c_str(), req.resp.fullResponse.size(), 0);
     cerr << "done" << endl;
 }
 
-void dirList()
+string createDirList()
 {
+    return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><body>";
+}
+
+vector<string> getDirs(string mainDir)
+{
+    std::vector<std::string> dirs;
+    DIR* dir = opendir(mainDir.c_str());
+    if (!dir) return dirs;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') continue; // skip . and ..
+        std::string fullPath = mainDir + "/" + entry->d_name;
+        struct stat st;
+        if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+            dirs.push_back(entry->d_name);
+        }
+    }
+    closedir(dir);
+    return dirs;
+}
+
+void dirList(LocationNode node, Request req)
+{
+    string mainDir = node.root;
+    vector<string> subDirs = getDirs(mainDir);
+    string dirlist = createDirList();
+    dirlist += "<h1>DIRECTORY LISTING</h1><ul>";
+    for (int i = 0; i < subDirs.size(); i++)
+    {
+        dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
+    }
+    dirlist += "</ul></body></html>";
+    req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+    makeResponse(req, dirlist);
 }
 
 // void Response::setHeaders(string header)
 // {
-    
 // }
 
 bool checkIndex(LocationNode node, Request req)
@@ -49,7 +82,8 @@ bool checkIndex(LocationNode node, Request req)
     {
         if(node.root != "")
             fileName = node.root + "/" + node.index[i];
-        //else chech the main root
+        // else
+        //     fileName ;
         fileContent = readFromFile(fileName);
         if (fileContent != "")
         {
@@ -58,7 +92,7 @@ bool checkIndex(LocationNode node, Request req)
             return 0;
         }
     }
-    throw ConfigException("couldnt fild the index", 500);
+    throw ConfigException("couldnt find the index", 500);
 }
 
 void WebServ::getMethode(Request req, ServerNode servNode)
@@ -74,7 +108,7 @@ void WebServ::getMethode(Request req, ServerNode servNode)
     LocationNode node = servNode.locationDict.find(location)->second;
     if (!exists(node.methods, string("GET")))
     {
-        string errorRes  = getErrorResponse(405, ""); 
+        string errorRes  = getErrorResponse(405, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
@@ -83,7 +117,7 @@ void WebServ::getMethode(Request req, ServerNode servNode)
         if (node.index.empty() == true || checkIndex(node, req) == 1)
         {
             if(node.autoIndex == true)
-                dirList();
+                dirList(node, req);
             // else error 403/404
         }
     }
