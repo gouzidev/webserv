@@ -7,12 +7,12 @@
 class WebServException: public exception
 {
     public:
-        WebServException(const string &msg, short errorCode);
+        WebServException(const string msg, short errorCode);
         virtual const char *what() const throw ();
         virtual ~WebServException() throw(); 
     protected:
-        short errorCode;
         string msg;
+        short errorCode;
 };
 
 class NetworkException:  public WebServException
@@ -37,6 +37,23 @@ class RequestException:  public WebServException
         RequestException(const string &msg, short errorCode, Request &req);
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class HeaderException:  public WebServException
 {
     private:
@@ -44,8 +61,21 @@ class HeaderException:  public WebServException
     public :
         Request &getReq() const;
         short getErrorCode() const;
-        HeaderException(const string &msg, short errorCode, ServerNode &serv);
+        HeaderException(const string &msg, short errorCode, Request &req);
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class ServerException:  public WebServException
 {

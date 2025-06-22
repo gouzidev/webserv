@@ -19,6 +19,7 @@ bool startsWith(string &str, string sub)
 	return (str.substr(0, sub.size()) == sub);
 }
 
+
 string trimSpaces(string &text)
 {
         // const char *ws = "\t\n\r\f\v";

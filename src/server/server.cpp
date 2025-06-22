@@ -13,45 +13,6 @@ void setupHints(struct addrinfo &hints)
 }
 
 
-bool isLarge(char *buff, size_t buffSize, bool &error)
-{
-    buff[buffSize] = '\0';
-    string buffStr = string(buff, buffSize);
-    cout  << "buff substr: " << buffStr.substr(0, 100) << endl; // print only the first 100 chars for debugging
-    size_t startPos = buffStr.find("Content-Length:");
-    if (startPos == string::npos)
-        error = true;
-    else
-    {
-        size_t endPos = buffStr.find("\r\n", startPos);
-        string contentLenStr = buffStr.substr(startPos + 15, endPos - startPos - 15);
-        contentLenStr = trimWSpaces(contentLenStr);
-        if (!strAllDigit(contentLenStr))
-        {
-            cout << "Error, Content-Length '" << contentLenStr << "' not a number" << endl;
-            error = true;
-            return false;
-        }
-
-        istringstream contentLenStream (contentLenStr);
-        if (contentLenStream.fail())
-        {
-            cout << "Error, Content-Length is not a number (fail)" << endl;
-            error = true;
-            return false;
-        }
-
-        long contentLen;
-        contentLenStream >> contentLen;
-        cout << "Content-Length is " << contentLen << endl;
-        if (contentLen > 5000000) // 5m
-            return true;
-        return false;
-    }
-    return false;
-}
-
-
 int bindAndGetSock(struct addrinfo *&res)
 {
     struct addrinfo *temp = res;
@@ -148,7 +109,6 @@ string readLine(int fd, bool &error)
     bytesRead = recv(fd, &c, 1, 0);
     if (bytesRead <= 0)
     {
-        cout << "hello 149" << endl;
         throw NetworkException("recv failed", 500);
     }
     while (bytesRead > 0)
@@ -158,7 +118,6 @@ string readLine(int fd, bool &error)
             bytesRead = recv(fd, &c, 1, 0);
             if (bytesRead < 0)
             {
-                cout << "hello 158" << endl;
                 throw NetworkException("recv failed", 500);
             }
             if (c == '\n')
@@ -166,10 +125,8 @@ string readLine(int fd, bool &error)
         }
         line += c;
         bytesRead = recv(fd, &c, 1, 0);
-        if (bytesRead < 0)
+        if (bytesRead <= 0)
         {
-            cout << "hello 169" << endl;
-            
             throw NetworkException("recv failed", 500);
         }
     }
@@ -186,8 +143,7 @@ bool Request::fillHeaders(int fd)
     throw NetworkException("recv failed or headers are too large", 500);
     
     string headersStr = string(buff, bytesRead);
-    cout << "Received headers: {{{{{" << headersStr << "}}}}}" << endl;
-    // cout << "Headers string: {{{" << headersStr << "}}}" <<  endl; // print only the first 100 chars for debugging
+    // cout << "Received headers: {{{{{" << headersStr << "}}}}}" << endl;
     size_t endPos = headersStr.find("\r\n\r\n");
     if (endPos == string::npos)
         throw RequestException("headers not found in request", 400, *this);
@@ -228,7 +184,6 @@ bool Request::fillHeaders(int fd)
     if (endPos + 4 < headersStr.size())
     {
         this->body = headersStr.substr(endPos + 4); // +4 to skip \r\n\r\n
-        cout << "Body: |||" << this->body << "|||" << endl; // print only the first 100 chars for debugging
     }
     else
     {
@@ -299,16 +254,11 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         req.isStartLineValid();
                         req.fillHeaders(readyFd);
 
-                        cout << "=== NEW REQUEST ===" << endl;
-                        cout << "Client FD: " << readyFd << endl;
-                        cout << "Time: " << time(0) << endl;
-                        cout << "===================" << endl;
                         if (!exists(req.headers, "host"))
                         {
                             sendErrToClient(req.cfd, 400, serv);
                             throw RequestException("could not find 'host' header", 400, req);
                         }
-                        cout << req.headers["host"] << endl;
                         string hostPort = getHostPort(req.headers["host"], serv.port);
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);

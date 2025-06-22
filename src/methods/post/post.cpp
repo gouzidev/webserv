@@ -83,110 +83,6 @@ FileData extractFileData(string contentDisposition)
     }
 }
 
-void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode)
-{
-    string errorRes;
-    if (locationNode.uploadDir == "")
-    {
-        errorRes  = getErrorResponse(405, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-        // error (no upload path provided)
-    }
-    string boundary;
-    string &contentType = req.headers["content-type"];
-    size_t boundaryPos = contentType.find("=");
-    boundary = "--" + contentType.substr(boundaryPos + 1);
-    string body = req.body;
-
-    cout << "boundary -> {" << boundary << "}" << endl;
-    cout << "body.substr(0, boundary.size()) -> {" << body.substr(0, boundary.size()) << "}" << endl;
-    if (body.substr(0, boundary.size()) != boundary)
-    {
-        // errorRes  = getErrorResponse(405, ""); // method not allowed 
-        cerr << "error with boundary -> '" << boundary << "'" << endl;
-        cout << "body -> {{" << body.substr(0, 100) << "}}" << endl;
-        sendErrToClient(req.cfd, 400, servNode);
-        return ;
-    }
-    
-    size_t cdPos = body.find("Content-Disposition:", boundary.size() + 1);
-    size_t nlPos = body.find("\n", cdPos); 
-    string contentDisposition = body.substr(cdPos, nlPos - cdPos);
-    cout << "content dispo : " << contentDisposition << endl;
-    size_t i = 0;
-    string name;
-    string filename;
-    while (contentDisposition[i])
-    {
-        if (contentDisposition.substr(i, 5) == "name=")
-        {
-            size_t firstQuote = -1;
-            size_t lastQuote = -1;
-            size_t j = i + 5;
-            while (j < contentDisposition.size() && contentDisposition[j] != ';' && contentDisposition[j] != '\r' && contentDisposition[j] != '\n')
-            {
-                if (contentDisposition[j] == '"')
-                {
-                    if (firstQuote == -1)
-                        firstQuote = j;
-                    else
-                        lastQuote = j;
-                }
-                j++;
-            }
-            name = contentDisposition.substr(firstQuote + 1, lastQuote - firstQuote - 1);
-            i = j;
-            continue;
-        }
-        else if (contentDisposition.substr(i, 9) == "filename=")
-        {
-            size_t firstQuote = -1;
-            size_t lastQuote = -1;
-            size_t j = i + 9;
-            while (j < contentDisposition.size() && contentDisposition[j] != ';' && contentDisposition[j] != '\r' && contentDisposition[j] != '\n')
-            {
-                if (contentDisposition[j] == '"')
-                {
-                    if (firstQuote == -1)
-                        firstQuote = j;
-                    else
-                        lastQuote = j;
-                }
-                j++;
-            }
-            filename = contentDisposition.substr(firstQuote + 1, lastQuote - firstQuote - 1);
-            i = j;
-            continue;
-        }
-        i++;
-    }
-    cout << "name     -> {" <<  name << "}" << endl;
-    cout << "filename -> {" << filename << "}" << endl;
-    string path = locationNode.uploadDir;
-    string newFile = path + "/" + filename;
-
-    int fd = open(newFile.c_str(), O_CREAT | O_RDWR);
-    if (fd == -1)
-    {
-        errorRes  = getErrorResponse(500, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
-
-    size_t bCTnlPos = body.find("\n", nlPos + 1);
-
-    // string bodyContentType = body.substr(nlPos + 1, bCt);
-
-
-    write(fd, body.c_str(), body.size());
-
-    // succes
-
-    string response = getQuickResponse(200, "");
-    send(req.cfd, response.c_str(), strlen(response.c_str()), 0);
-}
-
 long extractContentLen(Request &req, ServerNode &serv)
 {
     if (!exists(req.headers, "content-length"))
@@ -224,11 +120,11 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
         // sendErrToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
     }
-    if (contentLen > 10000000)
-    {
-        // sendErrToClient(req.cfd, 413, serv);
-        throw RequestException("content length is too large for the server", 413, req);
-    }
+    // if (contentLen > 10000000)
+    // {
+    //     // sendErrToClient(req.cfd, 413, serv);
+    //     throw RequestException("content length is too large for the server", 413, req);
+    // }
     if (!exists(headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;

@@ -1,7 +1,6 @@
 CC = c++
 
-FLAGS = -Wall -Wextra  -std=c++98 -g3
-
+FLAGS = -Wall -Wextra -std=c++98 -g3 -fsanitize=address -fno-omit-frame-pointer
 SRC_DIR = src
 OBJ_DIR = obj
 
@@ -11,6 +10,7 @@ FILES = $(SRC_DIR)/webserv.cpp \
         $(SRC_DIR)/request/Request.cpp \
         $(SRC_DIR)/methods/get/get.cpp \
         $(SRC_DIR)/methods/post/post.cpp \
+        $(SRC_DIR)/methods/post/upload.cpp \
         $(SRC_DIR)/methods/utils/utils.cpp \
         $(SRC_DIR)/utils/shortcuts.cpp \
         $(SRC_DIR)/utils/convert.cpp \
