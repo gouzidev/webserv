@@ -82,7 +82,7 @@ bool checkIndex(LocationNode node, Request req)
         if(node.root != "")
             fileName = node.root + "/" + node.index[i];
         // else
-        //     fileName ;
+        //      ;
         fileContent = readFromFile(fileName);
         if (fileContent != "")
         {
@@ -122,7 +122,7 @@ void WebServ::getMethode(Request req, ServerNode servNode)
     }
     catch(ConfigException& e)
     {
-        sendErrToClient(req.cfd, 500, req.serv);
+        sendErrToClient(req.cfd, req.error, req.serv);
         std::cerr << e.what() << '\n';
     }
 }
