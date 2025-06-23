@@ -157,6 +157,7 @@ class User
         User(string email, string password);
         User(string fName, string lName, string email, string password);
         User(string fName, string lName, string userName, string email, string password);
+        map <string, string> getKeyValData();
         const string &getEmail() const;
         const string &getFirstName() const;
         const string &getLastName() const;
@@ -239,7 +240,7 @@ string ushortToStr(unsigned short port);
 string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);
 
-
+string dynamicRender(string path, map <string, string> data); // for html files
 
 string getLocation(string resource, ServerNode &servNode);
 

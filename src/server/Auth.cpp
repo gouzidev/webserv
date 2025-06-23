@@ -29,6 +29,15 @@ void Auth::login(int cfd, string email, string password, Request &req)
     cout << "user logged in successfully" << endl;
 
     ifstream dashboardFile;
+
+
+    string response;
+
+    Session newSession = Session(users[email]);
+    string sessionKey = newSession.getKey();
+
+    map <string, string> data = users[email].getKeyValData();
+
     dashboardFile.open("./www/auth/dashboard.html");
     if (dashboardFile.fail())
     {
@@ -36,15 +45,8 @@ void Auth::login(int cfd, string email, string password, Request &req)
         send(cfd, generalErrorResponse, strlen(generalErrorResponse), 0);
         return ;
     }
-    string line, dashboardContent = "";
-    while (getline(dashboardFile, line))
-    {
-        dashboardContent += line + "\r\n";
-    }
-    string response;
-
-    Session newSession = Session(users[email]);
-    string sessionKey = newSession.getKey();
+    string line = "";
+    string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
     sessions.insert(make_pair(sessionKey, newSession));  // ✅ This doesn't need default constructor
 
     response += "HTTP/1.1 " + ushortToStr(200) + " " + getStatusMessage(200) + " \r\n";
