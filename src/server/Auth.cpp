@@ -29,7 +29,7 @@ void Auth::login(int cfd, string email, string password, Request &req)
     cout << "user logged in successfully" << endl;
 
     ifstream dashboardFile;
-    dashboardFile.open("/home/sgouzi/prj/webserv/www/auth/dashboard.html");
+    dashboardFile.open("./www/auth/dashboard.html");
     if (dashboardFile.fail())
     {
         cerr << "Error happened opening the file of dashboard" << endl;

@@ -15,7 +15,7 @@ string readFromFile(string path) // for html files
         {
             // cout << "line is " << line << endl;
             // cout << "last char is [" << line[line.size() - 1] << "]" << endl;
-           content += line + "\r\n";
+           content += line;
         }
         // cout << "content is " << content << endl;
         file.close();

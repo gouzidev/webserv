@@ -21,6 +21,8 @@
 #include <cstring>
 #include <sstream>
 #include <fcntl.h>
+#include <dirent.h>
+#include <sys/stat.h>
 // io operations
 
 
@@ -38,6 +40,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 // others
 
 

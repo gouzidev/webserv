@@ -4,4 +4,6 @@
 /obj
 webserv
 *.vscode
-www/upload
+/home/akoraich/webserv/badconf.conf
+/home/akoraich/webserv/cgi.conf
+/home/akoraich/webserv/www/upload
