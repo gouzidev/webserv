@@ -640,11 +640,11 @@
         });
         
         // ✅ FIXED: Add logout confirmation
-        document.querySelector('form[action="/logout"]').addEventListener('submit', function(e) {
-            if (!confirm('Are you sure you want to logout?')) {
-                e.preventDefault();
-            }
-        });
+        // document.querySelector('form[action="/logout"]').addEventListener('submit', function(e) {
+        //     if (!confirm('Are you sure you want to logout?')) {
+        //         e.preventDefault();
+        //     }
+        // });
         
         // ✅ FIXED: Add click effects for action buttons
         document.querySelectorAll('.action-btn').forEach(btn => {

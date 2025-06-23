@@ -133,7 +133,6 @@ string readLine(int fd, bool &error)
     return line;
 }
 
-// ❌ OLD BROKEN VERSION (what you likely had before)
 bool Request::fillHeaders(int fd)
 {
     char buff[BUFFSIZE + 1];
@@ -191,11 +190,9 @@ bool Request::fillHeaders(int fd)
             val = trimWSpaces(val);
             transform(key.begin(), key.end(), key.begin(), ::tolower);
             
-            if (key == "content-length") {
+            if (key == "content-length")
                 expectedContentLength = atol(val.c_str());
-            }
         }
-        
         i = nextLineEnd + 2;
     }
     
@@ -213,7 +210,6 @@ bool Request::fillHeaders(int fd)
     if (bodyAlreadyRead < expectedContentLength) // we have some content length that isnt read
     {
         size_t remainingBodyBytes = expectedContentLength - bodyAlreadyRead;
-
         while (remainingBodyBytes > 0)
         {
             size_t toRead = min((size_t) BUFFSIZE, remainingBodyBytes);
@@ -278,7 +274,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         req.cfd = readyFd;
 
                         req.fillHeaders(readyFd);
-
+                        
                         if (!exists(req.headers, "host"))
                         {
                             sendErrToClient(req.cfd, 400, serv);
@@ -290,8 +286,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         
                         if (req.getReqType() == POST)
                         {
-                            if (!req.body.empty())
-                                postMethode(req, serv);
+                            postMethode(req, serv);
                             close(readyFd);
                             clientServMap.erase(readyFd);
                             epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);

@@ -4,7 +4,7 @@
 
 Request::Request(ServerNode &serv) : serv(serv)
 {
-
+    contentLen = 0;
 }
 
 void Request::setStartLine(string line)
@@ -87,6 +87,12 @@ void Request::setHeaders(string line) //needs checking for headers syntax
     transform(key.begin(), key.end(), key.begin(), ::tolower); // Field names are case-insensitive rfc 4.2 msg headers
     pair <string, string> p = make_pair(key, val);
     headers.insert(p);
+
+    if (key == "content-length")
+    {
+        contentLen = extractContentLen(*this, serv);
+    }
+  
 }
 
 // for the body parsing : If a message is received with both a

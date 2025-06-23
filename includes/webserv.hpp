@@ -91,6 +91,7 @@ class Request
         map <string, string> queryParams;
         ServerNode &serv; // a server that the request belongs to
         string body; // possible update for large files in post
+        long contentLen;
     public :
         int cfd; // client fd
         void setStartLine(string);
@@ -247,6 +248,8 @@ string getErrorResponse(unsigned short errorCode, string body);
 string readFromFile(string path); // for html files
 
 string getStatusMessage(unsigned short code);
+
+long extractContentLen(Request &req, ServerNode &serv);
 
 vector<string> splitNoSpace(string &str, char delim);
 

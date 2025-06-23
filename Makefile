@@ -1,6 +1,6 @@
 CC = c++
 
-FLAGS = -Wall -Wextra -std=c++98 -g3 -fsanitize=address -fno-omit-frame-pointer
+FLAGS = -Wall -Wextra -std=c++98 -g3# -fsanitize=address -fno-omit-frame-pointer
 SRC_DIR = src
 OBJ_DIR = obj
 

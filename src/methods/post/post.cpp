@@ -63,6 +63,7 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
 
 void WebServ::handleLogout(Request &req, ServerNode &serv)
 {
+    cout << "handling logout" << endl;
     string sessionKey = req.getSessionKey();
     auth->logout(req.cfd, sessionKey, serv);
 }
@@ -107,7 +108,6 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
     string &location = req.getResource();
     map <string, string> &headers = req.getHeaders();
     string key = "host";
-    // Debugger::printMap("headers", headers);
 
     if (!exists(req.headers, "content-length"))
     {
@@ -120,11 +120,6 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
         // sendErrToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
     }
-    // if (contentLen > 10000000)
-    // {
-    //     // sendErrToClient(req.cfd, 413, serv);
-    //     throw RequestException("content length is too large for the server", 413, req);
-    // }
     if (!exists(headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;
