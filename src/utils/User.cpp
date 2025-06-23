@@ -79,3 +79,13 @@ void User::setPassword(string str)
 {
     password = str;
 }
+
+map <string, string> User::getKeyValData()
+{
+    map <string, string> data;
+    data["firstName"] = firstName;
+    data["lastName"] = lastName;
+    data["email"] = email;
+
+    return data;
+}

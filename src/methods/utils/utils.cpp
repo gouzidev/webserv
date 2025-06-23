@@ -1,5 +1,6 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
+#include "../../../includes/Exceptions.hpp"
 
 string readFromFile(string path) // for html files
 {
@@ -28,6 +29,45 @@ string readFromFile(string path) // for html files
     }
     return "";
 }
+
+// pair <string, string> parseData(string line)
+
+// in order for this to work, the line should be in the format "{{someKey}}", with no spaces or other characters around the key
+string dynamicRender(string path, map <string, string> data) // for html files
+{
+    // (void)path;
+    string content = "";
+    // char path_[] = "/home/akoraich/ourwebserve/www/asma.html";
+    std::ifstream file(path.c_str());
+    if (file)
+    {
+        string line;
+        // cout << "Reading file: " << path << endl;
+        while (getline(file, line))
+        {
+            size_t openBracketsPos = line.find("{{");
+            while (openBracketsPos != string::npos)
+            {
+                size_t closeBracketsPos = line.find("}}");
+                if (closeBracketsPos == string::npos)
+                    throw ServerException("Unmatched opening brackets in line: " + line, 500);
+                string key = line.substr(openBracketsPos + 2, closeBracketsPos - openBracketsPos - 2);
+                if (!exists(data, key))
+                throw ServerException("Key not found in data map: " + key, 500);
+                cout << "key -> {{" << key << "}}  -> [[" << data[key] << "]]" << endl; 
+
+                line.replace(openBracketsPos, closeBracketsPos - openBracketsPos + 2, data[key]);
+                openBracketsPos = line.find("{{");
+            }
+           content += line;
+        }
+        file.close();
+    }
+    else
+        throw ServerException("Error opening file: " + path, 500);
+    return content;
+}
+
 
 string getStatusMessage(unsigned short code) 
 {
