@@ -68,7 +68,7 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
     User newUser(fName, lName, userName, email, password);
     users[email] = newUser;
     ifstream dashboardFile;
-    dashboardFile.open("/home/sgouzi/prj/webserv/www/auth/dashboard.html");
+    dashboardFile.open("./www/auth/dashboard.html");
     if (dashboardFile.fail())
     {
         cerr << "Error happened opening the file of dashboard" << endl;
@@ -97,7 +97,7 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
 void Auth::redirectToLogin(int cfd, int errorCode)
 {
     ifstream loginFile;
-    loginFile.open("/home/sgouzi/prj/webserv/www/login/login.html");
+    loginFile.open("./www/login/login.html");
     if (loginFile.fail())
     {
         cerr << "Error happened opening the file of login" << endl;
@@ -155,4 +155,4 @@ void Auth::cleanUpSessions()
         }
         sessionsMapIt++;
     }
-}
+}           
