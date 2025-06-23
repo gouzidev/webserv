@@ -32,6 +32,7 @@ string readFromFile(string path) // for html files
 
 // pair <string, string> parseData(string line)
 
+// in order for this to work, the line should be in the format "{{someKey}}", with no spaces or other characters around the key
 string dynamicRender(string path, map <string, string> data) // for html files
 {
     // (void)path;
