@@ -122,11 +122,13 @@ void Auth::logout(int cfd, string sessionKey, ServerNode &serv)
 {
     if (exists(sessions, sessionKey))
     {
+        cout << "user logged out successfully" << endl;
         sessions.erase(sessionKey);
         redirectToLogin(cfd, 200);
     }
     else
     {
+        cout << "session key not found" << endl;
         redirectToLogin(cfd, 401);
     }
 }
