@@ -133,74 +133,101 @@ string readLine(int fd, bool &error)
     return line;
 }
 
+// ❌ OLD BROKEN VERSION (what you likely had before)
 bool Request::fillHeaders(int fd)
 {
     char buff[BUFFSIZE + 1];
-    size_t bytesRead = recv(fd, buff, BUFFSIZE, 0);
-    buff[bytesRead] = '\0';
     
-    if (bytesRead == -1)
-    throw NetworkException("recv failed or headers are too large", 500);
-    
-    string headersStr = string(buff, bytesRead);
-    // cout << "Received headers: {{{{{" << headersStr << "}}}}}" << endl;
-    size_t endPos = headersStr.find("\r\n\r\n");
-    if (endPos == string::npos)
-        throw RequestException("headers not found in request", 400, *this);
-    
-    size_t i = 0;
-    while (i < endPos)
+    size_t totalRead = 0;
+    bool completedHeaders = false;
+    string fullRequest = "";
+    size_t headersEnd = -1;
+    long expectedContentLength = 0;
+
+    while (!completedHeaders && totalRead < BUFFSIZE * 2)
     {
-        string key;
-        string val;
-
-        // Find the end of current line FIRST
-        size_t nextNlPos = headersStr.find("\r\n", i);
-        if (nextNlPos == string::npos || nextNlPos > endPos) {
-            break; // No more complete lines
+        ssize_t bytesRead = recv(fd, buff, BUFFSIZE, 0);
+        if (bytesRead <= 0) {
+            throw NetworkException("recv failed", 500);
         }
-        
-        // Now find colon ONLY within this line
-        size_t sepPos = headersStr.find(':', i);
-        if (sepPos == string::npos || sepPos >= nextNlPos) {
-            // No colon in this line, skip it
-            i = nextNlPos + 2;
-            continue;
+        fullRequest.append(buff, bytesRead);
+        totalRead += bytesRead;
+        headersEnd = fullRequest.find("\r\n\r\n");
+        if (headersEnd != string::npos)
+        {
+            completedHeaders = true;
         }
-
-        key = headersStr.substr(i, sepPos - i);
-        val = headersStr.substr(sepPos + 1, nextNlPos - sepPos - 1);
-
-        key = trimWSpaces(key);
-        val = trimWSpaces(val);
-        
-        // Convert key to lowercase
-        transform(key.begin(), key.end(), key.begin(), ::tolower);
-        headers[key] = val;
-        
-        // Move to next line
-        i = nextNlPos + 2;  // +2 to skip \r\n
     }
-    if (endPos + 4 < headersStr.size())
+    if (completedHeaders && headersEnd != -1)
+        body = fullRequest.substr(headersEnd + 4);
+    else
+        throw NetworkException("Incomplete headers received", 400);
+
+    size_t startLineEnd = fullRequest.find("\r\n");
+    if (startLineEnd == string::npos) {
+        throw NetworkException("Invalid start line", 400);
+    }
+    string startLine = fullRequest.substr(0, startLineEnd);
+    setStartLine(startLine);
+    isStartLineValid();
+    
+    // Parse headers
+    size_t i = startLineEnd + 2;
+    while (i < headersEnd) {
+        size_t nextLineEnd = fullRequest.find("\r\n", i);
+        if (nextLineEnd == string::npos || nextLineEnd > headersEnd) {
+            break;
+        }
+        
+        string headerLine = fullRequest.substr(i, nextLineEnd - i);
+        setHeaders(headerLine);
+        
+        // ✅ Extract Content-Length for body reading
+        size_t colonPos = headerLine.find(':');
+        if (colonPos != string::npos) {
+            string key = headerLine.substr(0, colonPos);
+            string val = headerLine.substr(colonPos + 1);
+            key = trimWSpaces(key);
+            val = trimWSpaces(val);
+            transform(key.begin(), key.end(), key.begin(), ::tolower);
+            
+            if (key == "content-length") {
+                expectedContentLength = atol(val.c_str());
+            }
+        }
+        
+        i = nextLineEnd + 2;
+    }
+    
+    size_t bodyStart = headersEnd + 4;
+    size_t bodyAlreadyRead = 0;
+
+    if (bodyStart < fullRequest.size())
     {
-        this->body = headersStr.substr(endPos + 4); // +4 to skip \r\n\r\n
+        bodyAlreadyRead = fullRequest.size() - bodyStart;
+        this->body = fullRequest.substr(bodyStart);
     }
     else
-    {
         this->body = "";
-        cout << "No body in request" << endl; // print only the first 100 chars for debugging
-    }
     
+    if (bodyAlreadyRead < expectedContentLength) // we have some content length that isnt read
+    {
+        size_t remainingBodyBytes = expectedContentLength - bodyAlreadyRead;
+
+        while (remainingBodyBytes > 0)
+        {
+            size_t toRead = min((size_t) BUFFSIZE, remainingBodyBytes);
+            ssize_t bytesRead = recv(fd, buff, toRead, 0);
+            if (bytesRead <= 0)
+                throw NetworkException("recv failed", 500);
+            this->body.append(buff, bytesRead);
+            remainingBodyBytes -= bytesRead;
+        }
+    }
+
     return true;
 }
-
-
-
-// steps :
-    // 1. Read start line
-    // 2. Read headers 
-    // 3. Read body (if POST)
-    // 4. Return complete request
+    
 bool readCompleteRequest(int fd, Request &req, string &error)
 {
 
@@ -246,12 +273,10 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                     {
                         string rest;
                         int servFd = clientServMap[readyFd];
-                        string startLine = readLine(readyFd, error);
                         ServerNode serv = servSocketMap[servFd];
                         Request req(serv);
                         req.cfd = readyFd;
-                        req.setStartLine(startLine);
-                        req.isStartLineValid();
+
                         req.fillHeaders(readyFd);
 
                         if (!exists(req.headers, "host"))
@@ -265,7 +290,8 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         
                         if (req.getReqType() == POST)
                         {
-                            postMethode(req, serv);
+                            if (!req.body.empty())
+                                postMethode(req, serv);
                             close(readyFd);
                             clientServMap.erase(readyFd);
                             epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);

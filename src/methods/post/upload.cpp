@@ -108,20 +108,20 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
     {
         size_t bodyEndPos = body.find(endBoundary);
         string bodyData = body.substr(bCTnlPos + 4, bodyEndPos - bCTnlPos - 4); // skip new line
-        cout << " [[" <<  bodyData << "]]" << endl;
+        // cout << " [[" <<  bodyData << "]]" << endl;
         write(fd, bodyData.c_str(), bodyData.size());
     }
     else
     {
-        cout << "body data is too large, reading from socket" << endl;
+        // cout << "body data is too large, reading from socket" << endl;
         
         size_t headersPlusDataRead = req.body.size();  // How much we already have read (headers + body headers + maybe some body data)
         size_t totalDataNeeded = contentLen;  // total data we need to read got it from -> Content-Length header
         size_t remainingToRead = totalDataNeeded - headersPlusDataRead; // the remaining data to read, will be reading until i reach it
 
-        cout << "Content-Length: " << contentLen << endl;
-        cout << "Already read: " << headersPlusDataRead << endl;
-        cout << "Still need to read: " << remainingToRead << endl;
+        // cout << "Content-Length: " << contentLen << endl;
+        // cout << "Already read: " << headersPlusDataRead << endl;
+        // cout << "Still need to read: " << remainingToRead << endl;
         
         string remaningStr = body.substr(bCTnlPos + 4);
         write(fd, remaningStr.c_str(), remaningStr.size());

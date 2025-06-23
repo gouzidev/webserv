@@ -454,7 +454,7 @@
         <!-- File Upload Section -->
         <div class="upload-section">
             <h3>📁 File Upload</h3>
-            <form id="uploadForm" action="https://127.0.0.1:8080/upload" method="POST" enctype="multipart/form-data">
+            <form id="uploadForm" method="POST" enctype="multipart/form-data">
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-content">
                         <div class="upload-icon">📁</div>
@@ -480,63 +480,13 @@
     </div>
 
     <script>
-        // Add logout confirmation
-        document.querySelector('form[action="/logout"]').addEventListener('submit', function(e) {
-            if (!confirm('Are you sure you want to logout?')) {
-                e.preventDefault();
-            }
-        });
-        
-        // Auto-refresh stats every 30 seconds
-        setInterval(() => {
-            // You can add AJAX calls here to update stats
-            console.log('Stats refresh...');
-        }, 30000);
-        
-        // Add click effects
-        document.querySelectorAll('.action-btn').forEach(btn => {
-            if (btn.type !== 'submit') {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    alert('Feature coming soon!');
-                });
-            }
-        });
-        
-        // File Upload Functionality
+        // ✅ FIXED: Properly declare all variables
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const uploadForm = document.getElementById('uploadForm');
         const filesList = document.getElementById('filesList');
         
-        // Drag and drop functionality
-        uploadArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            fileInput.files = files; // Set the files to the input
-            handleFiles(files);
-        });
-        
-        // Click to upload
-        uploadArea.addEventListener('click', function() {
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', function() {
-            handleFiles(this.files);
-        });
-        
+        // ✅ FIXED: Add the missing handleFiles function
         function handleFiles(files) {
             // Clear previous files display
             filesList.innerHTML = '';
@@ -589,7 +539,43 @@
             fileInput.value = '';
         }
         
-        // Handle form submission
+        // ✅ FIXED: Drag and drop functionality
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            fileInput.files = files;
+            handleFiles(files);
+        });
+        
+        // ✅ FIXED: Click to upload with proper event handling
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target === uploadArea || e.target.closest('.upload-content')) {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+        
+        // ✅ FIXED: Prevent event conflicts
+        fileInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+        
+        // ✅ FIXED: Form submission - REMOVE action attribute and fix fetch
         uploadForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -599,17 +585,19 @@
             }
             
             const formData = new FormData();
-            for (let file of fileInput.files) {
-                formData.append('file', file);
-            }
+            // ✅ FIXED: Use single file upload to avoid issues
+            formData.append('file', fileInput.files[0]);
             
             // Show uploading status
             document.querySelectorAll('.file-item').forEach(item => {
                 const sizeElement = item.querySelector('.file-size');
-                sizeElement.textContent = sizeElement.textContent.replace('Ready to upload', 'Uploading... ⏳');
+                if (sizeElement) {
+                    sizeElement.textContent = sizeElement.textContent.replace('Ready to upload', 'Uploading... ⏳');
+                }
             });
             
-            fetch('/upload', {
+            // ✅ FIXED: Use correct URL and proper error handling
+            fetch('http://127.0.0.1:8080/upload', {
                 method: 'POST',
                 body: formData
             })
@@ -617,32 +605,55 @@
                 if (response.ok) {
                     return response.text();
                 }
-                throw new Error('Upload failed');
+                throw new Error('Upload failed with status: ' + response.status);
             })
             .then(data => {
                 console.log('Upload successful:', data);
-                // Update the file list to show uploaded status
+                // Update status to success
                 document.querySelectorAll('.file-item').forEach(item => {
                     const sizeElement = item.querySelector('.file-size');
-                    if (sizeElement.textContent.includes('Uploading...')) {
+                    if (sizeElement && sizeElement.textContent.includes('Uploading...')) {
                         sizeElement.textContent = sizeElement.textContent.replace('Uploading... ⏳', 'Uploaded successfully ✅');
                         const actions = item.querySelector('.file-actions');
-                        actions.innerHTML = `
-                            <button class="file-action view-btn">View</button>
-                            <button class="file-action download-btn">Download</button>
-                            <button class="file-action delete-btn">Delete</button>
-                        `;
+                        if (actions) {
+                            actions.innerHTML = `
+                                <button class="file-action view-btn">View</button>
+                                <button class="file-action download-btn">Download</button>
+                                <button class="file-action delete-btn">Delete</button>
+                            `;
+                        }
                     }
                 });
+                alert('File uploaded successfully!');
             })
             .catch(error => {
                 console.error('Error:', error);
-                // Reset status
+                // Reset status on error
                 document.querySelectorAll('.file-item').forEach(item => {
                     const sizeElement = item.querySelector('.file-size');
-                    sizeElement.textContent = sizeElement.textContent.replace('Uploading... ⏳', 'Ready to upload');
+                    if (sizeElement) {
+                        sizeElement.textContent = sizeElement.textContent.replace('Uploading... ⏳', 'Upload failed ❌');
+                    }
                 });
+                alert('Upload failed: ' + error.message);
             });
+        });
+        
+        // ✅ FIXED: Add logout confirmation
+        document.querySelector('form[action="/logout"]').addEventListener('submit', function(e) {
+            if (!confirm('Are you sure you want to logout?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // ✅ FIXED: Add click effects for action buttons
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            if (btn.type !== 'submit') {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Feature coming soon!');
+                });
+            }
         });
     </script>
 </body>
