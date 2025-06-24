@@ -86,6 +86,7 @@ map <string, string> User::getKeyValData()
     data["firstName"] = firstName;
     data["lastName"] = lastName;
     data["email"] = email;
+    data["userName"] = userName;
 
     return data;
 }

@@ -32,17 +32,14 @@ string readFromFile(string path) // for html files
 
 // pair <string, string> parseData(string line)
 
-// in order for this to work, the line should be in the format "{{someKey}}", with no spaces or other characters around the key
-string dynamicRender(string path, map <string, string> data) // for html files
+// Replaces {{key}} placeholders in template file with values from data map
+string dynamicRender(string path, map <string, string> &data)
 {
-    // (void)path;
     string content = "";
-    // char path_[] = "/home/akoraich/ourwebserve/www/asma.html";
     std::ifstream file(path.c_str());
     if (file)
     {
         string line;
-        // cout << "Reading file: " << path << endl;
         while (getline(file, line))
         {
             size_t openBracketsPos = line.find("{{");
@@ -53,10 +50,11 @@ string dynamicRender(string path, map <string, string> data) // for html files
                     throw ServerException("Unmatched opening brackets in line: " + line, 500);
                 string key = line.substr(openBracketsPos + 2, closeBracketsPos - openBracketsPos - 2);
                 if (!exists(data, key))
-                throw ServerException("Key not found in data map: " + key, 500);
-                cout << "key -> {{" << key << "}}  -> [[" << data[key] << "]]" << endl; 
-
-                line.replace(openBracketsPos, closeBracketsPos - openBracketsPos + 2, data[key]);
+                    throw ServerException("Key not found in data map: " + key, 500);
+                string val = data[key];
+                if (val.empty())
+                    val = "unkown";
+                line.replace(openBracketsPos, closeBracketsPos - openBracketsPos + 2, val);
                 openBracketsPos = line.find("{{");
             }
            content += line;
@@ -72,11 +70,22 @@ string dynamicRender(string path, map <string, string> data) // for html files
 string getStatusMessage(unsigned short code) 
 {
     switch (code) {
+        case 200: return "OK";
+        case 201: return "Created";
+        case 202: return "Accepted";
+        case 204: return "No Content";
+        case 301: return "Moved Permanently";
+        case 302: return "Found";
+        case 303: return "See Other";
+        case 304: return "Not Modified";
         case 400: return "Bad Request";
         case 401: return "Unauthorized";
         case 403: return "Forbidden"; 
         case 404: return "Not Found";
         case 409: return "Conflict";
+        case 413: return "Request Entity Too Large";
+        case 414: return "Request-URI Too Long";
+        case 415: return "Unsupported Media Type";
         case 405: return "Method Not Allowed";
         case 500: return "Internal Server Error";
         case 502: return "Bad Gateway";
@@ -114,51 +123,54 @@ string getQuickResponse(short errCode, string fileStr)
     return res;
 }
 
-void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
+map <string , string> getErrorData(unsigned short errCode)
+{
+    map <string, string> errorData;
+    switch (errCode) {
+        case 400:
+            errorData["errorText"] = "The server could not understand the request due to invalid syntax.";
+            break;
+        case 401:
+            errorData["errorText"] = "You must authenticate yourself to get the requested response.";
+            break;
+        case 403:
+            errorData["errorText"] = "You do not have permission to access the requested resource.";
+            break;
+        case 404:
+            errorData["errorText"] = "The requested resource could not be found on this server.";
+            break;
+        case 500:
+            errorData["errorText"] = "The server encountered an internal error and was unable to complete your request.";
+            break;
+        default:
+            errorData["errorText"] = "An unexpected error occurred.";
+    }
+    errorData["errorCode"] = ushortToStr(errCode);
+    errorData["errorTitle"] = getStatusMessage(errCode);
+    return errorData;
+}
+
+void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode)
 {
     string errorRes;
-    const char *generalErrorResponse =
-        "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Server Error";
-    if (exists(servNode.errorNodes, errCode)) 
+    string errorPageName;
+    string errorPageStr;
+    map <string , string> errorData;
+    if (exists(servNode.errorNodes, errCode))
     {
-        cout << "Error code found in error nodes, sending specific error response" << endl;
-        string errorFileStr = servNode.errorNodes.find(errCode)->second;
-        cout << errorFileStr << endl;
-        if (!validPath(errorFileStr) || !checkFile(errorFileStr, O_RDONLY))
-        {
-            send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
-        }
-        else
-        {
-            ifstream errorFile;
-            errorFile.open(errorFileStr.c_str());
-            if (errorFile.fail())
-            {
-                cerr << "Error happened opening the file" << endl;
-                send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
-                return ;
-            }
-            string htmlErrFileStr, line;
-            while (getline(errorFile, line))
-            {
-                htmlErrFileStr += line + "\r\n";
-            }
-            errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
-            errorRes +=  "Content-Type: text/html\r\n";
-            errorRes +=  "Content-Length: " + ushortToStr(htmlErrFileStr.size()) + "\r\n\r\n";
-            errorRes += htmlErrFileStr;
-            send(clientfd, errorRes.c_str(), errorRes.length(), 0);
-        }
+        errorPageName = servNode.errorNodes[errCode]; 
+        errorPageStr = readFromFile(errorPageName);
     }
     else
     {
-        cout << "Error code not found in error nodes, sending general error response" << endl;
-        cout << "sending -> " << generalErrorResponse << endl;
-        send(clientfd, generalErrorResponse, strlen(generalErrorResponse), 0);
+        errorData = getErrorData(errCode);
+        errorPageStr = dynamicRender(servNode.defaultErrorPage, errorData);
     }
+    errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
+    errorRes +=  "Content-Type: text/html\r\n";
+    errorRes +=  "Content-Length: " + ushortToStr(errorPageStr.size()) + "\r\n\r\n";
+    errorRes += errorPageStr;
+    send(clientfd, errorRes.c_str(), errorRes.length(), 0);
+
 }
 

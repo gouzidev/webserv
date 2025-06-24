@@ -27,7 +27,7 @@ LocationNode::LocationNode()
     root = "";
     path = "";
     uploadDir = "";
-    clientMaxBodySize = 0;
+    // clientMaxBodySize = 0;
 }
 
 

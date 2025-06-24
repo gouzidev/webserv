@@ -107,21 +107,21 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
             throw ConfigException("config error for upload_dir, please provide an absolute upload_dir valid path starting with '/' -> : 'root [path]' at line: " + toString(lineNum), 400);
         locationNode.uploadDir = tokens[1];
     }
-    else if (tokens[0] == "client_max_body_size")
-    {
-        if (tokens.size() != 2 || tokens[1].size() < 1)
-            throw ConfigException("client_max_body_size syntax is wrong please provide a size in megabytes at line: " + toString(lineNum), 400);
-        if (locationNode.clientMaxBodySize != 0)
-            throw ConfigException("config error, can't have more than 1 client_max_body_size at line: " + toString(lineNum), 400);
-        char last = tokens[1][tokens[1].size() - 1];
-        if (last != 'm' && last != 'M')
-            throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m) at line': " + toString(lineNum), 400);
-        string clientMaxSizeStr = tokens[1].substr(0, tokens[1].size() - 1);
-        if (!strAllDigit(clientMaxSizeStr))
-            throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m)' at line: " + toString(lineNum), 400);
-        istringstream clientMaxSize (clientMaxSizeStr);
-        clientMaxSize >> locationNode.clientMaxBodySize;
-    }
+    // else if (tokens[0] == "client_max_body_size")
+    // {
+    //     if (tokens.size() != 2 || tokens[1].size() < 1)
+    //         throw ConfigException("client_max_body_size syntax is wrong please provide a size in megabytes at line: " + toString(lineNum), 400);
+    //     if (locationNode.clientMaxBodySize != 0)
+    //         throw ConfigException("config error, can't have more than 1 client_max_body_size at line: " + toString(lineNum), 400);
+    //     char last = tokens[1][tokens[1].size() - 1];
+    //     if (last != 'm' && last != 'M')
+    //         throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m) at line': " + toString(lineNum), 400);
+    //     string clientMaxSizeStr = tokens[1].substr(0, tokens[1].size() - 1);
+    //     if (!strAllDigit(clientMaxSizeStr))
+    //         throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m)' at line: " + toString(lineNum), 400);
+    //     istringstream clientMaxSize (clientMaxSizeStr);
+    //     clientMaxSize >> locationNode.clientMaxBodySize;
+    // }
     else if (tokens[0] == "cgi_path")
     {
         if (tokens.size() != 3)
@@ -248,27 +248,26 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
             throw ConfigException("config error for root, please provide an absolute root valid path starting with '/' -> : 'root [path]' at line: " + toString(lineNum), 400);
         servNode.root = tokens[1];
     }
-    else if (tokens[0] == "client_max_body_size")
+    else if (tokens[0] == "errorFolder")
     {
-        if (tokens.size() != 2 || tokens[1].size() < 1)
-            throw ConfigException("client_max_body_size syntax is wrong please provide a size in megabytes at line: " + toString(lineNum), 400);
-        if (servNode.clientMaxBodySize != 0)
-            throw ConfigException("config error, can't have more than 1 client_max_body_size at line: " + toString(lineNum), 400);
-        char last = tokens[1][tokens[1].size() - 1];
-        if (last != 'm' && last != 'M')
-            throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m) at line': " + toString(lineNum), 400);
-        string clientMaxSizeStr = tokens[1].substr(0, tokens[1].size() - 1);
-        if (!strAllDigit(clientMaxSizeStr))
-            throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m)' at line: " + toString(lineNum), 400);
-        istringstream clientMaxSize (clientMaxSizeStr);
-        clientMaxSize >> servNode.clientMaxBodySize;
+        if (tokens.size() != 2)
+            throw ConfigException("syntax error for error pages folder, please provide a error pages folder path: 'errorFolder [path]' at line: " + toString(lineNum), 400);
+        if (servNode.errorFolder != "")
+            throw ConfigException("config error, can't have more than 1 errorFolder at line: " + toString(lineNum), 400);
+        if (!validPath(tokens[1]) || !checkDir(tokens[1], R_OK))
+            throw ConfigException("config error for error pages folder, please provide an absolute error pages folder valid path starting with '/' -> : 'errorFolder [path]' at line: " + toString(lineNum), 400);
+        servNode.errorFolder = tokens[1];
     }
     else if (tokens[0] == "error_page")
     {
         if (tokens.size() < 3)
             throw ConfigException("error_page syntax is wrong, please provide error codes and page: 'error_page [error codes ...] [page]' at line: " + toString(lineNum), 400);
         string errorPageStr = tokens[tokens.size() - 1];
-        if (!validPath(errorPageStr) || !checkDir(errorPageStr, R_OK))
+        if (servNode.errorFolder == "")
+            throw ConfigException("syntax error for error pages, please provide a error pages folder path: 'errorFolder [path]' at line: " + toString(lineNum) + " before using error pages.", 400);
+        
+        string errorPagePath = servNode.errorFolder + "/" + errorPageStr;
+        if (!validPath(errorPagePath))
             throw ConfigException("config error for error_page, please provide an absolute error_page valid path starting with '/' -> : 'root [path]' at line: " + toString(lineNum), 400);
         
         size_t i = 1;
@@ -286,8 +285,23 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
                 throw ConfigException("error code syntax is wrong, error code must be in range of [400-500] at line: " + toString(lineNum), 400);
             if (servNode.errorNodes.find(errorCodeShort) != servNode.errorNodes.end())
                 throw ConfigException("config error, code at line: " + toString(lineNum) + " is already used" + toString(lineNum), 400);
-            servNode.errorNodes[errorCodeShort] = errorPageStr;
+            servNode.errorNodes[errorCodeShort] = errorPagePath;
         }
+    }
+    else if (tokens[0] == "client_max_body_size")
+    {
+        if (tokens.size() != 2 || tokens[1].size() < 1)
+            throw ConfigException("client_max_body_size syntax is wrong please provide a size in megabytes at line: " + toString(lineNum), 400);
+        if (servNode.clientMaxBodySize != 0)
+            throw ConfigException("config error, can't have more than 1 client_max_body_size at line: " + toString(lineNum), 400);
+        char last = tokens[1][tokens[1].size() - 1];
+        if (last != 'm' && last != 'M')
+            throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m) at line': " + toString(lineNum), 400);
+        string clientMaxSizeStr = tokens[1].substr(0, tokens[1].size() - 1);
+        if (!strAllDigit(clientMaxSizeStr))
+            throw ConfigException("client_max_body_size syntax is wrong, 'client_max_body_size [size](M-m)' at line: " + toString(lineNum), 400);
+        istringstream clientMaxSize (clientMaxSizeStr);
+        clientMaxSize >> servNode.clientMaxBodySize;
     }
     else
         throw ConfigException("syntax error, unkown entry in server context: '" + tokens[0] + "' in the line:" + toString(lineNum) + " is already used", 400);
@@ -330,6 +344,10 @@ void WebServ::validateParsing()
         }
         if (!checkDir(servNode.root, R_OK))
             throw ConfigException("config error, root folder: " + servNode.root + " isn't valid", 400);
+        string supposedDefaultErrorPage = servNode.errorFolder + "/" + "error.html";
+        if (!checkFile(supposedDefaultErrorPage, O_RDONLY))
+            throw ConfigException("config error, default error page: " + supposedDefaultErrorPage + " isn't valid or non existent", 400);
+        servNode.defaultErrorPage = supposedDefaultErrorPage;
         set <string> servNames = servNode.serverNames;
         for (set <string>::iterator it = servNames.begin() ; it != servNames.end(); it++)
         {

@@ -59,12 +59,6 @@ using namespace std;
 
 #define ERROR  1
 
-struct FileData
-{
-    string name;
-    string filename;
-};
-
 typedef int REQUEST;
 
 class Response
@@ -124,7 +118,7 @@ class LocationNode
         vector <string> index;
         bool   autoIndex;
         string uploadDir;
-        long long clientMaxBodySize;
+        // long long clientMaxBodySize;
         map <string, string> cgiExts;
 };
 
@@ -135,11 +129,13 @@ class ServerNode
         unsigned short port;
         string hostIp;
         string root;
+        string errorFolder;
         set <string> serverNames;
         vector <LocationNode> locationNodes;
         map <string, LocationNode> locationDict;
         map <unsigned short, string> errorNodes;
-        long long clientMaxBodySize;
+        string defaultErrorPage;
+        long long clientMaxBodySize; // in MB
 };
 
 class User
@@ -224,8 +220,9 @@ class WebServ
 };
 
 
-void sendErrToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
+void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
 string getQuickResponse(short errCode, string fileStr);
+map <string , string> getErrorData(unsigned short errCode);
 std::vector<std::string> split (const std::string &s, char delim);
 string trimWSpaces(string &text);
 string trimSpaces(string &text);
@@ -241,7 +238,7 @@ string ushortToStr(unsigned short port);
 string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);
 
-string dynamicRender(string path, map <string, string> data); // for html files
+string dynamicRender(string path, map <string, string> &data); // for html files
 
 string getLocation(string resource, ServerNode &servNode);
 
@@ -251,7 +248,7 @@ string readFromFile(string path); // for html files
 
 string getStatusMessage(unsigned short code);
 
-long extractContentLen(Request &req, ServerNode &serv);
+long long extractContentLen(Request &req, ServerNode &serv); 
 
 vector<string> splitNoSpace(string &str, char delim);
 
