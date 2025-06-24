@@ -79,7 +79,6 @@ class Response
         void setBody();
 };
 
-
 class Request
 {
     public :
@@ -215,6 +214,7 @@ class WebServ
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void postMethode(Request &req, ServerNode &servNode);
         int server();
+        void handleGetFile(Request req);
         int serverLoop(int epollfd, struct epoll_event ev, set <int> activeSockets, map <int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
         void handleLogin(Request &req, ServerNode &serv);

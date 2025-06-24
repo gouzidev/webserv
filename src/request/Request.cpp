@@ -92,7 +92,6 @@ void Request::setHeaders(string line) //needs checking for headers syntax
     {
         contentLen = extractContentLen(*this, serv);
     }
-  
 }
 
 // for the body parsing : If a message is received with both a
@@ -127,7 +126,6 @@ string getLocation(string resource, ServerNode &servNode)
     }
     return location;
 }
-
 
 // the resource will be starting with a slash
 // this function will return the location of the resource in the server node, ex : 

@@ -54,16 +54,13 @@ vector<string> getDirs(string mainDir)
     return dirs;
 }
 
-void dirList(LocationNode node, Request req)
+void dirList(string root, Request req)
 {
-    string mainDir = node.root;
-    vector<string> subDirs = getDirs(mainDir);
+    vector<string> subDirs = getDirs(root);
     string dirlist = createDirList();
     dirlist += "<h1>DIRECTORY LISTING</h1><ul>";
     for (int i = 0; i < subDirs.size(); i++)
-    {
         dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
-    }
     dirlist += "</ul></body></html>";
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     makeResponse(req, dirlist);
@@ -94,6 +91,65 @@ bool checkIndex(LocationNode node, Request req)
     throw ConfigException("couldnt find the index", 500);
 }
 
+// string getFilePath(Request req)
+// {
+//     string path;
+//     while(req.resource.)
+// }
+
+void WebServ::handleGetFile(Request req)
+{
+    Debugger::printMap("headers" , req.headers);
+    vector<string> subdirs = getDirs(req.serv.root);
+    DIR* dir = opendir(req.serv.root.c_str());
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_name[0] == '.') continue;
+        std::string fullPath = req.serv.root + "/" + entry->d_name;
+        struct stat st;
+        if (stat(fullPath.c_str(), &st) == 0)
+        {
+            string resource = req.resource.substr(1);
+            // cout << "full path isssss [" << fullPath << "]" << endl;
+            // cout << "entry name isssss [" << entry->d_name << "]" << endl;
+            // cout << "resource isssss [" << resource + ".html" << "]" << endl;
+            if (S_ISDIR(st.st_mode))
+            {
+                // cout << "wiwiwiwiwi" << endl;
+            }
+            else if (S_ISREG(st.st_mode) && entry->d_name == resource + ".html")
+            {
+                // cout << "ouiiiiiiiiiiiiiiiiiiiiiiii" << endl;
+                req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+                
+                // if file needs login ->  dynamic render dashboard or profile
+                // else just static render it.
+                makeResponse(req, readFromFile(fullPath));
+            }
+
+        }
+    }
+        // if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+        //     dirs.push_back(entry->d_name);
+        // }
+}
+
+bool isDirectory(string& path){
+    struct stat st;
+    if (stat(path.c_str(), &st) == 0)
+        return S_ISDIR(st.st_mode);
+    return false;
+}
+
+bool isRegularFile(string& path)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) == 0)
+        return S_ISREG(st.st_mode);
+    return false;
+}
+
 void WebServ::getMethode(Request req, ServerNode servNode)
 {
     string target = req.getResource();
@@ -113,12 +169,21 @@ void WebServ::getMethode(Request req, ServerNode servNode)
     }
     try
     {
-        if (node.index.empty() == true || checkIndex(node, req) == 1)
+        cout << "allooooo [" << req.resource << "]" << endl;
+        string resPath = "./www" + req.resource;
+        if(isDirectory(resPath) == true)
         {
-            if(node.autoIndex == true)
-                dirList(node, req);
-            // else error 403/404
+            cout << "d5lat" << endl;
+            if (node.index.empty() == true || checkIndex(node, req) == 1)
+            {
+                if(node.autoIndex == true)
+                    dirList(node.root, req);
+                // else error 403/404
+            }
         }
+        else
+            handleGetFile(req);
+        // cout << "HOW!!!!!" << endl;
     }
     catch(ConfigException& e)
     {
