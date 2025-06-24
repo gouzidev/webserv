@@ -277,7 +277,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         
                         if (!exists(req.headers, "host"))
                         {
-                            sendErrToClient(req.cfd, 400, serv);
+                            sendErrPageToClient(req.cfd, 400, serv);
                             throw RequestException("could not find 'host' header", 400, req);
                         }
                         string hostPort = getHostPort(req.headers["host"], serv.port);
@@ -307,7 +307,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         Request req = requestException.getReq();
                         short errorCode = requestException.getErrorCode();
                         cout << "RequestException caught: " << requestException.what() << endl;
-                        sendErrToClient(req.cfd, errorCode, req.serv);
+                        sendErrPageToClient(req.cfd, errorCode, req.serv);
                         close(req.cfd);
                         clientServMap.erase(req.cfd);
                         epoll_ctl(epollfd, EPOLL_CTL_DEL, req.cfd, NULL);

@@ -7,6 +7,15 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     string errorRes;
 
     string body = req.body;
+
+    if (!exists(req.headers, "content-type"))
+    {
+        cerr << "send a host and content-type mf" << endl;
+        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
+        send(req.cfd, testResponse, strlen(testResponse), 0);
+        return ;
+    }
+
     if (!strHas(body, "email=") || !strHas(body, "password="))
     {
         errorRes = getErrorResponse(400, "please provide an email and password");
@@ -18,7 +27,7 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
     {
         cout << "wtf0" << endl;
-        sendErrToClient(req.cfd, 400, serv);
+        sendErrPageToClient(req.cfd, 400, serv);
         return ;
     }
     string email = queryParams["email"];
@@ -34,6 +43,15 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
     string errorRes;
 
     string body = req.body;
+
+    if (!exists(req.headers, "content-type"))
+    {
+        cerr << "send a host and content-type mf" << endl;
+        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
+        send(req.cfd, testResponse, strlen(testResponse), 0);
+        return ;
+    }
+
     if (!strHas(body, "firstName=") || !strHas(body, "lastName=")
         || !strHas(body, "email=") || !strHas(body, "password="))
     {
@@ -47,7 +65,7 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
         || !exists(queryParams, string("email")) || !exists(queryParams, string("password"))
         )
     {
-        sendErrToClient(req.cfd, 400, serv);
+        sendErrPageToClient(req.cfd, 400, serv);
         return ;
     }
     string userName;
@@ -68,23 +86,7 @@ void WebServ::handleLogout(Request &req, ServerNode &serv)
     auth->logout(req.cfd, sessionKey, serv);
 }
 
-FileData extractFileData(string contentDisposition)
-{
-    FileData data;
-    size_t i = 0;
-    bool insideQuotes = false;
-    while (i < contentDisposition.size())
-    {
-
-            
-        if (!insideQuotes && contentDisposition.substr(i, 9) == "filename=")
-        {
-
-        }
-    }
-}
-
-long extractContentLen(Request &req, ServerNode &serv)
+long long extractContentLen(Request &req, ServerNode &serv)
 {
     if (!exists(req.headers, "content-length"))
         throw RequestException("could not find 'content-length' header", 400, req);
@@ -96,53 +98,47 @@ long extractContentLen(Request &req, ServerNode &serv)
     istringstream contentLenStream (contentLenStr);
     if (contentLenStream.fail())
         throw RequestException("failed to parse content-length: '" + contentLenStr + "' it is not a number", 400, req);
-    long contentLen;
+    long long contentLen;
     contentLenStream >> contentLen;
     return contentLen;
 }
 
-void WebServ::postMethode(Request &req, ServerNode &servNode)
+void WebServ::postMethode(Request &req, ServerNode &serv)
 {
     vector <string> startLine = req.getStartLine();
-    ServerNode serv;
     string &location = req.getResource();
     map <string, string> &headers = req.getHeaders();
     string key = "host";
 
     if (!exists(req.headers, "content-length"))
     {
-        // sendErrToClient(req.cfd, 400, serv);
+        // sendErrPageToClient(req.cfd, 400, serv);
         throw RequestException("could not find 'content-length'", 400, req);
     }
-    long contentLen = extractContentLen(req, serv);
+    long long contentLen = extractContentLen(req, serv); // stored in MB
     if (contentLen < 0)
     {
-        // sendErrToClient(req.cfd, 400, serv);
+        // sendErrPageToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
     }
-    if (!exists(headers, "content-type"))
-    {
-        cerr << "send a host and content-type mf" << endl;
-        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
-        send(req.cfd, testResponse, strlen(testResponse), 0);
-        return ;
-    }
+    
+
 
     string contentType = headers.find("content-type")->second;
-    string rootFolder = servNode.root;
+    string rootFolder = serv.root;
 
     string errorRes;
     
-    string locationTarget = getLocation(req.resource, servNode); // will get "/" if the location is not in the server
+    string locationTarget = getLocation(req.resource, serv); // will get "/" if the location is not in the server
 
-    if (!exists(servNode.locationDict, locationTarget)) // doesnt exist
+    if (!exists(serv.locationDict, locationTarget)) // doesnt exist
     {
         errorRes  = getErrorResponse(404, ""); // method not allowed 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
 
-    LocationNode locationNode = servNode.locationDict.find(locationTarget)->second;
+    LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
     if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
     {
         errorRes  = getErrorResponse(405, ""); // method not allowed 
@@ -161,7 +157,7 @@ void WebServ::postMethode(Request &req, ServerNode &servNode)
     }   
     else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
     {
-        handleUplaod(req, contentLen, servNode, locationNode);
+        handleUplaod(req, contentLen, serv, locationNode);
     }
     else
     {

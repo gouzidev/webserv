@@ -122,7 +122,7 @@ void WebServ::getMethode(Request req, ServerNode servNode)
     }
     catch(ConfigException& e)
     {
-        sendErrToClient(req.cfd, 500, req.serv);
+        sendErrPageToClient(req.cfd, 500, req.serv);
         std::cerr << e.what() << '\n';
     }
 }

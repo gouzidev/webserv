@@ -22,6 +22,7 @@ class Auth
         void signup(int cfd, string fName, string lName, string userName, string email, string password, Request &req);
         void logout(int cfd, string sessionKey, ServerNode &serv);
         void cleanUpSessions();
+        void redirectToPage(int cfd, string page, int errorCode);
         void redirectToLogin(int cfd, int errorCode);
         Auth();
         map < string, User> &getUsers();

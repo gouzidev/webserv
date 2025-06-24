@@ -16,14 +16,14 @@ void Auth::login(int cfd, string email, string password, Request &req)
     if (!exists(users, email))
     {
         cout << "email not found in users" << endl;
-        sendErrToClient(cfd, 404, req.serv);
+        sendErrPageToClient(cfd, 404, req.serv);
         return ;
     }
     string dbPassword = users[email].getPassword();
     if (dbPassword != password)
     {
         cout << "password does not match" << endl;
-        sendErrToClient(cfd, 403, req.serv);
+        sendErrPageToClient(cfd, 403, req.serv);
         return ;
     }
     cout << "user logged in successfully" << endl;
@@ -37,15 +37,6 @@ void Auth::login(int cfd, string email, string password, Request &req)
     string sessionKey = newSession.getKey();
 
     map <string, string> data = users[email].getKeyValData();
-
-    dashboardFile.open("./www/auth/dashboard.html");
-    if (dashboardFile.fail())
-    {
-        cerr << "Error happened opening the file of dashboard" << endl;
-        send(cfd, generalErrorResponse, strlen(generalErrorResponse), 0);
-        return ;
-    }
-    string line = "";
     string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
     sessions.insert(make_pair(sessionKey, newSession));  // ✅ This doesn't need default constructor
 
@@ -63,29 +54,20 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
     if (exists(users, email))
     {
         cout << "email already exists found in users" << endl;
-        sendErrToClient(cfd, 409, req.serv); // 409 conflict
+        sendErrPageToClient(cfd, 409, req.serv); // 409 conflict
         return ;
     }
 
     User newUser(fName, lName, userName, email, password);
     users[email] = newUser;
-    ifstream dashboardFile;
-    dashboardFile.open("/home/sgouzi/prj/webserv/www/auth/dashboard.html");
-    if (dashboardFile.fail())
-    {
-        cerr << "Error happened opening the file of dashboard" << endl;
-        send(cfd, generalErrorResponse, strlen(generalErrorResponse), 0);
-        return ;
-    }
-    string line, dashboardContent = "";
-    while (getline(dashboardFile, line))
-    {
-        dashboardContent += line + "\r\n";
-    }
     string response;
 
     Session newSession = Session(newUser);
     string sessionKey = newSession.getKey();
+
+    map <string, string> data = newUser.getKeyValData();
+
+    string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
     sessions.insert(make_pair(sessionKey, newSession));
 
     response += "HTTP/1.1 " + ushortToStr(200) + " " + getStatusMessage(200) + " \r\n";
@@ -98,27 +80,32 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
 
 void Auth::redirectToLogin(int cfd, int errorCode)
 {
-    ifstream loginFile;
-    loginFile.open("/home/sgouzi/prj/webserv/www/login/login.html");
-    if (loginFile.fail())
-    {
-        cerr << "Error happened opening the file of login" << endl;
-        send(cfd, generalErrorResponse, strlen(generalErrorResponse), 0);
-        return ;
-    }
-    string line, loginFileContent = "";
-    while (getline(loginFile, line))
-    {
-        loginFileContent += line + "\r\n";
-    }
-    string response;
+    string loginFile = readFromFile("./www/login/login.html");
+    string response = "";
 
     response += "HTTP/1.1 " + ushortToStr(errorCode) + " " + getStatusMessage(errorCode) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
-    response +=  "Content-Length: " + ushortToStr(loginFileContent.size()) + "\r\n\r\n";
-    response += loginFileContent;
+    response +=  "Content-Length: " + ushortToStr(loginFile.size()) + "\r\n\r\n";
+    response += loginFile;
     send(cfd, response.c_str(), response.length(), 0);
 }
+
+void Auth::redirectToPage(int cfd, string page, int errorCode)
+{
+    string response;
+    string file = readFromFile(page);
+    response += "HTTP/1.1 " + ushortToStr(errorCode) + " " + getStatusMessage(errorCode) + " \r\n";
+    response +=  "Content-Type: text/html\r\n";
+    response +=  "Content-Length: " + ushortToStr(file.size()) + "\r\n\r\n";
+    response += file;
+    send(cfd, response.c_str(), response.length(), 0);
+}
+
+// void Auth::redirectToError(int cfd, ServerNode &serv, map <string, string> &errorData)
+// {
+//     string defaultErrorPage = serv.errorNodes[]
+//     string errorResponse = dynamicRender()
+// }
 
 void Auth::logout(int cfd, string sessionKey, ServerNode &serv)
 {
