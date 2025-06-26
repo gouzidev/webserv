@@ -153,7 +153,10 @@ bool isRegularFile(string& path)
 void WebServ::getMethode(Request req, ServerNode servNode)
 {
     string target = req.getResource();
+
+    cout << "req.resource is " << target << endl;
     string location = getLocation(target, servNode);
+    cout << "location is " << location << endl;
     if (!exists(servNode.locationDict, location))
     {
         string errorRes  = getErrorResponse(404, "");
@@ -169,20 +172,24 @@ void WebServ::getMethode(Request req, ServerNode servNode)
     }
     try
     {
-        cout << "allooooo [" << req.resource << "]" << endl;
-        string resPath = "./www" + req.resource;
-        if(isDirectory(resPath) == true)
+        // string resPath = node.root + req.resource;
+        // cout << "allooooo [" << resPath << "]" << endl;
+        // if(isDirectory(resPath) == true)
+        // {
+        if (node.index.empty() == true || checkIndex(node, req) == 1)
         {
-            cout << "d5lat" << endl;
-            if (node.index.empty() == true || checkIndex(node, req) == 1)
+            if(node.autoIndex == true)
             {
-                if(node.autoIndex == true)
-                    dirList(node.root, req);
-                // else error 403/404
+                
+                cout << "d5lat" << endl;
+                dirList(node.root, req);
             }
+            else
+                throw ConfigException("forbidden request", 404);
         }
-        else
-            handleGetFile(req);
+        // }
+        // else
+        //     handleGetFile(req);
         // cout << "HOW!!!!!" << endl;
     }
     catch(ConfigException& e)
