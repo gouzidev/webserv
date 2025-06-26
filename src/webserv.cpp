@@ -12,6 +12,8 @@ ServerNode::ServerNode()
     // host = "";
     hostIp = "";
     root = "";
+    errorFolder = "";
+    authFolder = "";
 }
 
 LocationNode::LocationNode()
@@ -27,6 +29,7 @@ LocationNode::LocationNode()
     root = "";
     path = "";
     uploadDir = "";
+    isProtected = false;
     // clientMaxBodySize = 0;
 }
 

@@ -4,6 +4,7 @@
 
 void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode)
 {
+    Debugger::printMap("req.headers", req.headers);
     string errorRes;
     if (locationNode.uploadDir == "")
     {

@@ -59,6 +59,18 @@ map  <string ,string> & Request::getHeaders()
     return headers;
 }
 
+string Request::extractSessionId()
+{
+    string sessionId = "";
+    if (!exists(headers, "cookie"))
+        return "";
+    if (!exists(cookies, "sessionId"))
+        return "";
+    else
+        return cookies["sessionId"];
+    // string cookie =
+}
+
 string removeTrailingCR(string str)
 {
     if (!str.empty() && str[str.size() - 1] == '\r')
@@ -71,6 +83,55 @@ string & Request::getResource()
     return resource;
 }
 
+//RFC: If a cookie has neither the Max-Age nor the Expires attribute, the user agent will retain the cookie until "the current session is over" (as defined by the user agent)
+void Request::setCookies() 
+{
+    if (!exists(headers, "cookie"))
+        return;
+    
+    string cookie = headers.find("cookie")->second;
+    string key, val;
+    string sub;
+    size_t end;
+    size_t start = 0;
+    size_t semi = cookie.find(';');
+    
+    while (start < cookie.size())
+    {
+        if (semi != string::npos)
+            end = semi;
+        else
+            end = cookie.size();
+        sub = cookie.substr(start, end - start);
+        string segment = trimWSpaces(sub);
+        
+        if (!segment.empty())
+        {
+            size_t eqPos = segment.find('=');
+            if (eqPos != string::npos)
+            {
+                // Format: key=value
+                sub = segment.substr(0, eqPos);
+                key = trimWSpaces(sub);
+                val = segment.substr(eqPos + 1);
+            }
+            else
+            {
+                // Format: key (no value)
+                key = segment;
+                val = "";
+            }
+            if (!key.empty())
+                cookies[key] = val;
+        }
+        if (semi == string::npos)
+            break;
+        start = semi + 1;
+        semi = cookie.find(';', start);
+    }
+    
+    Debugger::printMap("cookies", cookies);
+}
 void Request::setHeaders(string line) //needs checking for headers syntax
 {
     size_t sepPos = line.find_first_of(':');
