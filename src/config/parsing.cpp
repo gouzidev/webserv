@@ -166,6 +166,7 @@ void WebServ::parseLocation(ServerNode &serverNode, ifstream &configFile, string
         throw ConfigException("syntax error for location, 'location [path]' at line: " + toString(lineNum), 500);
 
     string location = tokens[1];
+    locationNode.path = location;
     validateLocationStr(location, serverNode, lineNum);
     getline(configFile, line);
     lineNum++;
@@ -195,7 +196,6 @@ void WebServ::parseLocation(ServerNode &serverNode, ifstream &configFile, string
         lineNum++;
         line = trimSpaces(line);
     }
-
 
     serverNode.locationNodes.push_back(locationNode);
     serverNode.locationDict[location] = locationNode;
@@ -328,7 +328,12 @@ bool WebServ::validateLocation(ServerNode &servNode, LocationNode &locationNode)
     if (locationNode.root == "")
         locationNode.root = servNode.root;
     if (locationNode.methods.size() == 0)
-        throw ConfigException("syntax error, please specify allowed_methods: [allowed_methods {GET-POST-DELETE}]", 400);
+    {
+        cout << locationNode.root << endl;
+        locationNode.methods.insert("GET");
+        locationNode.methods.insert("POST");
+        locationNode.methods.insert("DELETE");
+    }
     if (!checkDir(locationNode.root, R_OK))
         throw ConfigException("config error, root folder: " + locationNode.root + " isn't valid", 400);
     return true;
@@ -339,7 +344,7 @@ void WebServ::validateParsing()
     size_t i = 0;
     ServerNode servNode;
     // set <unsigned short> ports;
-    LocationNode localNode;
+    ;
     while (i < servNodes.size())
     {
         ServerNode &servNode = servNodes[i];
@@ -355,8 +360,9 @@ void WebServ::validateParsing()
             throw ConfigException("no host block provided", 400);
         for (size_t i = 0; i < servNode.locationNodes.size(); i++)
         {
-            localNode = servNode.locationNodes[i];
+            LocationNode &localNode = servNode.locationNodes[i];
             validateLocation(servNode, localNode);
+            servNode.locationDict[localNode.path] = localNode;  // ✅ Store updated version
         }
         if (!checkDir(servNode.root, R_OK))
             throw ConfigException("config error, root folder: " + servNode.root + " isn't valid", 400);

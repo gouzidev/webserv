@@ -163,7 +163,9 @@ void WebServ::getMethode(Request req, ServerNode serv)
         return ;
     }
     LocationNode node = serv.locationDict.find(location)->second;
-    
+
+    cout << "location node is [ " << node.root << " ]" << endl;
+    // Debugger::printLocationNode(node);
     if (!exists(node.methods, string("GET")))
     {
         cout << "method not allowed for this location" << endl;
@@ -173,7 +175,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
     }
     try
     {
-
         if (node.isProtected)
         {
             string sessionKey = req.extractSessionId();
@@ -184,8 +185,7 @@ void WebServ::getMethode(Request req, ServerNode serv)
             }
         }
 
-
-        string resPath = node.root + "/" + req.resource; // signup
+        string resPath = node.root + "/" + req.resource;
         cout << "resPath is [ " << resPath << " ]" << endl;
         if (isDirectory(resPath) == true)
         {
