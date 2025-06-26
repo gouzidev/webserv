@@ -107,6 +107,12 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
             throw ConfigException("config error for upload_dir, please provide an absolute upload_dir valid path starting with '/' -> : 'root [path]' at line: " + toString(lineNum), 400);
         locationNode.uploadDir = tokens[1];
     }
+    else if (tokens[0] == "isProtected")
+    {
+        if (tokens.size() != 1)
+            throw ConfigException("syntax error for isProtected, 'isProtected' at line: " + toString(lineNum), 400);
+        locationNode.isProtected = true;
+    }
     // else if (tokens[0] == "client_max_body_size")
     // {
     //     if (tokens.size() != 2 || tokens[1].size() < 1)
@@ -287,6 +293,16 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
                 throw ConfigException("config error, code at line: " + toString(lineNum) + " is already used" + toString(lineNum), 400);
             servNode.errorNodes[errorCodeShort] = errorPagePath;
         }
+    }
+    else if (tokens[0] == "authFolder")
+    {
+        if (tokens.size() != 2)
+            throw ConfigException("syntax error for auth pages folder, please provide a auth pages folder path: 'authFolder [path]' at line: " + toString(lineNum), 400);
+        if (servNode.authFolder != "")
+            throw ConfigException("config error, can't have more than 1 authFolder at line: " + toString(lineNum), 400);
+        if (!validPath(tokens[1]) || !checkDir(tokens[1], R_OK))
+            throw ConfigException("config error for auth pages folder, please provide an absolute auth pages folder valid path starting with '/' -> : 'authFolder [path]' at line: " + toString(lineNum), 400);
+        servNode.authFolder = tokens[1];
     }
     else if (tokens[0] == "client_max_body_size")
     {

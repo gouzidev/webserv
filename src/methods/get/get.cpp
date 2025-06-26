@@ -99,7 +99,6 @@ bool checkIndex(LocationNode node, Request req)
 
 void WebServ::handleGetFile(Request req)
 {
-    Debugger::printMap("headers" , req.headers);
     vector<string> subdirs = getDirs(req.serv.root);
     DIR* dir = opendir(req.serv.root.c_str());
     struct dirent* entry;
@@ -150,28 +149,45 @@ bool isRegularFile(string& path)
     return false;
 }
 
-void WebServ::getMethode(Request req, ServerNode servNode)
+void WebServ::getMethode(Request req, ServerNode serv)
 {
     string target = req.getResource();
-    string location = getLocation(target, servNode);
-    if (!exists(servNode.locationDict, location))
+    cout << "target is [ " << target << " ]" << endl;
+    string location = getLocation(target, serv);
+    cout << "location is [ " << location << " ]" << endl;
+    if (!exists(serv.locationDict, location))
     {
+        cout << "location not found in server node" << endl;
         string errorRes  = getErrorResponse(404, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
-    LocationNode node = servNode.locationDict.find(location)->second;
+    LocationNode node = serv.locationDict.find(location)->second;
+    
     if (!exists(node.methods, string("GET")))
     {
+        cout << "method not allowed for this location" << endl;
         string errorRes  = getErrorResponse(405, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
     try
     {
-        cout << "allooooo [" << req.resource << "]" << endl;
-        string resPath = "./www" + req.resource;
-        if(isDirectory(resPath) == true)
+
+        if (node.isProtected)
+        {
+            string sessionKey = req.extractSessionId();
+            if (!auth->isLoggedIn(sessionKey))
+            {
+                sendErrPageToClient(req.cfd, 401, serv);
+                return ;
+            }
+        }
+
+
+        string resPath = node.root + "/" + req.resource; // signup
+        cout << "resPath is [ " << resPath << " ]" << endl;
+        if (isDirectory(resPath) == true)
         {
             cout << "d5lat" << endl;
             if (node.index.empty() == true || checkIndex(node, req) == 1)

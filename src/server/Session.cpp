@@ -25,8 +25,6 @@ User& Session::getUser()
     return user;
 }
 
-
-
 Session &Session::operator=(const Session &session)
 {
     this->createdAt = session.createdAt;

@@ -28,20 +28,17 @@ void Auth::login(int cfd, string email, string password, Request &req)
     }
     cout << "user logged in successfully" << endl;
 
-    ifstream dashboardFile;
-
-
     string response;
-
     Session newSession = Session(users[email]);
     string sessionKey = newSession.getKey();
 
     map <string, string> data = users[email].getKeyValData();
     string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
-    sessions.insert(make_pair(sessionKey, newSession));  // ✅ This doesn't need default constructor
+    sessions.insert(make_pair(sessionKey, newSession));
 
-    response += "HTTP/1.1 " + ushortToStr(200) + " " + getStatusMessage(200) + " \r\n";
+    response += "HTTP/1.1 " + ushortToStr(301) + " " + getStatusMessage(301) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
+    response +=  "Location: dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
     response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
     response += dashboardContent;
@@ -57,7 +54,6 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
         sendErrPageToClient(cfd, 409, req.serv); // 409 conflict
         return ;
     }
-
     User newUser(fName, lName, userName, email, password);
     users[email] = newUser;
     string response;
@@ -88,6 +84,11 @@ void Auth::redirectToLogin(int cfd, int errorCode)
     response +=  "Content-Length: " + ushortToStr(loginFile.size()) + "\r\n\r\n";
     response += loginFile;
     send(cfd, response.c_str(), response.length(), 0);
+}
+
+bool Auth::isLoggedIn(string sessionKey)
+{
+    return exists(sessions, sessionKey);
 }
 
 void Auth::redirectToPage(int cfd, string page, int errorCode)

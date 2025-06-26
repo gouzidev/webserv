@@ -162,6 +162,7 @@ bool Request::fillHeaders(int fd)
     else
         throw NetworkException("Incomplete headers received", 400);
 
+    cout << "Full request received: {{" << fullRequest << "}}" << endl;
     size_t startLineEnd = fullRequest.find("\r\n");
     if (startLineEnd == string::npos) {
         throw NetworkException("Invalid start line", 400);
@@ -181,7 +182,6 @@ bool Request::fillHeaders(int fd)
         string headerLine = fullRequest.substr(i, nextLineEnd - i);
         setHeaders(headerLine);
         
-        // ✅ Extract Content-Length for body reading
         size_t colonPos = headerLine.find(':');
         if (colonPos != string::npos) {
             string key = headerLine.substr(0, colonPos);
@@ -220,7 +220,6 @@ bool Request::fillHeaders(int fd)
             remainingBodyBytes -= bytesRead;
         }
     }
-
     return true;
 }
     
@@ -274,7 +273,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         req.cfd = readyFd;
 
                         req.fillHeaders(readyFd);
-                        
+                        req.setCookies();
                         if (!exists(req.headers, "host"))
                         {
                             sendErrPageToClient(req.cfd, 400, serv);

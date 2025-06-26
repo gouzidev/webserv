@@ -24,6 +24,7 @@ class Auth
         void cleanUpSessions();
         void redirectToPage(int cfd, string page, int errorCode);
         void redirectToLogin(int cfd, int errorCode);
+        bool isLoggedIn(string sessionKey);
         Auth();
         map < string, User> &getUsers();
     private: 

@@ -121,7 +121,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         // sendErrPageToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
     }
-    
 
 
     string contentType = headers.find("content-type")->second;
@@ -139,6 +138,15 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     }
 
     LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
+    if (locationNode.isProtected)
+    {
+        string sessionKey = req.extractSessionId();
+        if (!auth->isLoggedIn(sessionKey))
+        {
+            sendErrPageToClient(req.cfd, 401, serv);
+            return ;
+        }
+    }
     if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
     {
         errorRes  = getErrorResponse(405, ""); // method not allowed 
