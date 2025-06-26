@@ -127,10 +127,8 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     string rootFolder = serv.root;
 
     string errorRes;
-    
-    string locationTarget = getLocation(req.resource, serv); // will get "/" if the location is not in the server
-
-    if (!exists(serv.locationDict, locationTarget)) // doesnt exist
+    string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
+    if (locationTarget == "") // doesnt exist
     {
         errorRes  = getErrorResponse(404, ""); // method not allowed 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);

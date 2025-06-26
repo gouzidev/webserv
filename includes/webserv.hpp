@@ -71,6 +71,7 @@ class Request
         Response resp;
         REQUEST reqType;
         string resource;          // the resource is the path after the method in the request
+        string fullResource; // /nodeRoot/resource
         vector<string> startLine; // possible update
         map<string, string> headers;
         map<string, string> queryParams;
@@ -102,119 +103,119 @@ class Request
 
 class LocationNode
 {
-public:
-    LocationNode();
-    static set<string> possibleMethods;
-    static set<string> possibleCgiExts;
-    vector<string> headers;
-    set<string> methods;
-    pair<short, string> redirect;
-    string path;
-    string root;
-    vector<string> index;
-    bool autoIndex;
-    string uploadDir;
-    // long long clientMaxBodySize;
-    bool isProtected;
-    map<string, string> cgiExts;
+    public:
+        LocationNode();
+        static set<string> possibleMethods;
+        static set<string> possibleCgiExts;
+        vector<string> headers;
+        set<string> methods;
+        pair<short, string> redirect;
+        string path;
+        string root;
+        vector<string> index;
+        bool autoIndex;
+        string uploadDir;
+        // long long clientMaxBodySize;
+        bool isProtected;
+        map<string, string> cgiExts;
 };
 
 class ServerNode
 {
-public:
-    ServerNode();
-    unsigned short port;
-    string hostIp;
-    string root;
-    string errorFolder;
-    string authFolder;
-    set<string> serverNames;
-    vector<LocationNode> locationNodes;
-    map<string, LocationNode> locationDict;
-    map<unsigned short, string> errorNodes;
-    string defaultErrorPage;
-    long long clientMaxBodySize; // in MB
+    public:
+        ServerNode();
+        unsigned short port;
+        string hostIp;
+        string root;
+        string errorFolder;
+        string authFolder;
+        set<string> serverNames;
+        vector<LocationNode> locationNodes;
+        map<string, LocationNode> locationDict;
+        map<unsigned short, string> errorNodes;
+        string defaultErrorPage;
+        long long clientMaxBodySize; // in MB
 };
 
 class User
 {
-private:
-    static unsigned int userCount;
-    unsigned int id;
-    string email;
-    string userName;
-    string firstName;
-    string lastName;
-    string password;
+    private:
+        static unsigned int userCount;
+        unsigned int id;
+        string email;
+        string userName;
+        string firstName;
+        string lastName;
+        string password;
 
-public:
-    User();
-    User(string email, string password);
-    User(string fName, string lName, string email, string password);
-    User(string fName, string lName, string userName, string email, string password);
-    map<string, string> getKeyValData();
-    const string &getEmail() const;
-    const string &getFirstName() const;
-    const string &getLastName() const;
-    const string &getPassword() const;
+    public:
+        User();
+        User(string email, string password);
+        User(string fName, string lName, string email, string password);
+        User(string fName, string lName, string userName, string email, string password);
+        map<string, string> getKeyValData();
+        const string &getEmail() const;
+        const string &getFirstName() const;
+        const string &getLastName() const;
+        const string &getPassword() const;
 
-    void setEmail(string str);
-    void setFirstName(string str);
-    void setLastName(string str);
-    void setPassword(string str);
+        void setEmail(string str);
+        void setFirstName(string str);
+        void setLastName(string str);
+        void setPassword(string str);
 };
 
 class Session
 {
-private:
-    User &user;
-    string key;
-    long int expiredAt; // in seconds
-    long int createdAt; // in seconds
-public:
-    Session(User &user);
-    User &getUser();
-    string &getKey();
-    long int const &getExpiredAt() const;
-    long int const &getCreatedAt() const;
-    string generateSessionKey(const string &email);
-    Session &operator=(const Session &session);
+    private:
+        User &user;
+        string key;
+        long int expiredAt; // in seconds
+        long int createdAt; // in seconds
+    public:
+        Session(User &user);
+        User &getUser();
+        string &getKey();
+        long int const &getExpiredAt() const;
+        long int const &getCreatedAt() const;
+        string generateSessionKey(const string &email);
+        Session &operator=(const Session &session);
 };
 
 class WebServ
 {
-private:
-    bool criticalErr;
-    vector<ServerNode> servNodes;
-    map<string, ServerNode> hostServMap; // this map host:port to some server node
-    map<string, ServerNode> servNameServMap; // this map servName:port to some server node
-    bool logged;
-    User loggedUser;
-    Auth *auth; // auth instance (will manage the login and users)
-public:
-    WebServ(char *confName);
-    ~WebServ();
-    WebServ(string filename);
-    char *generalErrorResponse;
-    vector<ServerNode> parsing(char *filename);
-    ServerNode parseServer(ifstream &configFile, size_t &lineNum);
-    void handleServerLine(ServerNode &servNode, ifstream &configFile, vector<string> &tokens, string &line, size_t &lineNum);
-    void handleServerBlock(ServerNode &servNode, vector<string> &tokens, size_t &lineNum);
-    void handleLocationLine(LocationNode &locationNode, vector<string> &tokens, size_t &lineNum);
-    void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
-    void getMethode(Request req, ServerNode serverNode);
-    void validateParsing();
-    bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
-    bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
-    void postMethode(Request &req, ServerNode &servNode);
-    int server();
-    void handleGetFile(Request req);
-    int serverLoop(int epollfd, struct epoll_event ev, set<int> activeSockets, map<int, ServerNode> &servSocketMap);
-    void urlFormParser(string body, map<string, string> &queryParms);
-    void handleLogin(Request &req, ServerNode &serv);
-    void handleSignup(Request &req, ServerNode &serv);
-    void handleLogout(Request &req, ServerNode &serv);
-    void handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode);
+    private:
+        bool criticalErr;
+        vector<ServerNode> servNodes;
+        map<string, ServerNode> hostServMap; // this map host:port to some server node
+        map<string, ServerNode> servNameServMap; // this map servName:port to some server node
+        bool logged;
+        User loggedUser;
+        Auth *auth; // auth instance (will manage the login and users)
+    public:
+        WebServ(char *confName);
+        ~WebServ();
+        WebServ(string filename);
+        char *generalErrorResponse;
+        vector<ServerNode> parsing(char *filename);
+        ServerNode parseServer(ifstream &configFile, size_t &lineNum);
+        void handleServerLine(ServerNode &servNode, ifstream &configFile, vector<string> &tokens, string &line, size_t &lineNum);
+        void handleServerBlock(ServerNode &servNode, vector<string> &tokens, size_t &lineNum);
+        void handleLocationLine(LocationNode &locationNode, vector<string> &tokens, size_t &lineNum);
+        void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
+        void getMethode(Request req, ServerNode serverNode);
+        void validateParsing();
+        bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
+        bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
+        void postMethode(Request &req, ServerNode &servNode);
+        int server();
+        void handleGetFile(Request req);
+        int serverLoop(int epollfd, struct epoll_event ev, set<int> activeSockets, map<int, ServerNode> &servSocketMap);
+        void urlFormParser(string body, map<string, string> &queryParms);
+        void handleLogin(Request &req, ServerNode &serv);
+        void handleSignup(Request &req, ServerNode &serv);
+        void handleLogout(Request &req, ServerNode &serv);
+        void handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode);
 };
 
 void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
@@ -237,7 +238,7 @@ string getHostPort(string host, unsigned short port);
 
 string dynamicRender(string path, map<string, string> &data); // for html files
 
-string getLocation(string resource, ServerNode &servNode);
+string getLocation(Request &req, ServerNode &servNode); // resource no location is the rest of location part
 
 string getErrorResponse(unsigned short errorCode, string body);
 

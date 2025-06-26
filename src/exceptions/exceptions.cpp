@@ -7,6 +7,11 @@ WebServException::WebServException(const string msg, short errorCode)
     this->errorCode = errorCode;
 }
 
+short WebServException::getErrorCode()
+{
+    return errorCode;
+}
+
 WebServException::~WebServException() throw()
 {
 

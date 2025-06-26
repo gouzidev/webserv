@@ -59,6 +59,8 @@ void dirList(string root, Request req)
     vector<string> subDirs = getDirs(root);
     string dirlist = createDirList();
     dirlist += "<h1>DIRECTORY LISTING</h1><ul>";
+    if (subDirs.empty() == true)
+        dirlist += "<p>no sub-directories in this directory<br></p>";
     for (int i = 0; i < subDirs.size(); i++)
         dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
     dirlist += "</ul></body></html>";
@@ -83,6 +85,7 @@ bool checkIndex(LocationNode node, Request req)
         fileContent = readFromFile(fileName);
         if (fileContent != "")
         {
+            cout << "hello" << endl;
             req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
             makeResponse(req, fileContent);
             return 0;
@@ -99,39 +102,9 @@ bool checkIndex(LocationNode node, Request req)
 
 void WebServ::handleGetFile(Request req)
 {
-    vector<string> subdirs = getDirs(req.serv.root);
-    DIR* dir = opendir(req.serv.root.c_str());
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != NULL)
-    {
-        if (entry->d_name[0] == '.') continue;
-        std::string fullPath = req.serv.root + "/" + entry->d_name;
-        struct stat st;
-        if (stat(fullPath.c_str(), &st) == 0)
-        {
-            string resource = req.resource.substr(1);
-            // cout << "full path isssss [" << fullPath << "]" << endl;
-            // cout << "entry name isssss [" << entry->d_name << "]" << endl;
-            // cout << "resource isssss [" << resource + ".html" << "]" << endl;
-            if (S_ISDIR(st.st_mode))
-            {
-                // cout << "wiwiwiwiwi" << endl;
-            }
-            else if (S_ISREG(st.st_mode) && entry->d_name == resource + ".html")
-            {
-                // cout << "ouiiiiiiiiiiiiiiiiiiiiiiii" << endl;
-                req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-                
-                // if file needs login ->  dynamic render dashboard or profile
-                // else just static render it.
-                makeResponse(req, readFromFile(fullPath));
-            }
-
-        }
-    }
-        // if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
-        //     dirs.push_back(entry->d_name);
-        // }
+    req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+    string fileContent = readFromFile(req.fullResource);
+    makeResponse(req, fileContent);
 }
 
 bool isDirectory(string& path){
@@ -149,13 +122,22 @@ bool isRegularFile(string& path)
     return false;
 }
 
+string getFullResource(string root, string location, string target)
+{
+    if (location == target || location == "/")
+        return root;
+    string path = target.substr(location.size());
+    return root + path;
+}
+
 void WebServ::getMethode(Request req, ServerNode serv)
 {
     string target = req.getResource();
     cout << "target is [ " << target << " ]" << endl;
-    string location = getLocation(target, serv);
+    string location = getLocation(req, serv);
     cout << "location is [ " << location << " ]" << endl;
-    if (!exists(serv.locationDict, location))
+    // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
+    if (location == "")
     {
         cout << "location not found in server node" << endl;
         string errorRes  = getErrorResponse(404, "");
@@ -163,6 +145,8 @@ void WebServ::getMethode(Request req, ServerNode serv)
         return ;
     }
     LocationNode node = serv.locationDict.find(location)->second;
+    cout << "location node is [ " << node.root << " ]" << endl;
+    // Debugger::printLocationNode(node);
     if (!exists(node.methods, string("GET")))
     {
         cout << "method not allowed for this location" << endl;
@@ -170,10 +154,9 @@ void WebServ::getMethode(Request req, ServerNode serv)
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
-
+    req.fullResource = getFullResource(node.root, location, target);
     try
     {
-
         // if (node.isProtected)
         // {
         //     string sessionKey = req.extractSessionId();
@@ -182,12 +165,11 @@ void WebServ::getMethode(Request req, ServerNode serv)
         //         sendErrPageToClient(req.cfd, 401, serv);
         //         return ;
         //     }
-        // }
+        // } /home/akoraich/webserv/www/login/login.html
 
-
-        string resPath = node.root + "/" + req.resource; // signup
-        cout << "resPath is [ " << resPath << " ]" << endl;
-        if (isDirectory(resPath) == true)
+        // string resPath = node.root + "/" + req.resource;
+        cout << "resPath is [ " << req.fullResource << " ]" << endl;
+        if (isDirectory(req.fullResource) == true)
         {
             cout << "d5lat" << endl;
             if (node.index.empty() == true || checkIndex(node, req) == 1)
@@ -196,9 +178,23 @@ void WebServ::getMethode(Request req, ServerNode serv)
                     dirList(node.root, req);
                 // else error 403/404
             }
-            else
-                throw ConfigException("forbidden request", 404);
         }
+        else if (isRegularFile(req.fullResource) == true)
+        {
+            cout << "is file " << endl;
+            if (node.isProtected)
+            {
+                string sessionKey = req.extractSessionId();
+                if (!auth->isLoggedIn(sessionKey))
+                {
+                    sendErrPageToClient(req.cfd, 401, serv);
+                    return ;
+                }
+            }
+            handleGetFile(req);
+        }
+        else
+            throw ConfigException("forbidden request", 404);
         // }
         // else
         //     handleGetFile(req);
@@ -206,7 +202,8 @@ void WebServ::getMethode(Request req, ServerNode serv)
     }
     catch(ConfigException& e)
     {
-        sendErrPageToClient(req.cfd, req.error, req.serv);
+        cout << "wslat hnaaa" << endl;
+        sendErrPageToClient(req.cfd, e.getErrorCode(), req.serv);
         std::cerr << e.what() << '\n';
     }
 }

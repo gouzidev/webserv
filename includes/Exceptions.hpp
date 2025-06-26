@@ -10,6 +10,7 @@ class WebServException: public exception
         WebServException(const string msg, short errorCode);
         virtual const char *what() const throw ();
         virtual ~WebServException() throw(); 
+        short getErrorCode();
     protected:
         string msg;
         short errorCode;

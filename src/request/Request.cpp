@@ -169,23 +169,23 @@ int Request::getReqType()
     return reqType;
 }
 
-string getLocation(string resource, ServerNode &servNode)
+string getLocation(Request &req, ServerNode &servNode)
 {
-    string location = resource;
-    size_t i = 1;
-    for (; i < resource.size(); i++)
+    string location = req.resource;
+    size_t i = location.size() - 1;
+
+    if (exists(servNode.locationDict, location))
+        return location;
+    for (; i > 0; i--)
     {
-        if (resource[i] == '/')
-            break;
+        if (req.resource[i] == '/')
+        {
+            location = req.resource.substr(0, i);
+            if (exists(servNode.locationDict, location))
+                return location;
+        }
     }
-    location = resource.substr(0, i);
-    if (!exists(servNode.locationDict, location))
-    {
-        string defaultLocation = "/";
-        if (exists(servNode.locationDict, defaultLocation))
-            return defaultLocation;
-    }
-    return location;
+    return "";
 }
 
 // the resource will be starting with a slash
