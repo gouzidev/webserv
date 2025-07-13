@@ -46,7 +46,7 @@ vector<string> getDirs(string mainDir)
         if (entry->d_name[0] == '.') continue;
         std::string fullPath = mainDir + "/" + entry->d_name;
         struct stat st;
-        if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+        if (stat(fullPath.c_str(), &st) == 0) {
             dirs.push_back(entry->d_name);
         }
     }
@@ -54,7 +54,7 @@ vector<string> getDirs(string mainDir)
     return dirs;
 }
 
-void dirList(string root, Request req)
+void dirList(string root, string location, Request req)
 {
     vector<string> subDirs = getDirs(root);
     string dirlist = createDirList();
@@ -62,7 +62,12 @@ void dirList(string root, Request req)
     if (subDirs.empty() == true)
         dirlist += "<p>no sub-directories in this directory<br></p>";
     for (int i = 0; i < subDirs.size(); i++)
-        dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
+    {
+        if (location == "/")
+            dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
+        else
+            dirlist += "<li><a href=\"" + location + "/" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
+    }
     dirlist += "</ul></body></html>";
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     makeResponse(req, dirlist);
@@ -170,7 +175,7 @@ void WebServ::getMethode(Request req, ServerNode serv)
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
-                    dirList(node.root, req);
+                    dirList(node.root, location, req);
                 // else error 403/404
             }
         }
@@ -185,10 +190,12 @@ void WebServ::getMethode(Request req, ServerNode serv)
                     return ;
                 }
             }
+            
             Session session = auth->sessions.find(sessionKey)->second;
             User loggedUser = session.getUser();
             map <string, string> data = loggedUser.getKeyValData();
             // data['email'] = loggedUser.getEmail();
+            cout << "is file " << endl;
             handleGetFile(req, data);
         }
         else

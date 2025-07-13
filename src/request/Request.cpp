@@ -178,13 +178,17 @@ string getLocation(Request &req, ServerNode &servNode)
         return location;
     for (; i > -1; i--)
     {
-        cout << "roro " << req.resource[i] << endl;
-        if (req.resource[i] == '/')
+        if (i == 0 && req.resource[i] == '/')
+            location = "/";
+        else if (req.resource[i] == '/')
         {
-            cout << "should be here" << endl;
+            cout << "should be here " << i << endl;
             location = req.resource.substr(0, i);
-            if (exists(servNode.locationDict, location))
-                return location;
+        }
+        if (exists(servNode.locationDict, location))
+        {
+            cout << "roro " << req.resource[i] << endl;
+            return location;
         }
     }
     return "";
