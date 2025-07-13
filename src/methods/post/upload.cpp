@@ -4,7 +4,8 @@
 
 void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode)
 {
-    Debugger::printMap("req.headers", req.headers);
+    cout << "content len -> "  << contentLen << " bytes to upload" << endl;
+
     string errorRes;
     if (locationNode.uploadDir == "")
     {
@@ -26,7 +27,6 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
     string endBoundary = "\r\n" + startBoundary + "--";
 
     string body = req.body;
-    cout << "BODY :  {" << body.substr(0, 500) << "}" << endl;
 
     if (body.substr(0, expectedStart.size()) != expectedStart)
     {
@@ -86,8 +86,6 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
         }
         i++;
     }
-    cout << "name     -> {" <<  name << "}" << endl;
-    cout << "filename -> {" << filename << "}" << endl;
     string path = locationNode.uploadDir;
     string newFile = path + "/" + filename;
 
@@ -103,8 +101,7 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
 
     string bodyContentType = body.substr(cdnlPos + 2, bCTnlPos - cdnlPos); // skip new line
 
-    cout << "body content type new line pos -> " << bCTnlPos << ", with text ..." << body.substr(cdnlPos + 2, 400) << "..." << endl;
-
+    cout << "content len -> "  << contentLen << " bytes to upload" << endl;
     if (body.find(endBoundary) != string::npos)
     {
         size_t bodyEndPos = body.find(endBoundary);

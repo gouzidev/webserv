@@ -38,7 +38,7 @@ void Auth::login(int cfd, string email, string password, Request &req)
 
     response += "HTTP/1.1 " + ushortToStr(301) + " " + getStatusMessage(301) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
-    response +=  "Location: dashboard.html\r\n";
+    response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
     response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
     response += dashboardContent;
@@ -66,8 +66,9 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
     string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
     sessions.insert(make_pair(sessionKey, newSession));
 
-    response += "HTTP/1.1 " + ushortToStr(200) + " " + getStatusMessage(200) + " \r\n";
+    response += "HTTP/1.1 " + ushortToStr(301) + " " + getStatusMessage(301) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
+    response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
     response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
     response += dashboardContent;

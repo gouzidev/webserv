@@ -102,6 +102,7 @@ bool checkIndex(LocationNode node, Request req)
 
 void WebServ::handleGetFile(Request req)
 {
+    
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     string fileContent = readFromFile(req.fullResource);
     makeResponse(req, fileContent);
@@ -133,23 +134,18 @@ string getFullResource(string root, string location, string target)
 void WebServ::getMethode(Request req, ServerNode serv)
 {
     string target = req.getResource();
-    cout << "target is [ " << target << " ]" << endl;
     string location = getLocation(req, serv);
-    cout << "location is [ " << location << " ]" << endl;
     // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
     if (location == "")
     {
-        cout << "location not found in server node" << endl;
         string errorRes  = getErrorResponse(404, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
     LocationNode node = serv.locationDict.find(location)->second;
-    cout << "location node is [ " << node.root << " ]" << endl;
     // Debugger::printLocationNode(node);
     if (!exists(node.methods, string("GET")))
     {
-        cout << "method not allowed for this location" << endl;
         string errorRes  = getErrorResponse(405, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
@@ -168,10 +164,8 @@ void WebServ::getMethode(Request req, ServerNode serv)
         // } /home/akoraich/webserv/www/login/login.html
 
         // string resPath = node.root + "/" + req.resource;
-        cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
         {
-            cout << "d5lat" << endl;
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
@@ -181,7 +175,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
         }
         else if (isRegularFile(req.fullResource) == true)
         {
-            cout << "is file " << endl;
             if (node.isProtected)
             {
                 string sessionKey = req.extractSessionId();
@@ -202,7 +195,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
     }
     catch(ConfigException& e)
     {
-        cout << "wslat hnaaa" << endl;
         sendErrPageToClient(req.cfd, e.getErrorCode(), req.serv);
         std::cerr << e.what() << '\n';
     }

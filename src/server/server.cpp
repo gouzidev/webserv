@@ -162,8 +162,6 @@ bool Request::fillHeaders(int fd)
     else
         throw NetworkException("Incomplete headers received", 400);
 
-    cout << "Full request received: {{" << fullRequest << "}}" << endl;
-    cout << "allooooooooooooooooooo" << endl;
     size_t startLineEnd = fullRequest.find("\r\n");
     if (startLineEnd == string::npos) {
         throw NetworkException("Invalid start line", 400);

@@ -125,7 +125,6 @@ string getQuickResponse(short errCode, string fileStr)
 
 map <string , string> getErrorData(unsigned short errCode)
 {
-    cout << "yaaaaaaaaaaaaaaaaaak" << endl;
     map <string, string> errorData;
     switch (errCode) {
         case 400:
@@ -171,7 +170,6 @@ void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servN
     errorRes +=  "Content-Type: text/html\r\n";
     errorRes +=  "Content-Length: " + ushortToStr(errorPageStr.size()) + "\r\n\r\n";
     errorRes += errorPageStr;
-    cout << "error is {" << errorRes << "}" << endl;
     send(clientfd, errorRes.c_str(), errorRes.length(), 0);
 
 }
