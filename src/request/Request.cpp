@@ -172,14 +172,16 @@ int Request::getReqType()
 string getLocation(Request &req, ServerNode &servNode)
 {
     string location = req.resource;
-    size_t i = location.size() - 1;
+    int i = location.size() - 1;
 
     if (exists(servNode.locationDict, location))
         return location;
-    for (; i > 0; i--)
+    for (; i > -1; i--)
     {
+        cout << "roro " << req.resource[i] << endl;
         if (req.resource[i] == '/')
         {
+            cout << "should be here" << endl;
             location = req.resource.substr(0, i);
             if (exists(servNode.locationDict, location))
                 return location;

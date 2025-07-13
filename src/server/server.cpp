@@ -227,6 +227,26 @@ bool readCompleteRequest(int fd, Request &req, string &error)
 
 }
 
+bool cleanFd(int fdToClose, map<int, int> &clientServMap, int epollfd)
+{
+    close(fdToClose);
+    clientServMap.erase(fdToClose);
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, fdToClose, NULL);
+
+    return true;
+}
+
+bool checkSessions(time_t &lastCleanup, Auth *auth)
+{
+    time_t now = time(0);
+    if (now - lastCleanup > 300)
+    {
+        auth->cleanUpSessions();
+        lastCleanup = now;
+    }
+    return true;
+}
+
 
 int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSockets, map <int, ServerNode> &servSocketMap)
 {
@@ -281,21 +301,16 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         string hostPort = getHostPort(req.headers["host"], serv.port);
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);
-                        
                         if (req.getReqType() == POST)
                         {
                             postMethode(req, serv);
-                            close(readyFd);
-                            clientServMap.erase(readyFd);
-                            epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);
+                            cleanFd(readyFd, clientServMap, epollfd);
                             continue;
                         }
                         else if (req.getReqType() == GET)
                         {
                             getMethode(req, serv);
-                            close(readyFd);
-                            clientServMap.erase(readyFd);
-                            epoll_ctl(epollfd, EPOLL_CTL_DEL, readyFd, NULL);
+                            cleanFd(readyFd, clientServMap, epollfd);
                             continue;
                         }
                     }
@@ -305,22 +320,14 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         Request req = requestException.getReq();
                         short errorCode = requestException.getErrorCode();
                         cout << "RequestException caught: " << requestException.what() << endl;
-                        sendErrPageToClient(req.cfd, errorCode, req.serv);
-                        close(req.cfd);
-                        clientServMap.erase(req.cfd);
-                        epoll_ctl(epollfd, EPOLL_CTL_DEL, req.cfd, NULL);
+                        sendErrPageToClient(readyFd, errorCode, req.serv);
+                        cleanFd(readyFd, clientServMap, epollfd);
                         continue; // continue to the next iteration
                     }
                 }
             }
     
-    
-            time_t now = time(0);
-            if (now - lastCleanup > 300)
-            {
-                auth->cleanUpSessions();
-                lastCleanup = now;
-            }
+            checkSessions(lastCleanup, auth);
         }
         // handle epoll_wait error
         catch(const std::exception& e)

@@ -26,25 +26,19 @@ void Auth::login(int cfd, string email, string password, Request &req)
         sendErrPageToClient(cfd, 403, req.serv);
         return ;
     }
-    cout << "user logged in successfully" << endl;
 
     string response;
     Session newSession = Session(users[email]);
     string sessionKey = newSession.getKey();
 
-    map <string, string> data = users[email].getKeyValData();
-    string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
     sessions.insert(make_pair(sessionKey, newSession));
 
     response += "HTTP/1.1 " + ushortToStr(301) + " " + getStatusMessage(301) + " \r\n";
-    response +=  "Content-Type: text/html\r\n";
     response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
-    response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
-    response += dashboardContent;
+    response += "Content-Length: 0\r\n\r\n";
     send(cfd, response.c_str(), response.length(), 0);
 }
-
 
 void Auth::signup(int cfd, string fName, string lName, string userName, string email, string password, Request &req)
 {
@@ -61,17 +55,11 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
     Session newSession = Session(newUser);
     string sessionKey = newSession.getKey();
 
-    map <string, string> data = newUser.getKeyValData();
-
-    string dashboardContent = dynamicRender("./www/auth/dashboard.html", data);
     sessions.insert(make_pair(sessionKey, newSession));
-
     response += "HTTP/1.1 " + ushortToStr(301) + " " + getStatusMessage(301) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
     response +=  "Location: /auth/dashboard.html\r\n";
-    response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
-    response +=  "Content-Length: " + ushortToStr(dashboardContent.size()) + "\r\n\r\n";
-    response += dashboardContent;
+    response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n\r\n";
     send(cfd, response.c_str(), response.length(), 0);
 }
 

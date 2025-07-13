@@ -17,7 +17,6 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
         send(req.cfd, testResponse, strlen(testResponse), 0);
         return ;
     }
-
     if (!strHas(body, "email=") || !strHas(body, "password="))
     {
         errorRes = getErrorResponse(400, "please provide an email and password");
@@ -29,7 +28,6 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
 
     if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
     {
-        cout << "wtf0" << endl;
         sendErrPageToClient(req.cfd, 400, serv);
         return ;
     }
@@ -182,25 +180,5 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         send(req.cfd, successResponse, strlen(successResponse), 0);
 
     }
-    // const char *successResponse =
-    // "HTTP/1.1 404 OK\r\n"
-    // "Content-Type: text/plain\r\n"
-    // "Content-Length: 12\r\n"
-    // "\r\n"
-    // "Successfull!";
-    // send(req.cfd, successResponse, strlen(successResponse), 0);
-
-    // cout << "BODY -> " << req.body << endl;
-    // const char *testResponse =
-    // "HTTP/1.1 404 OK\r\n"
-    // "Content-Type: text/plain\r\n"
-    // "Content-Length: 12\r\n"
-    // "\r\n"
-    // "bad request!";
-    // send(req.cfd, testResponse, strlen(testResponse), 0);
-
-
-    // cerr << testResponse;
-
 }
 
