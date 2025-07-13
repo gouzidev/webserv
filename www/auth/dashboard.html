@@ -610,7 +610,7 @@
         <div class="quick-actions">
             <h3>⚡ Quick Actions</h3>
             <div class="quick-action-grid">
-                <a href="/profile" class="quick-action-btn">
+                <a href="/auth/profile.html" class="quick-action-btn">
                     <div class="quick-action-icon">👤</div>
                     <div class="quick-action-label">Profile</div>
                 </a>
@@ -641,7 +641,7 @@
 
         <!-- Main Action Buttons -->
         <div class="actions">
-            <a href="/profile" class="action-btn">👤 View Profile</a>
+            <a href="/auth/profile.html" class="action-btn">👤 View Profile</a>
             <a href="/files" class="action-btn">📁 My Files</a>
             <a href="/settings" class="action-btn">⚙️ Settings</a>
             <a href="/analytics" class="action-btn">📈 Analytics</a>
@@ -907,20 +907,6 @@
             existingFiles.forEach(file => file.classList.add('sample-file'));
         });
         
-        // Add click handlers for action buttons
-        document.querySelectorAll('.action-btn, .quick-action-btn').forEach(btn => {
-            if (btn.type !== 'submit' && !btn.closest('form')) {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const url = this.getAttribute('href');
-                    if (url === '/profile') {
-                        window.location.href = '/profile';
-                    } else {
-                        alert('Feature coming soon!');
-                    }
-                });
-            }
-        });
 
         // Add interactive effects
         document.querySelectorAll('.info-item, .stat-card').forEach(card => {

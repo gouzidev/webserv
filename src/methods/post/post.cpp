@@ -15,7 +15,6 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
         send(req.cfd, testResponse, strlen(testResponse), 0);
         return ;
     }
-
     if (!strHas(body, "email=") || !strHas(body, "password="))
     {
         errorRes = getErrorResponse(400, "please provide an email and password");
@@ -193,9 +192,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     // "\r\n"
     // "bad request!";
     // send(req.cfd, testResponse, strlen(testResponse), 0);
-
-
     // cerr << testResponse;
-
 }
 

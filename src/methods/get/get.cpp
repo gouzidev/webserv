@@ -27,7 +27,7 @@ void makeResponse(Request req, string fileContent)
     // "Content-Type: text/plain\r\n"
     // "Content-Length: " + strlen(File.c_str()) + "\r\n";
     req.resp.fullResponse = req.resp.statusLine + "Content-Type: text/html\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
-    // cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
+    cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
     send(req.cfd, req.resp.fullResponse.c_str(), req.resp.fullResponse.size(), 0);
 }
 
@@ -100,10 +100,10 @@ bool checkIndex(LocationNode node, Request req)
 //     while(req.resource.)
 // }
 
-void WebServ::handleGetFile(Request req)
+void WebServ::handleGetFile(Request req, map<string, string> &data)
 {
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-    string fileContent = readFromFile(req.fullResource);
+    string fileContent = dynamicRender(req.fullResource, data);
     makeResponse(req, fileContent);
 }
 
@@ -132,6 +132,7 @@ string getFullResource(string root, string location, string target)
 
 void WebServ::getMethode(Request req, ServerNode serv)
 {
+    string sessionKey;
     string target = req.getResource();
     cout << "target is [ " << target << " ]" << endl;
     string location = getLocation(req, serv);
@@ -184,14 +185,18 @@ void WebServ::getMethode(Request req, ServerNode serv)
             cout << "is file " << endl;
             if (node.isProtected)
             {
-                string sessionKey = req.extractSessionId();
+                sessionKey = req.extractSessionId();
                 if (!auth->isLoggedIn(sessionKey))
                 {
                     sendErrPageToClient(req.cfd, 401, serv);
                     return ;
                 }
             }
-            handleGetFile(req);
+            Session session = auth->sessions.find(sessionKey)->second;
+            User loggedUser = session.getUser();
+            map <string, string> data = loggedUser.getKeyValData();
+            // data['email'] = loggedUser.getEmail();
+            handleGetFile(req, data);
         }
         else
             throw ConfigException("forbidden request", 404);

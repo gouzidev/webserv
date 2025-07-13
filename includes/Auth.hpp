@@ -27,7 +27,7 @@ class Auth
         bool isLoggedIn(string sessionKey);
         Auth();
         map < string, User> &getUsers();
-    private: 
+    public: 
         map < string, User> users;
         map <string, Session> sessions;
 

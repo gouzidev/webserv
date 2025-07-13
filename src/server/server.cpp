@@ -283,7 +283,9 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         string hostPort = getHostPort(req.headers["host"], serv.port);
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);
-                        
+                        Debugger::printVec("sttsline", req.startLine);
+                        Debugger::printMap("heaader", req.headers);
+                        cout << req.body << endl;
                         if (req.getReqType() == POST)
                         {
                             postMethode(req, serv);
