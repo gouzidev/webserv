@@ -6,6 +6,8 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
 {
     string errorRes;
 
+    map < string , string > queryParams;
+
     string body = req.body;
 
     if (!exists(req.headers, "content-type"))
@@ -21,19 +23,17 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
         send(req.cfd, errorRes.c_str(), strlen(errorRes.c_str()), 0);
         return ;
     }
-    map < string , string > queryParams;
+
     urlFormParser(body, queryParams);
+
     if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
     {
-        cout << "wtf0" << endl;
         sendErrPageToClient(req.cfd, 400, serv);
         return ;
     }
     string email = queryParams["email"];
     string password = queryParams["password"];
 
-    cout << "email: " << email << endl;
-    cout << "password: " << password << endl;
     auth->login(req.cfd, email, password, req);
 }
 
@@ -104,6 +104,7 @@ long long extractContentLen(Request &req, ServerNode &serv)
 
 void WebServ::postMethode(Request &req, ServerNode &serv)
 {
+    cout << "handling post request" << endl;
     vector <string> startLine = req.getStartLine();
     string &location = req.getResource();
     map <string, string> &headers = req.getHeaders();
@@ -121,7 +122,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         throw RequestException("content length is not valid", 400, req);
     }
 
-
     string contentType = headers.find("content-type")->second;
     string rootFolder = serv.root;
 
@@ -129,11 +129,13 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
     if (locationTarget == "") // doesnt exist
     {
+        cout << "location not found in server node for target -> " << req.getResource() << endl;
         errorRes  = getErrorResponse(404, ""); // method not allowed 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
 
+    cout << "location target is [ " << locationTarget << " ]" << endl;
     LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
     if (locationNode.isProtected)
     {
@@ -151,6 +153,7 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         return ;
     }
 
+    cout << "content type is " << contentType << endl;
     if (contentType == "application/x-www-form-urlencoded") // handle form post request
     {
         if (locationTarget == "/login")
@@ -162,6 +165,7 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     }   
     else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
     {
+        cout << "handling file upload" << endl;
         handleUplaod(req, contentLen, serv, locationNode);
     }
     else
@@ -176,22 +180,5 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         send(req.cfd, successResponse, strlen(successResponse), 0);
 
     }
-    // const char *successResponse =
-    // "HTTP/1.1 404 OK\r\n"
-    // "Content-Type: text/plain\r\n"
-    // "Content-Length: 12\r\n"
-    // "\r\n"
-    // "Successfull!";
-    // send(req.cfd, successResponse, strlen(successResponse), 0);
-
-    // cout << "BODY -> " << req.body << endl;
-    // const char *testResponse =
-    // "HTTP/1.1 404 OK\r\n"
-    // "Content-Type: text/plain\r\n"
-    // "Content-Length: 12\r\n"
-    // "\r\n"
-    // "bad request!";
-    // send(req.cfd, testResponse, strlen(testResponse), 0);
-    // cerr << testResponse;
 }
 

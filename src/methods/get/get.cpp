@@ -114,6 +114,7 @@ void WebServ::handleGetFile(Request req)
 
 void WebServ::handleProtectedGetFile(Request req, map<string, string> &data)
 {
+    
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     string fileContent = dynamicRender(req.fullResource, data);
     makeResponse(req, fileContent);
@@ -146,23 +147,18 @@ void WebServ::getMethode(Request req, ServerNode serv)
 {
     string sessionKey;
     string target = req.getResource();
-    cout << "target is [ " << target << " ]" << endl;
     string location = getLocation(req, serv);
-    cout << "location is [ " << location << " ]" << endl;
     // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
     if (location == "")
     {
-        cout << "location not found in server node" << endl;
         string errorRes  = getErrorResponse(404, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
     LocationNode node = serv.locationDict.find(location)->second;
-    cout << "location node is [ " << node.root << " ]" << endl;
     // Debugger::printLocationNode(node);
     if (!exists(node.methods, string("GET")))
     {
-        cout << "method not allowed for this location" << endl;
         string errorRes  = getErrorResponse(405, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
@@ -173,7 +169,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
         cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
         {
-            cout << "d5lat" << endl;
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
@@ -209,22 +204,7 @@ void WebServ::getMethode(Request req, ServerNode serv)
     }
     catch(ConfigException& e)
     {
-        cout << "wslat hnaaa" << endl;
         sendErrPageToClient(req.cfd, e.getErrorCode(), req.serv);
         std::cerr << e.what() << '\n';
     }
 }
-    // cout << "location is [ " << location << " ]" << endl;
-    // const char *testResponse =
-    // "HTTP/1.1 200 OK\r\n"
-    // "Content-Type: text/plain\r\n"
-    // "Content-Length: 13\r\n"
-    // "\r\n";
-    // // "Hello, World!";
-    // string requestedFile = readFromFile(req.resource);
-    // Response resp;
-    // resp.fullResponse = testResponse + requestedFile;
-    // cout << "response is [ " << resp.fullResponse << " ]" << endl;
-    // send(req.cfd, resp.fullResponse.c_str(), resp.fullResponse.size(), 0);
-    // // cerr << testResponse;
-// }

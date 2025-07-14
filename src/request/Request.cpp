@@ -130,7 +130,7 @@ void Request::setCookies()
         semi = cookie.find(';', start);
     }
     
-    Debugger::printMap("cookies", cookies);
+    // Debugger::printMap("cookies", cookies);
 }
 void Request::setHeaders(string line) //needs checking for headers syntax
 {
