@@ -105,7 +105,14 @@ bool checkIndex(LocationNode node, Request req)
 //     while(req.resource.)
 // }
 
-void WebServ::handleGetFile(Request req, map<string, string> &data)
+void WebServ::handleGetFile(Request req)
+{
+    req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+    string fileContent = readFromFile(req.fullResource);
+    makeResponse(req, fileContent);
+}
+
+void WebServ::handleProtectedGetFile(Request req, map<string, string> &data)
 {
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     string fileContent = dynamicRender(req.fullResource, data);
@@ -163,17 +170,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
     req.fullResource = getFullResource(node.root, location, target);
     try
     {
-        // if (node.isProtected)
-        // {
-        //     string sessionKey = req.extractSessionId();
-        //     if (!auth->isLoggedIn(sessionKey))
-        //     {
-        //         sendErrPageToClient(req.cfd, 401, serv);
-        //         return ;
-        //     }
-        // } /home/akoraich/webserv/www/login/login.html
-
-        // string resPath = node.root + "/" + req.resource;
         cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
         {
@@ -195,20 +191,20 @@ void WebServ::getMethode(Request req, ServerNode serv)
                     sendErrPageToClient(req.cfd, 401, serv);
                     return ;
                 }
+                Session session = auth->sessions.find(sessionKey)->second;
+                cout << "is file " << endl;
+                User loggedUser = session.getUser();
+                map <string, string> data = loggedUser.getKeyValData();
+                // data['email'] = loggedUser.getEmail();
+                handleProtectedGetFile(req, data);
             }
+            handleGetFile(req);
             
-            Session session = auth->sessions.find(sessionKey)->second;
-            User loggedUser = session.getUser();
-            map <string, string> data = loggedUser.getKeyValData();
-            // data['email'] = loggedUser.getEmail();
-            cout << "is file " << endl;
-            handleGetFile(req, data);
         }
         else
             throw ConfigException("forbidden request", 404);
         // }
         // else
-        //     handleGetFile(req);
         // cout << "HOW!!!!!" << endl;
     }
     catch(ConfigException& e)
