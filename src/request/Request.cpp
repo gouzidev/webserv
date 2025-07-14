@@ -169,6 +169,27 @@ int Request::getReqType()
     return reqType;
 }
 
+void Request::getMimeType()
+{
+    string target = resource;
+    cout << "target is " << target << endl;
+    int i = target.size() - 1;
+    while (target[i] != '.')
+        i--;
+    string mime = target.substr(i + 1);
+    cout << "mime is " << mime << endl;
+    if (mime == "html")
+        mimeType = "text/html";
+    else if (mime == "csv")
+        mimeType = "text/csv";
+    else if (mime == "jpg" || mime == "jpeg" || mime == "png")
+        mimeType = "image";
+    else if (mime == "mp4")
+        mimeType = "video";
+    else
+        mimeType = "not supported";
+}
+
 string getLocation(Request &req, ServerNode &servNode)
 {
     string location = req.resource;
