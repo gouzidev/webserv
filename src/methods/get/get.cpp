@@ -26,7 +26,7 @@ void makeResponse(Request req, string fileContent)
     // "HTTP/1.1 200 OK\r\n"
     // "Content-Type: text/plain\r\n"
     // "Content-Length: " + strlen(File.c_str()) + "\r\n";
-    req.resp.fullResponse = req.resp.statusLine + "Content-Type: text/html\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
+    req.resp.fullResponse = req.resp.statusLine + "Content-Type: " + req.mimeType + "\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
     // cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
     send(req.cfd, req.resp.fullResponse.c_str(), req.resp.fullResponse.size(), 0);
 }
@@ -61,7 +61,7 @@ void dirList(string root, string location, Request req)
     dirlist += "<h1>DIRECTORY LISTING</h1><ul>";
     if (subDirs.empty() == true)
         dirlist += "<p>no sub-directories in this directory<br></p>";
-    for (int i = 0; i < subDirs.size(); i++)
+    for (unsigned long i = 0; i < subDirs.size(); i++)
     {
         if (location == "/")
             dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
@@ -105,15 +105,47 @@ bool checkIndex(LocationNode node, Request req)
 //     while(req.resource.)
 // }
 
+// void WebServ::handleGetFile(Request req)
+// {
+//     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+//     string fileContent = readFromFile(req.fullResource);
+//     makeResponse(req, fileContent);
+// }
+
+string sendImageResponse(const std::string& imagePath)
+{
+    // Read image as binary
+    std::ifstream file(imagePath.c_str(), std::ios::in | std::ios::binary);
+    if (!file) return "";
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    std::string imageData = ss.str();
+    return imageData;
+}
+
 void WebServ::handleGetFile(Request req, map<string, string> &data)
 {
-    
+    string fileContent;
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-    string fileContent = dynamicRender(req.fullResource, data);
+    if (req.mimeType == "text/html")
+    {
+        // req.resp.headers += "Content-Type: image/jpeg\r\n";
+        if (data.empty())
+            fileContent = readFromFile(req.fullResource);
+        else
+            fileContent = dynamicRender(req.fullResource, data);
+    }
+    else if (req.mimeType == "image")
+    {
+        cout << "here we should handle images" << endl;
+        // req.resp.headers += "Content-Type: image/jpeg\r\n";
+        fileContent = sendImageResponse(req.fullResource);
+    }
     makeResponse(req, fileContent);
 }
 
-bool isDirectory(string& path){
+bool isDirectory(string& path)
+{
     struct stat st;
     if (stat(path.c_str(), &st) == 0)
         return S_ISDIR(st.st_mode);
@@ -139,6 +171,7 @@ string getFullResource(string root, string location, string target)
 void WebServ::getMethode(Request req, ServerNode serv)
 {
     string sessionKey;
+    map <string, string> data ;
     string target = req.getResource();
     string location = getLocation(req, serv);
     // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
@@ -151,7 +184,7 @@ void WebServ::getMethode(Request req, ServerNode serv)
     LocationNode node = serv.locationDict.find(location)->second;
     // Debugger::printLocationNode(node);
     if (!exists(node.methods, string("GET")))
-    {
+    { 
         string errorRes  = getErrorResponse(405, "");
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
@@ -159,19 +192,10 @@ void WebServ::getMethode(Request req, ServerNode serv)
     req.fullResource = getFullResource(node.root, location, target);
     try
     {
-        // if (node.isProtected)
-        // {
-        //     string sessionKey = req.extractSessionId();
-        //     if (!auth->isLoggedIn(sessionKey))
-        //     {
-        //         sendErrPageToClient(req.cfd, 401, serv);
-        //         return ;
-        //     }
-        // } /home/akoraich/webserv/www/login/login.html
-
-        // string resPath = node.root + "/" + req.resource;
+        cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
         {
+            cout << "is dir but why" << endl;
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
@@ -189,20 +213,21 @@ void WebServ::getMethode(Request req, ServerNode serv)
                     sendErrPageToClient(req.cfd, 401, serv);
                     return ;
                 }
+                Session session = auth->sessions.find(sessionKey)->second;
+                User loggedUser = session.getUser();
+                data = loggedUser.getKeyValData();
+                // data['email'] = loggedUser.getEmail();
             }
-            
-            Session session = auth->sessions.find(sessionKey)->second;
-            User loggedUser = session.getUser();
-            map <string, string> data = loggedUser.getKeyValData();
-            // data['email'] = loggedUser.getEmail();
-            cout << "is file " << endl;
+            req.getMimeType();
             handleGetFile(req, data);
+            // cout << "is file " << endl;
+            // handleGetFile(req);
+            
         }
         else
             throw ConfigException("forbidden request", 404);
         // }
         // else
-        //     handleGetFile(req);
         // cout << "HOW!!!!!" << endl;
     }
     catch(ConfigException& e)

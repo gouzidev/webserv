@@ -58,7 +58,7 @@ class Response
 public:
     string fullResponse;
     string statusLine;
-    map<string, string> headers;
+    string headers;
     vector<char> body;
     void setStatusLine(string sttsLine);
     void setHeaders(string header);
@@ -75,6 +75,7 @@ class Request
         vector<string> startLine; // possible update
         map<string, string> headers;
         map<string, string> queryParams;
+        string mimeType;
         ServerNode &serv; // a server that the request belongs to
         string body;      // possible update for large files in post
         string extractSessionId();
@@ -91,6 +92,7 @@ class Request
         string getSessionKey();
         int isStartLineValid();
         int getReqType();
+        void getMimeType();
         string &getResource();
         string getHttpVer();
         void fillQuery(string queryStr);
@@ -209,6 +211,7 @@ class WebServ
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void postMethode(Request &req, ServerNode &servNode);
         int server();
+        // void handleGetFile(Request req);
         void handleGetFile(Request req, map<string, string> &data);
         int serverLoop(int epollfd, struct epoll_event ev, set<int> activeSockets, map<int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
