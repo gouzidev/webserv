@@ -32,6 +32,7 @@
 
 // others
 #include <unistd.h>
+#include <wait.h>
 #include <dirent.h>
 #include <algorithm>
 #include <stdio.h>
@@ -236,6 +237,7 @@ bool checkDir(string dirname, int dirStat);
 bool validPath(string path);
 
 string ushortToStr(unsigned short port);
+char decodeHex(string &str, size_t &idx);
 long stringToHexLong(string str, Request &req);
 
 string removeTrailingCR(string str);
