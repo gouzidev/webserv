@@ -1,2 +1,7 @@
+Content-Disposition: form-data; name="last"; filename="people-example.csv"
+Content-Type: text/csv
+
 First Name,Last Name,Country,age
 "Bob","Smith","United States",24
+
+----------------------------856275610907057033698498--

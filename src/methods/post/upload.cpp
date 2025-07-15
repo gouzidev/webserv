@@ -2,47 +2,38 @@
 #include "../../../includes/Debugger.hpp"
 #include "../../../includes/Exceptions.hpp"
 
-void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode)
+bool verifyUpload(Request &req, ServerNode &servNode, LocationNode &locationNode, size_t &boundaryPos)
 {
-    cout << "content len -> "  << contentLen << " bytes to upload" << endl;
-
     string errorRes;
     if (locationNode.uploadDir == "")
     {
         errorRes  = getErrorResponse(405, ""); // method not allowed 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
+        return false;
         // error (no upload path provided)
     }
     string &contentType = req.headers["content-type"];
-    size_t boundaryPos = contentType.find("boundary=");
+    boundaryPos = contentType.find("boundary=");
     if (boundaryPos == string::npos)
     {
         sendErrPageToClient(req.cfd, 400, servNode);
-        return ;
+        return false;
     }
-    string boundary = contentType.substr(boundaryPos + 9);
-    string startBoundary = "--" + boundary;
-    string expectedStart = startBoundary + "\r\n";
-    string endBoundary = "\r\n" + startBoundary + "--";
-    string body = req.body;
+    return true;
+}
 
-    cout << "expected start boundary -> '" << expectedStart << "'" << endl;
-    cout << "expected substring      -> '" << body.substr(0, expectedStart.size()) << "'" << endl;
-    if (body.substr(0, expectedStart.size()) != expectedStart)
-    {
-        // errorRes  = getErrorResponse(405, ""); // method not allowed 
-        cerr << "error with startBoundary -> '" << startBoundary << "'" << endl;
-        sendErrPageToClient(req.cfd, 400, servNode);
-        return ;
-    }
-    
-    size_t cdPos = body.find("Content-Disposition:", startBoundary.size() + 2); // content disposition (start) pos
-    size_t cdnlPos = body.find("\r\n", cdPos);  // content disposition new line (end) pos (and start of body content type after ..)
-    string contentDisposition = body.substr(cdPos, cdnlPos - cdPos);
-    size_t i = 0;
+struct fileUploadData
+{
     string name;
     string filename;
+};
+
+struct fileUploadData getUploadData(string &contentDisposition)
+{
+    struct fileUploadData data;
+    size_t i = 0;
+ 
+    struct fileUploadData fileData;
     while (i < contentDisposition.size())
     {
         if (contentDisposition.substr(i, 5) == "name=")
@@ -61,7 +52,7 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
                 }
                 j++;
             }
-            name = contentDisposition.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+            data.name = contentDisposition.substr(firstQuote + 1, lastQuote - firstQuote - 1);
             i = j;
             continue;
         }
@@ -81,74 +72,98 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
                 }
                 j++;
             }
-            filename = contentDisposition.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+            data.filename = contentDisposition.substr(firstQuote + 1, lastQuote - firstQuote - 1);
             i = j;
             continue;
         }
         i++;
     }
+    return data;
+}
+
+
+bool handleUploadData(Request &req, size_t currBodyPos, size_t bodyBoundaryPos, size_t endBoundarySize, LocationNode &locationNode)
+{
+    string errorRes;
+    string bodyData;
+    string body = req.body;
+    size_t cdPos = body.find("Content-Disposition:", currBodyPos); // content disposition (start) pos
+    size_t cdEndPos = body.find("\r\n", cdPos);  // content disposition new line (end) pos (and start of body content type after ..)
+    string contentDisposition = body.substr(cdPos, cdEndPos - cdPos);
+    struct fileUploadData fileData = getUploadData(contentDisposition);
+
+    size_t bctEndPos = body.find("\r\n\r\n", cdEndPos + 2); // body content type new line (end) pos 
+
+
+    string bodyContentType = body.substr(cdEndPos + 2, bctEndPos - cdEndPos);
+
+    if (endBoundarySize != string::npos)
+    {
+        bodyData = body.substr(currBodyPos, bodyBoundaryPos - currBodyPos- endBoundarySize);
+        cout << "bodyData: " << bodyData << endl;
+        cout << "end boundary size: " << endBoundarySize << endl;
+    }
+    else
+        bodyData = body.substr(currBodyPos, bodyBoundaryPos - currBodyPos);
     string path = locationNode.uploadDir;
-    string newFile = path + "/" + filename;
+    string newFile = path + "/" + fileData.filename;
 
     int fd = open(newFile.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (fd == -1)
     {
         errorRes  = getErrorResponse(500, ""); // method not allowed 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
+        return false;
     }
-
-    size_t bCTnlPos = body.find("\r\n\r\n", cdnlPos + 2); // body content type new line (end) pos 
-
-    string bodyContentType = body.substr(cdnlPos + 2, bCTnlPos - cdnlPos); // skip new line
-
-    cout << "content len -> "  << contentLen << " bytes to upload" << endl;
-    if (body.find(endBoundary) != string::npos)
-    {
-        cout << "body data is small enough, writing directly to file" << endl;
-        size_t bodyEndPos = body.find(endBoundary);
-        string bodyData = body.substr(bCTnlPos + 4, bodyEndPos - bCTnlPos - 4); // skip new line
-        // cout << " [[" <<  bodyData << "]]" << endl;
-        write(fd, bodyData.c_str(), bodyData.size());
-    }
-    else
-    {
-        cout << "body data is too large, reading from socket" << endl;
-        // cout << "body data is too large, reading from socket" << endl;
-        size_t headersPlusDataRead = req.body.size();  // How much we already have read (headers + body headers + maybe some body data)
-        size_t totalDataNeeded = contentLen;  // total data we need to read got it from -> Content-Length header
-        size_t remainingToRead = totalDataNeeded - headersPlusDataRead; // the remaining data to read, will be reading until i reach it
-        // cout << "Content-Length: " << contentLen << endl;
-        // cout << "Already read: " << headersPlusDataRead << endl;
-        // cout << "Still need to read: " << remainingToRead << endl;
-        string remaningStr = body.substr(bCTnlPos + 4);
-        write(fd, remaningStr.c_str(), remaningStr.size());
-
-        char buff[BUFFSIZE + 1];
-        size_t totalRead = 0;
-        
-        while (totalRead < remainingToRead)
-        {
-            size_t toRead = min((size_t)BUFFSIZE, remainingToRead - totalRead);
-            size_t bytesRead = recv(req.cfd, buff, toRead, 0);
-            
-            if (bytesRead == 0) {
-                cout << "Client closed connection" << endl;
-                break;
-            }
-            if (bytesRead == -1) {
-                close(fd);
-                throw NetworkException("recv failed during upload", 500);
-            }
-            write(fd, buff, bytesRead);
-            totalRead += bytesRead;
-            cout << "Read " << bytesRead << " bytes, total: " << totalRead / 1000 << "/" << remainingToRead / 1000 << endl;
-        }
-        cout << "Upload completed! Total bytes written: " << totalRead << endl;
-    }
+    write(fd, bodyData.c_str(), bodyData.size());
     close(fd);
-    // success
+    return true;
+}
 
-    cout << "File uploaded successfully to " << newFile << endl;
+void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode)
+{
+
+
+    // init some vars
+    string errorRes;
+
+
+    // GET THE BOUNDARY AND VERIFY
+    string &contentType = req.headers["content-type"];
+    size_t headerBoundaryPos;
+    if (verifyUpload(req, servNode, locationNode, headerBoundaryPos) == false)
+        return ;
+
+    string headerBoundary = contentType.substr(headerBoundaryPos + 9);
+    string headerStartBoundary = "--" + headerBoundary;
+    string bodyBoundary = headerStartBoundary + "\r\n";
+    string body = req.body;
+
+    if (body.substr(0, bodyBoundary.size()) != bodyBoundary)
+        return (sendErrPageToClient(req.cfd, 400, servNode));
+
+    string endBoundary = "\r\n" + headerStartBoundary + "--";
+
+    size_t endBoundaryPos = body.find(endBoundary);
+
+
+    if (endBoundaryPos != string::npos) // small body
+    {
+        string bodyData;
+        size_t currBodyPos = bodyBoundary.size(); // start the search after the Boundary
+        size_t bodyBoundaryPos = body.find(bodyBoundary, currBodyPos);
+        while (bodyBoundaryPos != string::npos) // while we still have multiple uploads
+        {
+            if (handleUploadData(req, currBodyPos, bodyBoundaryPos, string::npos, locationNode) == false)
+                return ;
+            currBodyPos = bodyBoundaryPos + bodyBoundary.size(); // including \r\n \r\n
+            bodyBoundaryPos = body.find(bodyBoundary, currBodyPos);
+        }
+        if (handleUploadData(req, currBodyPos, bodyBoundaryPos, endBoundary.size(), locationNode) == false)
+            return ;
+    }
+
+
+    // success
     auth->redirectToPage(req.cfd, "./www/auth/profile.html" , 200); // redirect to login page with success message
 }

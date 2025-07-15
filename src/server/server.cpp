@@ -88,9 +88,8 @@ int WebServ::server()
         servSockets.insert(sock);
         servSocketMap[sock] = servIt->second;
         if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev) == -1)
-        throw NetworkException("epoll_ctl failed", 500);
+            throw NetworkException("epoll_ctl failed", 500);
         servIt++;
-        cout << "seg" << endl;
     }
     serverLoop(epollfd, ev, servSockets, servSocketMap);
     return 0;
