@@ -150,6 +150,7 @@ bool Request::fillHeaders(int fd)
             throw NetworkException("recv failed", 500);
         }
         fullRequest.append(buff, bytesRead);
+        
         totalRead += bytesRead;
         headersEnd = fullRequest.find("\r\n\r\n");
         if (headersEnd != string::npos)
@@ -219,13 +220,10 @@ bool Request::fillHeaders(int fd)
             remainingBodyBytes -= bytesRead;
         }
     }
+    cout << "body ->  " << endl << endl << "{{"  << endl << body << endl  << "}}" << endl << endl;
     return true;
 }
     
-bool readCompleteRequest(int fd, Request &req, string &error)
-{
-
-}
 
 bool cleanFd(int fdToClose, map<int, int> &clientServMap, int epollfd)
 {
@@ -247,6 +245,11 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
     return true;
 }
 
+
+bool parseChuncked()
+{
+    return true;
+}
 
 int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSockets, map <int, ServerNode> &servSocketMap)
 {

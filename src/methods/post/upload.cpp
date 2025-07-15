@@ -25,9 +25,10 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
     string startBoundary = "--" + boundary;
     string expectedStart = startBoundary + "\r\n";
     string endBoundary = "\r\n" + startBoundary + "--";
-
     string body = req.body;
 
+    cout << "expected start boundary -> '" << expectedStart << "'" << endl;
+    cout << "expected substring      -> '" << body.substr(0, expectedStart.size()) << "'" << endl;
     if (body.substr(0, expectedStart.size()) != expectedStart)
     {
         // errorRes  = getErrorResponse(405, ""); // method not allowed 
@@ -104,6 +105,7 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
     cout << "content len -> "  << contentLen << " bytes to upload" << endl;
     if (body.find(endBoundary) != string::npos)
     {
+        cout << "body data is small enough, writing directly to file" << endl;
         size_t bodyEndPos = body.find(endBoundary);
         string bodyData = body.substr(bCTnlPos + 4, bodyEndPos - bCTnlPos - 4); // skip new line
         // cout << " [[" <<  bodyData << "]]" << endl;
@@ -111,6 +113,7 @@ void WebServ::handleUplaod(Request &req, long contentLen, ServerNode &servNode, 
     }
     else
     {
+        cout << "body data is too large, reading from socket" << endl;
         // cout << "body data is too large, reading from socket" << endl;
         size_t headersPlusDataRead = req.body.size();  // How much we already have read (headers + body headers + maybe some body data)
         size_t totalDataNeeded = contentLen;  // total data we need to read got it from -> Content-Length header

@@ -182,12 +182,10 @@ string getLocation(Request &req, ServerNode &servNode)
             location = "/";
         else if (req.resource[i] == '/')
         {
-            cout << "should be here " << i << endl;
             location = req.resource.substr(0, i);
         }
         if (exists(servNode.locationDict, location))
         {
-            cout << "roro " << req.resource[i] << endl;
             return location;
         }
     }
@@ -228,6 +226,8 @@ char decodeHex(string &str, size_t &idx)
         decoded = str[idx];
     return decoded;
 }
+
+
 
 void WebServ::urlFormParser(string str, map <string, string> &queryParms)
 {

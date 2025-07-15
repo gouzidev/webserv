@@ -102,14 +102,82 @@ long long extractContentLen(Request &req, ServerNode &serv)
     return contentLen;
 }
 
+bool handleChunkedBodyStart(string &body, Request &req)
+{
+    // since i know this is chunked i know it must be  :
+    //      HEX\r\n
+    long hex = -1;
+    size_t i = 0;
+    string chunk;
+    string newBody;
+    string hexStr;
+    size_t startReadingIdx = 0;
+    size_t hexEndPos = body.find("\r\n", 0);
+    while (hexEndPos != string::npos)
+    {
+        hexStr = body.substr(i, hexEndPos - i);
+        hex = stringToHexLong(hexStr, req);
+        if (hex == 0)
+            break;
+
+        startReadingIdx = hexEndPos += 2; // skip the \r\n
+        chunk = body.substr(startReadingIdx, hex);
+        i = startReadingIdx + chunk.size();
+        cout << "will read chunk of size " << hex << " bytes, -> {{" << chunk.substr(20) << "..." << chunk.substr(chunk.size() - 20) << "}}" << ",  i -> " << i  << endl;
+        if (i > body.size() - 2)
+        {
+            cout << "Error: Reached the end of the body before finding the end of the chunked data." << endl;
+            throw RequestException("Invalid chunked body format", 400, req);
+        }
+        if (body[i] != '\r' || body[i + 1] != '\n')
+        {
+            cout << "Error: Expected '\\r\\n' after chunk data, but found: '" << body.substr(i, 2) << "'" << endl;
+            throw RequestException("Invalid chunked body format", 400, req);
+        }
+        i += 2;
+        newBody += chunk;
+        hexEndPos = body.find("\r\n", i);
+    }
+    body = newBody; // Update the original body with the parsed chunks
+    req.headers["content-length"] = toString(newBody.size());
+    return true;
+}
+
+bool parseChuncked(Request &req, ServerNode &serv)
+{
+    handleChunkedBodyStart(req.body, req);
+    return true;
+
+}
+
 void WebServ::postMethode(Request &req, ServerNode &serv)
 {
+    string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
+    string errorRes;
+    LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
+    if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
+    {
+        errorRes  = getErrorResponse(405, ""); // method not allowed 
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
+
     cout << "handling post request" << endl;
     vector <string> startLine = req.getStartLine();
     string &location = req.getResource();
     map <string, string> &headers = req.getHeaders();
     string key = "host";
 
+    if (exists(headers, "transfer-encoding"))
+    {
+        if (headers.find("transfer-encoding")->second != "chunked")
+        {
+            throw RequestException("bad value for 'transfer encoding' only 'chunked' is accepted", 400, req);
+        }
+        cout << "handling chunked transfer encoding" << endl;
+        parseChuncked(req, serv);
+        cout << "chunked body after parsing: {{" << req.body << "}}" << endl;
+    }
     if (!exists(req.headers, "content-length"))
     {
         // sendErrPageToClient(req.cfd, 400, serv);
@@ -125,8 +193,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     string contentType = headers.find("content-type")->second;
     string rootFolder = serv.root;
 
-    string errorRes;
-    string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
     if (locationTarget == "") // doesnt exist
     {
         cout << "location not found in server node for target -> " << req.getResource() << endl;
@@ -135,23 +201,16 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         return ;
     }
 
-    cout << "location target is [ " << locationTarget << " ]" << endl;
-    LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
-    if (locationNode.isProtected)
-    {
-        string sessionKey = req.extractSessionId();
-        if (!auth->isLoggedIn(sessionKey))
-        {
-            sendErrPageToClient(req.cfd, 401, serv);
-            return ;
-        }
-    }
-    if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
-    {
-        errorRes  = getErrorResponse(405, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
+    // if (locationNode.isProtected)
+    // {
+    //     string sessionKey = req.extractSessionId();
+    //     if (!auth->isLoggedIn(sessionKey))
+    //     {
+    //         sendErrPageToClient(req.cfd, 401, serv);
+    //         return ;
+    //     }
+    // }
+ 
 
     cout << "content type is " << contentType << endl;
     if (contentType == "application/x-www-form-urlencoded") // handle form post request
@@ -178,7 +237,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         "\r\n"
         "Successfull!";
         send(req.cfd, successResponse, strlen(successResponse), 0);
-
     }
 }
 

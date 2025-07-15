@@ -231,7 +231,9 @@ bool strAllDigit(string s);
 bool checkFile(string filename, int perm);
 bool checkDir(string dirname, int dirStat);
 bool validPath(string path);
+
 string ushortToStr(unsigned short port);
+long stringToHexLong(string str, Request &req);
 
 string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);
