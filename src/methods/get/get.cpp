@@ -112,7 +112,7 @@ bool checkIndex(LocationNode node, Request req)
 //     makeResponse(req, fileContent);
 // }
 
-string sendImageResponse(const std::string& imagePath)
+string sendBinaryResponse(const std::string& imagePath)
 {
     // Read image as binary
     std::ifstream file(imagePath.c_str(), std::ios::in | std::ios::binary);
@@ -123,23 +123,83 @@ string sendImageResponse(const std::string& imagePath)
     return imageData;
 }
 
+string checkResource(string fullResource)
+{
+    size_t i = 0;
+    string newResource;
+    while (fullResource[i])
+    {
+        // cout << "wieiiwiwiwiwiwiiwiw" << endl;
+        if (fullResource[i] == '%')
+            newResource += decodeHex(fullResource, i);
+        else
+            newResource += fullResource[i];
+        i++;
+    }
+    cout << "NEWWWWWWWWWWWWWWWWWWWWW " << newResource << endl;
+    return newResource;
+}
+
+string runCgi(Request req)
+{
+    int pipefd[2];
+    pipe(pipefd);
+    int id = fork();
+    if (id == 0)
+    {
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+
+        char *cmd[2];
+        cmd[0] = strdup(req.fullResource.c_str());
+        cmd[1] = NULL;
+        execve(req.fullResource.c_str(), cmd, NULL);
+        free(cmd[0]);
+        exit(1);
+    }
+    close(pipefd[1]);
+    string cgiOutput;
+    char buffer[4096];
+    ssize_t n;
+    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0)
+        cgiOutput.append(buffer, n);
+    close(pipefd[0]);
+    waitpid(id, NULL, 0);
+    cout << "OUTPUT IS FOR CGI " << cgiOutput << endl;
+    return (cgiOutput);
+}
+
 void WebServ::handleGetFile(Request req, map<string, string> &data)
 {
     string fileContent;
-    req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+    req.resp.setStatusLine("HTTP/1.0 200 OK\r\n");
+    cout << "full res " << req.fullResource << endl;
+    // string fileName = checkResource(req.fullResource);
+    cout << "full res after " << req.fullResource << endl;
+
     if (req.mimeType == "text/html")
     {
-        // req.resp.headers += "Content-Type: image/jpeg\r\n";
         if (data.empty())
             fileContent = readFromFile(req.fullResource);
         else
             fileContent = dynamicRender(req.fullResource, data);
     }
-    else if (req.mimeType == "image")
+    else if (req.mimeType == "cgi")
+    {
+        req.mimeType = "text";
+        fileContent = runCgi(req);
+    }
+    else if (req.mimeType == "not supported")
+    {
+        req.mimeType = "text";
+        fileContent = "this file type is not supported";
+    }
+    else
     {
         cout << "here we should handle images" << endl;
         // req.resp.headers += "Content-Type: image/jpeg\r\n";
-        fileContent = sendImageResponse(req.fullResource);
+        fileContent = sendBinaryResponse(req.fullResource);
     }
     makeResponse(req, fileContent);
 }
@@ -173,6 +233,7 @@ void WebServ::getMethode(Request req, ServerNode serv)
     string sessionKey;
     map <string, string> data ;
     string target = req.getResource();
+    cout << "target is " << target << endl;
     string location = getLocation(req, serv);
     // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
     if (location == "")
@@ -192,6 +253,7 @@ void WebServ::getMethode(Request req, ServerNode serv)
     req.fullResource = getFullResource(node.root, location, target);
     try
     {
+        req.fullResource = checkResource(req.fullResource);
         cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
         {
@@ -199,12 +261,13 @@ void WebServ::getMethode(Request req, ServerNode serv)
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
-                    dirList(node.root, location, req);
+                dirList(node.root, location, req);
                 // else error 403/404
             }
         }
         else if (isRegularFile(req.fullResource) == true)
         {
+            cout << "should be fileeee" << endl;
             if (node.isProtected)
             {
                 sessionKey = req.extractSessionId();
@@ -225,7 +288,10 @@ void WebServ::getMethode(Request req, ServerNode serv)
             
         }
         else
+        {
+            cout << "AHAAAAAAAAAAAAAAAAA!!!!!!!!!!!!!!!" << endl;
             throw ConfigException("forbidden request", 404);
+        }
         // }
         // else
         // cout << "HOW!!!!!" << endl;

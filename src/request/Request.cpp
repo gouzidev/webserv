@@ -180,12 +180,18 @@ void Request::getMimeType()
     cout << "mime is " << mime << endl;
     if (mime == "html")
         mimeType = "text/html";
+    else if (mime == "mp4")
+        mimeType = "video/mpeg";
+    else if (mime == "py")
+        mimeType = "cgi";
+    else if (mime == "zip")
+        mimeType = "application/zip";
+    else if (mime == "pdf")
+        mimeType = "application/pdf";
     else if (mime == "csv")
         mimeType = "text/csv";
     else if (mime == "jpg" || mime == "jpeg" || mime == "png")
         mimeType = "image";
-    else if (mime == "mp4")
-        mimeType = "video";
     else
         mimeType = "not supported";
 }
