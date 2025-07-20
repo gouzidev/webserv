@@ -90,9 +90,9 @@ bool checkIndex(LocationNode node, Request req)
         fileContent = readFromFile(fileName);
         if (fileContent != "")
         {
-            cout << "hello" << endl;
             req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
             makeResponse(req, fileContent);
+            cout << "hello" << endl;
             return 0;
         }
     }
@@ -140,6 +140,7 @@ string checkResource(string fullResource)
     return newResource;
 }
 
+
 string runCgi(Request req)
 {
     int pipefd[2];
@@ -163,12 +164,13 @@ string runCgi(Request req)
     char buffer[4096];
     ssize_t n;
     while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0)
-        cgiOutput.append(buffer, n);
+       cgiOutput.append(buffer, n);
     close(pipefd[0]);
     waitpid(id, NULL, 0);
     cout << "OUTPUT IS FOR CGI " << cgiOutput << endl;
     return (cgiOutput);
 }
+
 
 void WebServ::handleGetFile(Request req, map<string, string> &data)
 {
@@ -222,37 +224,43 @@ bool isRegularFile(string& path)
 
 string getFullResource(string root, string location, string target)
 {
-    if (location == target || location == "/")
+    if (location == target)
         return root;
     string path = target.substr(location.size());
     return root + path;
 }
 
-void WebServ::getMethode(Request req, ServerNode serv)
+void WebServ::requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node)
 {
-    string sessionKey;
-    map <string, string> data ;
     string target = req.getResource();
     cout << "target is " << target << endl;
-    string location = getLocation(req, serv);
+    location = getLocation(req, serv);
     // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
     if (location == "")
     {
-        string errorRes  = getErrorResponse(404, "");
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
+       // string errorRes  = getErrorResponse(404, "");
+        // send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        throw ConfigException("forbidden request", 404);
     }
-    LocationNode node = serv.locationDict.find(location)->second;
+    node = serv.locationDict.find(location)->second;
     // Debugger::printLocationNode(node);
-    if (!exists(node.methods, string("GET")))
-    { 
-        string errorRes  = getErrorResponse(405, "");
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
+    if (!exists(node.methods, req.getReqType()))
+    {
+        throw ConfigException(getStatusMessage(405), 405);
     }
     req.fullResource = getFullResource(node.root, location, target);
+}
+
+void WebServ::getMethode(Request &req, ServerNode &serv)
+{
+    string sessionKey;
+    map <string, string> data ;
+    string location;
+    LocationNode node;
     try
     {
+        // remove("");
+        requestChecks(req, serv, location, node);
         req.fullResource = checkResource(req.fullResource);
         cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
@@ -261,8 +269,9 @@ void WebServ::getMethode(Request req, ServerNode serv)
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
-                dirList(node.root, location, req);
-                // else error 403/404
+                    dirList(node.root, location, req);
+                else
+                    throw ConfigException("forbidden request", 404);
             }
         }
         else if (isRegularFile(req.fullResource) == true)
@@ -279,22 +288,14 @@ void WebServ::getMethode(Request req, ServerNode serv)
                 Session session = auth->sessions.find(sessionKey)->second;
                 User loggedUser = session.getUser();
                 data = loggedUser.getKeyValData();
-                // data['email'] = loggedUser.getEmail();
             }
             req.getMimeType();
             handleGetFile(req, data);
-            // cout << "is file " << endl;
-            // handleGetFile(req);
-            
         }
         else
         {
-            cout << "AHAAAAAAAAAAAAAAAAA!!!!!!!!!!!!!!!" << endl;
             throw ConfigException("forbidden request", 404);
         }
-        // }
-        // else
-        // cout << "HOW!!!!!" << endl;
     }
     catch(ConfigException& e)
     {

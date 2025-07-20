@@ -9,6 +9,7 @@ FILES = $(SRC_DIR)/webserv.cpp \
         $(SRC_DIR)/config/parsing.cpp \
         $(SRC_DIR)/request/Request.cpp \
         $(SRC_DIR)/methods/get/get.cpp \
+        $(SRC_DIR)/methods/delete/delete.cpp \
         $(SRC_DIR)/methods/post/post.cpp \
         $(SRC_DIR)/methods/post/upload.cpp \
         $(SRC_DIR)/methods/utils/utils.cpp \

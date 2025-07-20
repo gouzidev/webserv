@@ -115,6 +115,7 @@ bool handleUploadData(Request &req, size_t currBodyPos, size_t bodyBoundaryPos, 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return false;
     }
+    
     write(fd, bodyData.c_str(), bodyData.size());
     close(fd);
     return true;
