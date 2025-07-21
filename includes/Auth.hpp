@@ -28,7 +28,11 @@ class Auth
         Auth();
         map < string, User> &getUsers();
     public: 
+
+        // email -> User
         map < string, User> users;
+
+        // sessionKey -> Session
         map <string, Session> sessions;
 
 };

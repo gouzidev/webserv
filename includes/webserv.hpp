@@ -121,6 +121,7 @@ class LocationNode
         string uploadDir;
         // long long clientMaxBodySize;
         bool isProtected;
+        bool needContentLen;
         map<string, string> cgiExts;
 };
 
@@ -133,7 +134,6 @@ class ServerNode
         string root;
         string errorFolder;
         string authFolder;
-        set<string> serverNames;
         vector<LocationNode> locationNodes;
         map<string, LocationNode> locationDict;
         map<unsigned short, string> errorNodes;
@@ -151,6 +151,7 @@ class User
         string firstName;
         string lastName;
         string password;
+        vector <string> uploads;
 
     public:
         User();
@@ -158,6 +159,7 @@ class User
         User(string fName, string lName, string email, string password);
         User(string fName, string lName, string userName, string email, string password);
         map<string, string> getKeyValData();
+        const unsigned int &getId() const;
         const string &getEmail() const;
         const string &getFirstName() const;
         const string &getLastName() const;
@@ -196,6 +198,15 @@ class WebServ
         bool logged;
         User loggedUser;
         Auth *auth; // auth instance (will manage the login and users)
+
+        // max possible number of files uploaded to the server -> 999
+        short MAXSERVERUPLOADS;
+
+        // max digits of the user id (if 2 -> 99), (if 3 -> 999)
+        short MAX_USERID_DIGITS;
+
+        // current number of files uploaded to the server (increments every time user uploads new file) 
+        short currentUploadCount;
     public:
         WebServ(char *confName);
         ~WebServ();
@@ -215,9 +226,11 @@ class WebServ
         void deleteMethod(Request &req, ServerNode &servNode);
         int server();
         void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
+        string getFileNameWithUserId(Request &req, unsigned int userId, string originalName); // will return the name with the user id in the front
+        string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); // will get the original name and set the id found in the saved name
         // void handleGetFile(Request req);
         void handleGetFile(Request req, map<string, string> &data);
-        int serverLoop(int epollfd, struct epoll_event ev, set<int> activeSockets, map<int, ServerNode> &servSocketMap);
+        int serverLoop(int epollfd, struct epoll_event &ev, set<int> &activeSockets, map<int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
         void handleLogin(Request &req, ServerNode &serv);
         void handleSignup(Request &req, ServerNode &serv);

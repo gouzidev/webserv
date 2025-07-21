@@ -27,6 +27,7 @@ string getOriginalFileName(string fileNameWithUserId, unsigned int &userIdAssoci
     string originalName = fileNameWithUserId.substr(namePrefixSize + 1);
     return originalName;
 }
+
 int main()
 {
     unsigned int userId = 999;

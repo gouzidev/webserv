@@ -423,7 +423,7 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         throw RequestException("could not find 'content-length'", 400, req);
     }
     long long contentLen = extractContentLen(req, serv); // stored in MB
-    if (contentLen <= 0)
+    if (contentLen <= 0 && locationNode.needContentLen)
     {
         // sendErrPageToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
@@ -445,7 +445,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         return ;
     }
 
-    cout << "location target is [ " << locationTarget << " ]" << endl;
     if (locationNode.isProtected)
     {
         string sessionKey = req.extractSessionId();
@@ -455,12 +454,7 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
             return ;
         }
     }
-    if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
-    {
-        errorRes  = getErrorResponse(405, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
+ 
 
     cout << "content type is " << contentType << endl;
     if (contentType == "application/x-www-form-urlencoded") // handle form post request

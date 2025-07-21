@@ -30,12 +30,16 @@ LocationNode::LocationNode()
     path = "";
     uploadDir = "";
     isProtected = false;
+    needContentLen = false;
     // clientMaxBodySize = 0;
 }
 
 
 WebServ::WebServ(char *filename)
 {
+    MAXSERVERUPLOADS = 999;
+    MAX_USERID_DIGITS = 3;
+    currentUploadCount = 0;
     generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";
    
     criticalErr = false;
@@ -53,6 +57,8 @@ WebServ::WebServ(char *filename)
 
 WebServ::WebServ(string filename)
 {
+    MAXSERVERUPLOADS = 999;
+    currentUploadCount = 0;
     generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";
     criticalErr = false;
     User admin("salah", "gouzi", "salahgouzi11@gmail.com", "1234");

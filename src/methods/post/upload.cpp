@@ -1,7 +1,7 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
 #include "../../../includes/Exceptions.hpp"
-
+#include <string>
 
 
 
@@ -15,6 +15,36 @@ struct FileUploadData
     string name;
     string filename;
 };
+
+string WebServ::getFileNameWithUserId(Request &req, unsigned int userId, string originalName)
+{
+    stringstream ss;
+    
+    ss << userId;
+    string userIdStr = ss.str();
+    int i = userIdStr.size();
+    while (i++ < MAX_USERID_DIGITS)
+        userIdStr.insert(0, "0");
+    string resName = userIdStr + "_" + originalName;
+    return resName;
+}
+
+string WebServ::getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
+{
+    userIdAssociated = -1;
+    short namePrefixSize = MAX_USERID_DIGITS + 1; // size of ([MAX_USERID_DIGITS] + ['_'])
+
+    if (fileNameWithUserId.size() < namePrefixSize + 1) // 1 -> at least '_' and a character in the filename with the prefix
+        throw RequestException("Invalid file name format", 400, req);
+    if (fileNameWithUserId[namePrefixSize] != '_')
+        throw RequestException("Invalid file name format", 400, req);
+    
+    string userIdFromFileName = fileNameWithUserId.substr(0, MAX_USERID_DIGITS);
+
+    userIdAssociated = atoi(userIdFromFileName.c_str());
+    string originalName = fileNameWithUserId.substr(namePrefixSize + 1);
+    return originalName;
+}
 
 struct FileUploadData getUploadData(string &contentDisposition)
 {
@@ -226,7 +256,7 @@ std::string getFilenameFromHeaders(const std::string& headers)
     end_pos = headers.find("\"", pos);
     if (end_pos != std::string::npos)
         fileData.name = headers.substr(pos, end_pos - pos);
-   
+    return fileData.filename;
     
 }
 
@@ -264,6 +294,14 @@ struct FileUploadData getContentDataFromHeaders(const std::string& headers)
 // The single, unified upload handler function
 void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locationNode)
 {
+
+    string sessionKey = req.extractSessionId();
+    if (!auth->isLoggedIn(sessionKey))
+    {
+        sendErrPageToClient(req.cfd, 401, serv);
+        return ;
+    }
+    User &LoggedUser = auth->sessions.find(sessionKey)->second.getUser();
 
     string formDataDiv = "";
 
@@ -404,10 +442,11 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
                 {
                     std::string headers = multipart_chunk.substr(0, headers_end_pos);
                     struct FileUploadData fileData = getContentDataFromHeaders(headers);
-                    cout << "File name: " << fileData.filename << ", Name: " << fileData.name << endl;
                     std::string filename = fileData.filename;
+                    cout << "File name: " << fileData.filename << ", Name: " << fileData.name << ", after processing -> " << filename << endl;
                     if (!filename.empty())
                     {
+                        filename = getFileNameWithUserId(req, LoggedUser.getId(), filename);
                         std::string filepath = locationNode.uploadDir + "/" + filename;
                         filefd = open(filepath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
                     }
