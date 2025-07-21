@@ -181,7 +181,7 @@ void Request::getMimeType()
     if (mime == "html")
         mimeType = "text/html";
     else if (mime == "mp4")
-        mimeType = "video/mpeg";
+        mimeType = "video/mp4";
     else if (mime == "py")
         mimeType = "cgi";
     else if (mime == "zip")

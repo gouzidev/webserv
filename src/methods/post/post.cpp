@@ -228,7 +228,7 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         throw RequestException("could not find 'content-length'", 400, req);
     }
     long long contentLen = extractContentLen(req, serv); // stored in MB
-    if (contentLen <= 0)
+    if (contentLen <= 0 && locationNode.needContentLen)
     {
         // sendErrPageToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
@@ -250,15 +250,15 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         return ;
     }
 
-    // if (locationNode.isProtected)
-    // {
-    //     string sessionKey = req.extractSessionId();
-    //     if (!auth->isLoggedIn(sessionKey))
-    //     {
-    //         sendErrPageToClient(req.cfd, 401, serv);
-    //         return ;
-    //     }
-    // }
+    if (locationNode.isProtected)
+    {
+        string sessionKey = req.extractSessionId();
+        if (!auth->isLoggedIn(sessionKey))
+        {
+            sendErrPageToClient(req.cfd, 401, serv);
+            return ;
+        }
+    }
  
 
     cout << "content type is " << contentType << endl;

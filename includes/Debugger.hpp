@@ -77,9 +77,7 @@ class Debugger
             cout << "Port: " << servNode.port << endl;
             cout << "Root: " << servNode.root << endl;
             
-            cout << "Server Names: ";
-            for (set<string>::const_iterator it = servNode.serverNames.begin(); it != servNode.serverNames.end(); ++it)
-                cout << *it << " ";
+          
             cout << endl;
             
             cout << "Client Max Body Size: " << servNode.clientMaxBodySize << " megabytes" << endl;
@@ -125,10 +123,6 @@ class Debugger
                 cout << "      • Host: " << it->second.hostIp << endl;
                 cout << "      • Port: " << it->second.port << endl;
                 cout << "      • Root: " << it->second.root << endl;
-                cout << "      • Server Names: ";
-                for (set<string>::const_iterator nameIt = it->second.serverNames.begin(); 
-                     nameIt != it->second.serverNames.end(); ++nameIt)
-                    cout << *nameIt << " ";
                 cout << endl;
             }
             cout << "===========================================" << endl;

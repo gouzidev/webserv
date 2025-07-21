@@ -113,6 +113,14 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
             throw ConfigException("syntax error for isProtected, 'isProtected' at line: " + toString(lineNum), 400);
         locationNode.isProtected = true;
     }
+    else if (tokens[0] == "needContentLen")
+    {
+        if (tokens.size() != 1)
+            throw ConfigException("syntax error for needContentLen, 'needContentLen' at line: " + toString(lineNum), 400);
+        locationNode.needContentLen = true;
+    }
+
+    // needContentLen
     // else if (tokens[0] == "client_max_body_size")
     // {
     //     if (tokens.size() != 2 || tokens[1].size() < 1)
@@ -233,17 +241,7 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
         else
             servNode.hostIp = tokens[1];
     }
-    else if (tokens[0] == "server_names")
-    {
-        if (tokens.size() == 1)
-            throw ConfigException("server_names syntax is wrong, please enter at least one server name at line: " + toString(lineNum), 400);
-        set <string> server_names;
-        for (size_t i = 1; i < tokens.size(); i++)
-        {
-            server_names.insert(tokens[i]);
-        }
-        servNode.serverNames = server_names;
-    }
+    
     else if (tokens[0] == "root")
     {
         if (tokens.size() != 2)
@@ -370,19 +368,6 @@ void WebServ::validateParsing()
         if (!checkFile(supposedDefaultErrorPage, O_RDONLY))
             throw ConfigException("config error, default error page: " + supposedDefaultErrorPage + " isn't valid or non existent", 400);
         servNode.defaultErrorPage = supposedDefaultErrorPage;
-        set <string> servNames = servNode.serverNames;
-        for (set <string>::iterator it = servNames.begin() ; it != servNames.end(); it++)
-        {
-            string servName = *it;
-            string servNamePort = servName + ":" + ushortToStr(servNode.port);
-            if (servNameServMap.find(servNamePort) != servNameServMap.end())
-            {
-                ServerNode foundServ = servNameServMap.find(servNamePort)->second;
-                if (foundServ.hostIp == servNode.hostIp)
-                    throw ConfigException("duplicate server name for the same port: " + servNamePort + " isn't valid", 400);
-            }
-            servNameServMap[servNamePort] = servNode;
-        }
         hostServMap[servNode.hostIp + ":" + ushortToStr(servNode.port)] = servNode;
         i++;
     }

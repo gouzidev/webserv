@@ -40,6 +40,11 @@ User::User(string fName, string lName, string userName, string email, string pas
     userCount++;
 }
 
+const unsigned int &User::getId() const
+{
+    return id;
+}
+
 const string &User::getEmail() const
 {
     return email;

@@ -235,7 +235,7 @@ bool parseChuncked()
     return true;
 }
 
-int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSockets, map <int, ServerNode> &servSocketMap)
+int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSockets, map <int, ServerNode> &servSocketMap)
 {
     bool error = false;
     bool done;
