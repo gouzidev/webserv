@@ -270,13 +270,13 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
                 }
                 else
                 {
+                    string rest;
+                    int servFd = clientServMap[readyFd];
+                    ServerNode serv = servSocketMap[servFd];
+                    Request req(serv);
+                    req.cfd = readyFd;
                     try
                     {
-                        string rest;
-                        int servFd = clientServMap[readyFd];
-                        ServerNode serv = servSocketMap[servFd];
-                        Request req(serv);
-                        req.cfd = readyFd;
 
                         req.fillHeaders(readyFd);
                         req.setCookies();
@@ -285,7 +285,9 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
                             sendErrPageToClient(req.cfd, 400, serv);
                             throw RequestException("could not find 'host' header", 400, req);
                         }
+                        
                         string hostPort = getHostPort(req.headers["host"], serv.port);
+                        cout << "hostPort: " << hostPort << endl;
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);
                         if (req.getReqType() == POST)

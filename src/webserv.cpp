@@ -31,6 +31,8 @@ LocationNode::LocationNode()
     uploadDir = "";
     isProtected = false;
     needContentLen = false;
+    redirect.first = 0;
+    redirect.second = "";
     // clientMaxBodySize = 0;
 }
 

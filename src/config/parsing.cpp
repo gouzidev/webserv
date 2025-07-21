@@ -92,8 +92,8 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
         }
         else
         {
-            locationNode.redirect.second = tokens[1];
             locationNode.redirect.first = -1;
+            locationNode.redirect.second = tokens[1];
         }
         
     }

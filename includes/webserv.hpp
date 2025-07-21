@@ -113,7 +113,9 @@ class LocationNode
         static set<string> possibleCgiExts;
         vector<string> headers;
         set<string> methods;
-        pair<short, string> redirect;
+
+        // httpCode -> /location
+        pair <short, string> redirect;
         string path;
         string root;
         vector<string> index;

@@ -172,12 +172,10 @@ int Request::getReqType()
 void Request::getMimeType()
 {
     string target = resource;
-    cout << "target is " << target << endl;
     int i = target.size() - 1;
     while (target[i] != '.')
         i--;
     string mime = target.substr(i + 1);
-    cout << "mime is " << mime << endl;
     if (mime == "html")
         mimeType = "text/html";
     else if (mime == "mp4")

@@ -90,7 +90,6 @@ bool checkIndex(LocationNode node, Request req)
         fileContent = readFromFile(fileName);
         if (fileContent != "")
         {
-            cout << "hello" << endl;
             req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
             makeResponse(req, fileContent);
             return 0;
@@ -231,7 +230,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
     string sessionKey;
     map <string, string> data ;
     string target = req.getResource();
-    cout << "target is " << target << endl;
     string location = getLocation(req, serv);
     // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
     if (location == "")
@@ -263,7 +261,6 @@ void WebServ::getMethode(Request req, ServerNode serv)
         }
         else if (isRegularFile(req.fullResource) == true)
         {
-            cout << "should be fileeee" << endl;
             // if (node.isProtected)
             // {
             //     sessionKey = req.extractSessionId();
