@@ -114,7 +114,6 @@ bool checkIndex(LocationNode node, Request req)
 
 string sendBinaryResponse(const std::string& imagePath)
 {
-    // Read image as binary
     std::ifstream file(imagePath.c_str(), std::ios::in | std::ios::binary);
     if (!file) return "";
     std::ostringstream ss;
@@ -136,7 +135,6 @@ string checkResource(string fullResource)
             newResource += fullResource[i];
         i++;
     }
-    cout << "NEWWWWWWWWWWWWWWWWWWWWW " << newResource << endl;
     return newResource;
 }
 
@@ -254,10 +252,8 @@ void WebServ::getMethode(Request req, ServerNode serv)
     try
     {
         req.fullResource = checkResource(req.fullResource);
-        cout << "resPath is [ " << req.fullResource << " ]" << endl;
         if (isDirectory(req.fullResource) == true)
         {
-            cout << "is dir but why" << endl;
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
@@ -268,19 +264,19 @@ void WebServ::getMethode(Request req, ServerNode serv)
         else if (isRegularFile(req.fullResource) == true)
         {
             cout << "should be fileeee" << endl;
-            if (node.isProtected)
-            {
-                sessionKey = req.extractSessionId();
-                if (!auth->isLoggedIn(sessionKey))
-                {
-                    sendErrPageToClient(req.cfd, 401, serv);
-                    return ;
-                }
-                Session session = auth->sessions.find(sessionKey)->second;
-                User loggedUser = session.getUser();
-                data = loggedUser.getKeyValData();
-                // data['email'] = loggedUser.getEmail();
-            }
+            // if (node.isProtected)
+            // {
+            //     sessionKey = req.extractSessionId();
+            //     if (!auth->isLoggedIn(sessionKey))
+            //     {
+            //         sendErrPageToClient(req.cfd, 401, serv);
+            //         return ;
+            //     }
+            //     Session session = auth->sessions.find(sessionKey)->second;
+            //     User &loggedUser = session.getUser();
+            //     data = loggedUser.getKeyValData();
+            //     // data['email'] = loggedUser.getEmail();
+            // }
             req.getMimeType();
             handleGetFile(req, data);
             // cout << "is file " << endl;
