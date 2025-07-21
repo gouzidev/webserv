@@ -67,7 +67,10 @@ string Request::extractSessionId()
     if (!exists(cookies, "sessionId"))
         return "";
     else
+    {
+        cout << "session id is " << cookies["sessionId"] << endl;
         return cookies["sessionId"];
+    }
     // string cookie =
 }
 
@@ -181,7 +184,7 @@ void Request::getMimeType()
     if (mime == "html")
         mimeType = "text/html";
     else if (mime == "mp4")
-        mimeType = "video/mpeg";
+        mimeType = "video/mp4";
     else if (mime == "py")
         mimeType = "cgi";
     else if (mime == "zip")

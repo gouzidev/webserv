@@ -13,6 +13,11 @@ void deleteFile(string path)
     cout << "didn't delete shit" << endl;
 }
 
+void isAuthorised()
+{
+
+}
+
 void WebServ::deleteMethod(Request &req, ServerNode &serv)
 {
     string sessionKey;
@@ -31,14 +36,11 @@ void WebServ::deleteMethod(Request &req, ServerNode &serv)
         {
             // sessionKey = req.extractSessionId();
             // if (!auth->isLoggedIn(sessionKey))
-            // {
-            //     sendErrPageToClient(req.cfd, 401, serv);
-            //     return ;
-            // }
+            //     throw ConfigException("Unauthorised", 401);
             // Session session = auth->sessions.find(sessionKey)->second;
             // User loggedUser = session.getUser();
             // data = loggedUser.getKeyValData();
-            cout << "got here" << endl;
+            // isAuthorised();
             deleteFile(req.fullResource);
             //check if user has authorischdchsd to delete this file
             //check if parent dir (root ig) is w_ok and x_ok

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebServ Test Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f4f7f6; min-height: 100vh; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 2.5rem; color: #2c3e50; }
+        h3 { font-size: 1.5rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef; color: #34495e; }
+        .test-section { background: #f8f9fa; border-radius: 10px; padding: 30px; margin-top: 30px; border-left: 5px solid #3498db; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .submit-btn { background: #3498db; color: white; padding: 12px 30px; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background 0.3s ease; width: 100%; margin-top: 10px;}
+        .submit-btn:hover { background: #2980b9; }
+        #filesList { margin-top: 15px; }
+        .file-item { background: #fff; padding: 10px; border-radius: 5px; border: 1px solid #eee; margin-bottom: 5px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WebServ Backend Test Panel 🧪</h1>
+            <p>Use these forms to test your server's POST request handling.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>Test `multipart/form-data` Upload</h3>
+            <p>This form submits files and text data together via your `/upload` endpoint. Your backend should save the files and display the text data on the response page.</p>
+            <br>
+            <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="test-user">
+                </div>
+                <div class="form-group">
+                    <label for="description">File Description</label>
+                    <input type="text" id="description" name="description" value="A sample file upload.">
+                </div>
+                <div class="form-group">
+                    <label for="fileInput">Select Files (Multiple Allowed)</label>
+                    <input type="file" id="fileInput" name="files" multiple>
+                </div>
+                
+                <div id="filesList"></div>
+
+                <button type="submit" class="submit-btn">🚀 Test Multipart Upload</button>
+            </form>
+        </div>
+        
+         <div class="test-section">
+            <h3>Test `application/x-www-form-urlencoded`</h3>
+            <p>This submits a standard form. You'll need to create a `location /form-test` endpoint in your server config for this to work.</p>
+            <br>
+            <form action="/form-test" method="POST">
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName" value="Ada">
+                </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName" value="Lovelace">
+                </div>
+                <button type="submit" class="submit-btn">✉️ Test URL-Encoded Post</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+        const filesList = document.getElementById('filesList');
+
+        fileInput.addEventListener('change', function() {
+            filesList.innerHTML = '';
+            if (this.files.length > 0) {
+                const title = document.createElement('h5');
+                title.textContent = 'Selected files:';
+                filesList.appendChild(title);
+                for (const file of this.files) {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.textContent = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                    filesList.appendChild(fileItem);
+                }
+            }
+        });
+
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (fileInput.files.length === 0) {
+                alert('Please select at least one file to test the upload.');
+                return;
+            }
+            const formData = new FormData(this);
+            fetch('/upload', { method: 'POST', body: formData })
+            .then(response => response.text())
+            .then(html => {
+                const newWindow = window.open();
+                newWindow.document.write(html);
+                newWindow.document.close();
+            })
+            .catch(error => console.error('Error submitting form:', error));
+        });
+    </script>
+</body>
+</html>

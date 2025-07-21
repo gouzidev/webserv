@@ -280,6 +280,61 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     auth->login(req.cfd, email, password, req);
 }
 
+void WebServ::handleFormData(Request &req, ServerNode &serv)
+{
+    string errorRes;
+    string dataDivStr = "<div>";
+    map < string , string > queryParams;
+
+    string body = req.body;
+
+    if (!exists(req.headers, "content-type"))
+    {
+        cerr << "send a host and content-type mf" << endl;
+        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
+        send(req.cfd, testResponse, strlen(testResponse), 0);
+        return ;
+    }
+
+    urlFormParser(body, queryParams);
+
+
+    map < string , string >::iterator it;
+
+    it = queryParams.begin();
+
+    while (it != queryParams.end())
+    {
+        dataDivStr += "<li>" + it->first + " -> " + it->second + "</li>";
+        it++;
+    }
+    dataDivStr += "</div>";
+
+    queryParams["data"] = dataDivStr;
+    string page = dynamicRender("./www/auth/form.html", queryParams);
+    cout << "{{{{" << page << "}}}}" << endl;
+
+    string response;
+    response += "HTTP/1.1 " + ushortToStr(201) + " " + getStatusMessage(201) + " \r\n";
+    response +=  "Content-Type: text/html\r\n";
+    response +=  "Content-Length: " + ushortToStr(page.size()) + "\r\n\r\n";
+    response += page;
+
+    send(req.cfd, response.c_str(), response.size(), 0);
+    
+}
+
+string WebServ::getDataStrInDiv(string &name, string &value)
+{
+    string errorRes;
+    string dataDivStr = "<div>";
+    dataDivStr += "<li>" + name + " ---> " + value + "</li>";
+    dataDivStr += "</div>";
+
+    
+    return dataDivStr;
+}
+
 void WebServ::handleSignup(Request &req, ServerNode &serv)
 {
     string errorRes;
@@ -347,6 +402,15 @@ long long extractContentLen(Request &req, ServerNode &serv)
 
 void WebServ::postMethode(Request &req, ServerNode &serv)
 {
+    string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
+    string errorRes;
+    LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
+    if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
+    {
+        errorRes  = getErrorResponse(405, ""); // method not allowed 
+        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
+        return ;
+    }
     cout << "handling post request" << endl;
     vector <string> startLine = req.getStartLine();
     string &location = req.getResource();
@@ -359,17 +423,20 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         throw RequestException("could not find 'content-length'", 400, req);
     }
     long long contentLen = extractContentLen(req, serv); // stored in MB
-    if (contentLen < 0)
+    if (contentLen <= 0)
     {
         // sendErrPageToClient(req.cfd, 400, serv);
         throw RequestException("content length is not valid", 400, req);
     }
 
+    if (!exists(req.headers, "content-type"))
+    {
+        // sendErrPageToClient(req.cfd, 400, serv);
+        throw RequestException("could not find 'content-type'", 400, req);
+    }
     string contentType = headers.find("content-type")->second;
     string rootFolder = serv.root;
 
-    string errorRes;
-    string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
     if (locationTarget == "") // doesnt exist
     {
         cout << "location not found in server node for target -> " << req.getResource() << endl;
@@ -379,7 +446,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     }
 
     cout << "location target is [ " << locationTarget << " ]" << endl;
-    LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
     if (locationNode.isProtected)
     {
         string sessionKey = req.extractSessionId();
@@ -399,17 +465,20 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     cout << "content type is " << contentType << endl;
     if (contentType == "application/x-www-form-urlencoded") // handle form post request
     {
+
         if (locationTarget == "/login")
             handleLogin(req, serv);
         else if (locationTarget == "/signup")
             handleSignup(req, serv);
         else if (locationTarget == "/logout")
             handleLogout(req, serv);
+        else if (locationTarget == "/form-test")
+            handleFormData(req, serv);
     }   
     else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
     {
         cout << "handling file upload" << endl;
-        handleUplaod(req, contentLen, serv, locationNode);
+        handleUpload(req, serv, locationNode);
     }
     else
     {

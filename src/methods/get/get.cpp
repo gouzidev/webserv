@@ -259,7 +259,6 @@ void WebServ::getMethode(Request &req, ServerNode &serv)
     LocationNode node;
     try
     {
-        // remove("");
         requestChecks(req, serv, location, node);
         req.fullResource = checkResource(req.fullResource);
         cout << "resPath is [ " << req.fullResource << " ]" << endl;

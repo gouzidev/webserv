@@ -79,6 +79,7 @@ class Request
         string mimeType;
         ServerNode &serv; // a server that the request belongs to
         string body;      // possible update for large files in post
+        size_t bodyLen;
         string extractSessionId();
         void setCookies();
         unsigned short error;
@@ -221,8 +222,13 @@ class WebServ
         void handleLogin(Request &req, ServerNode &serv);
         void handleSignup(Request &req, ServerNode &serv);
         void handleLogout(Request &req, ServerNode &serv);
-        void handleUplaod(Request &req, long contentLen, ServerNode &servNode, LocationNode &locationNode);
+        void handleUpload(Request &req, ServerNode &serv, LocationNode &locationNode);
+        void handleFormData(Request &req, ServerNode &serv);
+        string getDataStrInDiv(string &name, string &value);
+        
 };
+
+void makeResponse(Request req, string fileContent);
 
 void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
 string getQuickResponse(short errCode, string fileStr);
@@ -266,6 +272,7 @@ string checkResource(string fullResource);
 bool isDirectory(string& path);
 bool isRegularFile(string& path);
 
+bool strHas(string str, string sub, size_t pos);
 
 // converts T types to strings, T could be int, float, double, etc.
 template <typename T>
@@ -288,6 +295,7 @@ bool exists(map<T1, T2> &m, T1 key)
     return m.find(key) != m.end();
 };
 
+bool isValidPos(ssize_t pos);
 template <typename T>
 bool exists(set<T> s, T v)
 {

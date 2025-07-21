@@ -143,9 +143,10 @@ bool Request::fillHeaders(int fd)
     size_t headersEnd = -1;
     long expectedContentLength = 0;
 
-    while (!completedHeaders && totalRead < BUFFSIZE * 2)
+    while (!completedHeaders)
     {
         ssize_t bytesRead = recv(fd, buff, BUFFSIZE, 0);
+        write(1, buff, bytesRead);
         if (bytesRead <= 0) {
             throw NetworkException("recv failed", 500);
         }
@@ -158,10 +159,18 @@ bool Request::fillHeaders(int fd)
             completedHeaders = true;
         }
     }
-    if (completedHeaders && headersEnd != -1)
-        body = fullRequest.substr(headersEnd + 4);
+
+    size_t bodyStart = headersEnd + 4;
+    if (bodyStart < fullRequest.size())
+    {
+        body = fullRequest.substr(bodyStart);
+        bodyLen = fullRequest.size() - bodyStart;
+    }
     else
-        throw NetworkException("Incomplete headers received", 400);
+    {
+        body = "";
+        bodyLen = 0;
+    }
 
     size_t startLineEnd = fullRequest.find("\r\n");
     if (startLineEnd == string::npos) {
@@ -198,31 +207,6 @@ bool Request::fillHeaders(int fd)
         i = nextLineEnd + 2;
     }
     
-    size_t bodyStart = headersEnd + 4;
-    size_t bodyAlreadyRead = 0;
-
-    if (bodyStart < fullRequest.size())
-    {
-        bodyAlreadyRead = fullRequest.size() - bodyStart;
-        this->body = fullRequest.substr(bodyStart);
-    }
-    else
-        this->body = "";
-    
-    if (bodyAlreadyRead < expectedContentLength) // we have some content length that isnt read
-    {
-        size_t remainingBodyBytes = expectedContentLength - bodyAlreadyRead;
-        while (remainingBodyBytes > 0)
-        {
-            size_t toRead = min((size_t) BUFFSIZE, remainingBodyBytes);
-            ssize_t bytesRead = recv(fd, buff, toRead, 0);
-            if (bytesRead <= 0)
-                throw NetworkException("recv failed", 500);
-            this->body.append(buff, bytesRead);
-            remainingBodyBytes -= bytesRead;
-        }
-    }
-    cout << "body ->  " << endl << endl << "{{"  << endl << body << endl  << "}}" << endl << endl;
     return true;
 }
     
@@ -301,7 +285,7 @@ int WebServ::serverLoop(int epollfd, struct epoll_event ev, set <int> servSocket
                         {
                             sendErrPageToClient(req.cfd, 400, serv);
                             throw RequestException("could not find 'host' header", 400, req);
-                        }
+                        }  
                         string hostPort = getHostPort(req.headers["host"], serv.port);
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);
