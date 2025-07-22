@@ -39,7 +39,6 @@ getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userI
 
     if (fileNameWithUserId.size() < namePrefixSize + 1) // 1 -> at least '_' and a character in the filename with the prefix
         throw RequestException("Invalid file name format", 400, req);
-    cout << fileNameWithUserId << "where is problem " << fileNameWithUserId[namePrefixSize] << endl;
     if (fileNameWithUserId[MAX_USERID_DIGITS] != '_')
         throw RequestException("Invalid file name format", 400, req);
     string userIdFromFileName = fileNameWithUserId.substr(0, MAX_USERID_DIGITS);
@@ -297,7 +296,7 @@ struct FileUploadData getContentDataFromHeaders(const std::string& headers)
 // The single, unified upload handler function
 void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locationNode)
 {
-
+    long long clientMaxUploadSize = serv.clientMaxBodySize * 1024 * 1024;
     string sessionKey = req.extractSessionId();
     if (!auth->isLoggedIn(sessionKey))
     {
@@ -306,6 +305,9 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
     }
     User &LoggedUser = auth->sessions.find(sessionKey)->second.getUser();
 
+    long long contentLen = extractContentLen(req, serv);
+    if (contentLen > clientMaxUploadSize)
+        throw RequestException("Upload size exceeded", 413, req);
     string formDataDiv = "";
 
     // === 1. UNIFIED SETUP ===
@@ -320,6 +322,12 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
     int filefd = -1;
     std::string filename;
     std::string name;
+
+
+    // byte tracking
+    ssize_t bytesRead;
+    ssize_t bytesTotal;
+
     // -- State for the De-Chunker (only used if isChunked is true) --
     // this state machine handles the chunked encoding itself (e.g., "4\r\nWiki\r\n").
     ChunkedState chunkedState = pChunkSize;
@@ -328,13 +336,17 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
     // -- Buffers --
     // `socket_chunk` holds the raw data exactly as it comes from the network.
     std::string socket_chunk = req.body;
+    bytesTotal = req.bodyLen;
+    cout << req.body << endl;
+    cout << "bytesTotal size: " << bytesTotal << endl;
+    cout << "body -> " << req.body << endl;
     // `multipart_chunk` holds the clean, continuous data after de-chunking.
     // for normal requests, data moves directly from socket_chunk to multipart_chunk.
     std::string multipart_chunk;
 
     // -- Network variables --
     char socket_read_buffer[BUFFSIZE];
-    ssize_t bytesRead;
+
 
     std::string &contentType = req.headers["content-type"];
     size_t headerBoundaryPos = contentType.find("boundary=");
@@ -530,7 +542,18 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
         bytesRead = recv(req.cfd, socket_read_buffer, BUFFSIZE, 0);
         if (bytesRead > 0)
         {
+            bytesTotal += bytesRead;
+            if (bytesTotal > clientMaxUploadSize)
+            {
+                if (filefd != -1)
+                {
+                    close(filefd);
+                    filefd = -1;
+                }
+                throw RequestException("Upload size exceeded", 413, req);
+            }
             socket_chunk.append(socket_read_buffer, bytesRead);
+            
         }
         else
         {

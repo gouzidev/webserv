@@ -311,8 +311,7 @@ void WebServ::handleFormData(Request &req, ServerNode &serv)
     dataDivStr += "</div>";
 
     queryParams["data"] = dataDivStr;
-    string page = dynamicRender("./www/auth/form.html", queryParams);
-    cout << "{{{{" << page << "}}}}" << endl;
+    string page = dynamicRender("/home/sgouzi/webserv/www/auth/form.html", queryParams);
 
     string response;
     response += "HTTP/1.1 " + ushortToStr(201) + " " + getStatusMessage(201) + " \r\n";
@@ -417,6 +416,16 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     map <string, string> &headers = req.getHeaders();
     string key = "host";
 
+     
+    if (locationNode.redirect.second != "") // has redirection
+    {
+        string response;
+        response += "HTTP/1.1 " + ushortToStr(308) + " " + getStatusMessage(308) + " \r\n";
+        response +=  "Location: " + locationNode.redirect.second + "\r\n";
+        response += "Content-Length: 0\r\n\r\n";
+        send(req.cfd, response.c_str(), response.length(), 0);
+        return ;
+    }
     if (!exists(req.headers, "content-length"))
     {
         // sendErrPageToClient(req.cfd, 400, serv);
@@ -454,19 +463,18 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
             return ;
         }
     }
- 
+
 
     cout << "content type is " << contentType << endl;
     if (contentType == "application/x-www-form-urlencoded") // handle form post request
     {
-
         if (locationTarget == "/login")
             handleLogin(req, serv);
         else if (locationTarget == "/signup")
             handleSignup(req, serv);
         else if (locationTarget == "/logout")
             handleLogout(req, serv);
-        else if (locationTarget == "/form-test")
+        else
             handleFormData(req, serv);
     }   
     else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
