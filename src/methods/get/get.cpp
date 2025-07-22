@@ -94,6 +94,7 @@ bool checkIndex(LocationNode node, Request req)
 {
     string fileContent;
     string fileName;
+
     for (unsigned long i = 0; i < node.index.size() ; i++)
     {
         if(node.root != "")
@@ -248,32 +249,32 @@ void WebServ::requestChecks(Request &req, ServerNode &serv, string &location, Lo
     req.fullResource = getFullResource(node.root, location, target);
 }
 
-string getFileNameWithUserId(unsigned int userId, string originalName)
-{
-    stringstream ss;
+// string getFileNameWithUserId(unsigned int userId, string originalName)
+// {
+//     stringstream ss;
     
-    ss << userId;
-    string userIdStr = ss.str();
-    int i = userIdStr.size();
-    while (i++ < 3)
-    {
-        userIdStr.insert(0, "0");
-    }
-    string resName = userIdStr + "_" + originalName;
-    return resName;
-}
+//     ss << userId;
+//     string userIdStr = ss.str();
+//     int i = userIdStr.size();
+//     while (i++ < 3)
+//     {
+//         userIdStr.insert(0, "0");
+//     }
+//     string resName = userIdStr + "_" + originalName;
+//     return resName;
+// }
 
-void handleGetUpload(Request req, User loggedUser)
-{
-    int userId = loggedUser.getId();
-    string originalFileName;
-    int i = 0;
-    while (req.resource[i] != '/')
-        i++;
-    originalFileName = req.resource.substr(i);
-    string fileNameWithId = getFileNameWithUserId(userId, originalFileName);
+// void handleGetUpload(Request req, User loggedUser)
+// {
+//     int userId = loggedUser.getId();
+//     string originalFileName;
+//     int i = 0;
+//     while (req.resource[i] != '/')
+//         i++;
+//     originalFileName = req.resource.substr(i);
+//     string fileNameWithId = getFileNameWithUserId(userId, originalFileName);
 
-}
+// }
 
 void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, string location)
 {
@@ -283,9 +284,7 @@ void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, s
     while (i > 0)
     {
         if (req.fullResource[i - 1] == '/')
-        {
            break;
-        }
         i--;
     }
     string fileName = req.fullResource.substr(i);
