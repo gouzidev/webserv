@@ -179,7 +179,9 @@ bool Request::fillHeaders(int fd)
     string startLine = fullRequest.substr(0, startLineEnd);
     setStartLine(startLine);
     isStartLineValid();
-    
+    cout << "start line ->> "  << startLine << endl;
+
+
     // Parse headers
     size_t i = startLineEnd + 2;
     while (i < headersEnd) {
@@ -277,7 +279,6 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
                     req.cfd = readyFd;
                     try
                     {
-
                         req.fillHeaders(readyFd);
                         req.setCookies();
                         if (!exists(req.headers, "host"))
@@ -289,14 +290,27 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
                         string hostPort = getHostPort(req.headers["host"], serv.port);
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);
-                        if (req.getReqType() == POST)
+                        cout << "waaaaaaaaaaaaaaaaaaaayli" << endl;
+                        cout << "req type -> " << req.reqType << endl;
+                        if (req.getReqType() == "POST")
+                        {
                             postMethode(req, serv);
-                        else if (req.getReqType() == GET)
+                            cleanFd(readyFd, clientServMap, epollfd);
+                            continue;
+                        }
+                        else if (req.getReqType() == "GET")
+                        {
                             getMethode(req, serv);
-                        cleanFd(readyFd, clientServMap, epollfd);
-
+                            cleanFd(readyFd, clientServMap, epollfd);
+                            continue;
+                        }
+                        else if (req.getReqType() == "DELETE")
+                        {
+                            deleteMethod(req, serv);
+                            cleanFd(readyFd, clientServMap, epollfd);
+                            continue;
+                        }
                     }
-
                     catch (RequestException &requestException)
                     {
                         Request req = requestException.getReq();

@@ -43,16 +43,16 @@
 using namespace std;
 
 #define GETROOT "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nDate: Wed, 30 Apr 2025 14:18:33 GMT\r\nLast-Modified: Thu, 17 Oct 2019 07:18:26 GMT\r\nContent-Length: 133\r\n\r\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Document</title>\n</head>\n<body>\n    asmaaaaaaaaaaaaa<3\n</body>\n</html>"
-#define GET 0
-#define POST 1
-#define DELETE 2
-#define other 3
+// #define GET 0
+// #define POST 1
+// #define DELETE 2
+// #define other 3
 
 #define BUFFSIZE 64000
 
 #define ERROR 1
 
-typedef int REQUEST;
+typedef string REQUEST;
 
 class Response
 {
@@ -93,7 +93,7 @@ class Request
         void setBody(string line);
         string getSessionKey();
         int isStartLineValid();
-        int getReqType();
+        string getReqType();
         void getMimeType();
         string &getResource();
         string getHttpVer();
@@ -221,15 +221,23 @@ class WebServ
         void handleServerBlock(ServerNode &servNode, vector<string> &tokens, size_t &lineNum);
         void handleLocationLine(LocationNode &locationNode, vector<string> &tokens, size_t &lineNum);
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
-        void getMethode(Request req, ServerNode serverNode);
+        void getMethode(Request &req, ServerNode &serverNode);
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void postMethode(Request &req, ServerNode &servNode);
+        void deleteMethod(Request &req, ServerNode &servNode);
         int server();
-        string getFileNameWithUserId(Request &req, unsigned int userId, string originalName); // will return the name with the user id in the front
-        string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); // will get the original name and set the id found in the saved name
+        void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
+        string checkResource(string fullResource, string location);
+        void handleGetUpload(Request req, LocationNode node, User loggedUser, string location);
+
+        // will return the name with the user id in the front
+        string getFileNameWithUserId(Request &req, unsigned int userId, string originalName);
+        // will get the original name and set the id found in the saved name 
+        string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); 
         // void handleGetFile(Request req);
+        void dirList(string root, string location, Request req);
         void handleGetFile(Request req, map<string, string> &data);
         int serverLoop(int epollfd, struct epoll_event &ev, set<int> &activeSockets, map<int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
@@ -282,6 +290,10 @@ vector<string> splitNoSpace(string &str, char delim);
 bool exists(map<string, string> &m, string key);
 
 bool strHas(string str, string sub);
+string checkResource(string fullResource);
+bool isDirectory(string& path);
+bool isRegularFile(string& path);
+
 bool strHas(string str, string sub, size_t pos);
 
 // converts T types to strings, T could be int, float, double, etc.
@@ -311,4 +323,5 @@ bool exists(set<T> s, T v)
 {
     return s.find(v) != s.end();
 }
-#endif
+
+#endif 

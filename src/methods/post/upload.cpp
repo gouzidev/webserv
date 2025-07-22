@@ -29,16 +29,18 @@ string WebServ::getFileNameWithUserId(Request &req, unsigned int userId, string 
     return resName;
 }
 
-string WebServ::getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
+string WebServ::
+getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
 {
     userIdAssociated = 0;
     short namePrefixSize = MAX_USERID_DIGITS + 1; // size of ([MAX_USERID_DIGITS] + ['_'])
+
+    cout << "name man3ref xno " << namePrefixSize << endl;
 
     if (fileNameWithUserId.size() < namePrefixSize + 1) // 1 -> at least '_' and a character in the filename with the prefix
         throw RequestException("Invalid file name format", 400, req);
     if (fileNameWithUserId[MAX_USERID_DIGITS] != '_')
         throw RequestException("Invalid file name format", 400, req);
-    
     string userIdFromFileName = fileNameWithUserId.substr(0, MAX_USERID_DIGITS);
 
     userIdAssociated = atoi(userIdFromFileName.c_str());
@@ -574,7 +576,7 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
 
     map <string, string> data;
     data["data"] =  formDataDiv;
-    string page = dynamicRender("/home/sgouzi/webserv/www/auth/form.html", data);
+    string page = dynamicRender("./www/auth/form.html", data);
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     makeResponse(req, page);
 }

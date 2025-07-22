@@ -67,7 +67,10 @@ string Request::extractSessionId()
     if (!exists(cookies, "sessionId"))
         return "";
     else
+    {
+        cout << "session id is " << cookies["sessionId"] << endl;
         return cookies["sessionId"];
+    }
     // string cookie =
 }
 
@@ -164,7 +167,7 @@ void Request::setBody(string line) // must handle checked body if its in the hea
     body += line;
 }
 
-int Request::getReqType()
+string Request::getReqType()
 {
     return reqType;
 }
@@ -188,8 +191,10 @@ void Request::getMimeType()
         mimeType = "application/pdf";
     else if (mime == "csv")
         mimeType = "text/csv";
-    else if (mime == "jpg" || mime == "jpeg" || mime == "png")
-        mimeType = "image";
+    else if (mime == "jpg" || mime == "jpeg")
+        mimeType = "image/jpeg";
+    else if (mime == "png")
+        mimeType = "image/png";
     else
         mimeType = "not supported";
 }
@@ -293,11 +298,11 @@ int Request::isStartLineValid()
         throw RequestException("start line syntax is incorrect", 400, *this);
     transform(startLine[0].begin(), startLine[0].end(), startLine[0].begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
     if (startLine[0] == "GET")
-        reqType = GET;
+        reqType = "GET";
     else if (startLine[0] == "POST")
-        reqType = POST;
+        reqType = "POST";
     else if (startLine[0] == "DELETE")
-        reqType = DELETE;
+        reqType = "DELETE";
     else
         throw RequestException("start line is errornous, unidentified request type", 400, *this);
     if (startLine[1].find("/") != 0)

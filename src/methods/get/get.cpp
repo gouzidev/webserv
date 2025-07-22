@@ -36,7 +36,7 @@ string createDirList()
     return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><body>";
 }
 
-vector<string> getDirs(string mainDir)
+vector<string> getDirs(string mainDir, string location)
 {
     std::vector<std::string> dirs;
     DIR* dir = opendir(mainDir.c_str());
@@ -54,28 +54,41 @@ vector<string> getDirs(string mainDir)
     return dirs;
 }
 
-void dirList(string root, string location, Request req)
+void WebServ::dirList(string root, string location, Request req)
 {
-    vector<string> subDirs = getDirs(root);
+    vector<string> subDirs = getDirs(root, location);
     string dirlist = createDirList();
     dirlist += "<h1>DIRECTORY LISTING</h1><ul>";
     if (subDirs.empty() == true)
         dirlist += "<p>no sub-directories in this directory<br></p>";
+    
+    string sessionKey = req.extractSessionId();
+    if (location == "/upload" && !auth->isLoggedIn(sessionKey))
+        throw ConfigException("Unauthorised", 401);
+    Session session = auth->sessions.find(sessionKey)->second;
+    User loggedUser = session.getUser();
+    unsigned int userId = loggedUser.getId();
+    unsigned int fileId;
+    cout << "user is " << loggedUser.getFirstName() << " id is " << userId << endl;
     for (unsigned long i = 0; i < subDirs.size(); i++)
     {
-        if (location == "/")
-            dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
-        else
-            dirlist += "<li><a href=\"" + location + "/" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
+            if (location == "/")
+                dirlist += "<li><a href=\"" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
+            else if (location == "/upload")
+            {
+                string fileWithoutId = getOriginalFileName(req, subDirs[i], fileId);
+                if (fileId != userId)
+                    continue;
+                dirlist += "<li><a href=\"" + location + "/" + fileWithoutId + "\">" + fileWithoutId + "</a></li>";
+            }
+            else
+                dirlist += "<li><a href=\"" + location + "/" + subDirs[i] + "\">" + subDirs[i] + "</a></li>";
     }
+
     dirlist += "</ul></body></html>";
     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
     makeResponse(req, dirlist);
 }
-
-// void Response::setHeaders(string header)
-// {
-// }
 
 bool checkIndex(LocationNode node, Request req)
 {
@@ -92,6 +105,7 @@ bool checkIndex(LocationNode node, Request req)
         {
             req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
             makeResponse(req, fileContent);
+            cout << "hello" << endl;
             return 0;
         }
     }
@@ -121,7 +135,7 @@ string sendBinaryResponse(const std::string& imagePath)
     return imageData;
 }
 
-string checkResource(string fullResource)
+string WebServ::checkResource(string fullResource, string location)
 {
     size_t i = 0;
     string newResource;
@@ -160,7 +174,7 @@ string runCgi(Request req)
     char buffer[4096];
     ssize_t n;
     while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0)
-        cgiOutput.append(buffer, n);
+       cgiOutput.append(buffer, n);
     close(pipefd[0]);
     waitpid(id, NULL, 0);
     cout << "OUTPUT IS FOR CGI " << cgiOutput << endl;
@@ -215,75 +229,133 @@ bool isRegularFile(string& path)
 
 string getFullResource(string root, string location, string target)
 {
-    if (location == target || location == "/")
+    if (location == target)
         return root;
     string path = target.substr(location.size());
     return root + path;
 }
 
-void WebServ::getMethode(Request req, ServerNode serv)
+void WebServ::requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node)
+{
+    string target = req.getResource();
+    cout << "target is " << target << endl;
+    location = getLocation(req, serv);
+    if (location == "")
+        throw ConfigException("forbidden request", 404);
+    node = serv.locationDict.find(location)->second;
+    if (!exists(node.methods, req.getReqType()))
+        throw ConfigException(getStatusMessage(405), 405);
+    req.fullResource = getFullResource(node.root, location, target);
+}
+
+string getFileNameWithUserId(unsigned int userId, string originalName)
+{
+    stringstream ss;
+    
+    ss << userId;
+    string userIdStr = ss.str();
+    int i = userIdStr.size();
+    while (i++ < 3)
+    {
+        userIdStr.insert(0, "0");
+    }
+    string resName = userIdStr + "_" + originalName;
+    return resName;
+}
+
+void handleGetUpload(Request req, User loggedUser)
+{
+    int userId = loggedUser.getId();
+    string originalFileName;
+    int i = 0;
+    while (req.resource[i] != '/')
+        i++;
+    originalFileName = req.resource.substr(i);
+    string fileNameWithId = getFileNameWithUserId(userId, originalFileName);
+
+}
+
+void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, string location)
+{
+    unsigned int userId = loggedUser.getId();
+    map <string, string> data = loggedUser.getKeyValData();
+    int i = req.fullResource.size();
+    while (i > 0)
+    {
+        if (req.fullResource[i - 1] == '/')
+        {
+           break;
+        }
+        i--;
+    }
+    string fileName = req.fullResource.substr(i);
+    string uploadResource = node.root + "/" + getFileNameWithUserId(req, userId ,fileName); //will need updates
+    if (isDirectory(req.fullResource) == true)
+    {
+        if (node.index.empty() == true || checkIndex(node, req) == 1)
+        {
+            if(node.autoIndex == true)
+                dirList(node.root, location, req);
+            else
+                throw ConfigException("forbidden request", 404);
+        }
+    }
+    else if (isRegularFile(uploadResource) == true)
+    {
+        req.fullResource = uploadResource;
+        cout << "should be fileeee" << endl;
+        req.getMimeType();
+        handleGetFile(req, data);
+    }
+    else
+        throw ConfigException("anaaa", 404);
+}
+
+void WebServ::getMethode(Request &req, ServerNode &serv)
 {
     string sessionKey;
     map <string, string> data ;
-    string target = req.getResource();
-    string location = getLocation(req, serv);
-    // cout << "restOfLocation is [ " << restOfLocation << " ]" << endl;
-    if (location == "")
-    {
-        string errorRes  = getErrorResponse(404, "");
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
-    LocationNode node = serv.locationDict.find(location)->second;
-    // Debugger::printLocationNode(node);
-    if (!exists(node.methods, string("GET")))
-    { 
-        string errorRes  = getErrorResponse(405, "");
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
-    req.fullResource = getFullResource(node.root, location, target);
+    string location;
+    LocationNode node;
+    User loggedUser;
+    unsigned int userId;
     try
     {
-        req.fullResource = checkResource(req.fullResource);
-        if (isDirectory(req.fullResource) == true)
+        requestChecks(req, serv, location, node);
+        //if location  is upload : 1. same as is protected 2. use encoding function (check if the user id is the same as the one in the file)
+        req.fullResource = checkResource(req.fullResource, location);
+        if (node.isProtected)
+        {
+            sessionKey = req.extractSessionId();
+            if (!auth->isLoggedIn(sessionKey))
+                throw ConfigException("Unauthorised", 401);
+                Session session = auth->sessions.find(sessionKey)->second;
+                loggedUser = session.getUser();
+                data = loggedUser.getKeyValData();
+                cout << "user id " << userId << endl;
+        }
+        if (location == "/upload")
+            handleGetUpload(req, node, loggedUser, location);
+        else if (isDirectory(req.fullResource) == true)
         {
             if (node.index.empty() == true || checkIndex(node, req) == 1)
             {
                 if(node.autoIndex == true)
                 dirList(node.root, location, req);
-                // else error 403/404
+                else
+                throw ConfigException("forbidden request", 404);
             }
         }
         else if (isRegularFile(req.fullResource) == true)
         {
-            // if (node.isProtected)
-            // {
-            //     sessionKey = req.extractSessionId();
-            //     if (!auth->isLoggedIn(sessionKey))
-            //     {
-            //         sendErrPageToClient(req.cfd, 401, serv);
-            //         return ;
-            //     }
-            //     Session session = auth->sessions.find(sessionKey)->second;
-            //     User &loggedUser = session.getUser();
-            //     data = loggedUser.getKeyValData();
-            //     // data['email'] = loggedUser.getEmail();
-            // }
+            cout << "should be fileeee" << endl;
             req.getMimeType();
             handleGetFile(req, data);
-            // cout << "is file " << endl;
-            // handleGetFile(req);
-            
         }
         else
         {
-            cout << "AHAAAAAAAAAAAAAAAAA!!!!!!!!!!!!!!!" << endl;
-            throw ConfigException("forbidden request", 404);
+            throw ConfigException("Not Found", 404);
         }
-        // }
-        // else
-        // cout << "HOW!!!!!" << endl;
     }
     catch(ConfigException& e)
     {
