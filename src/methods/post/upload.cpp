@@ -29,20 +29,23 @@ string WebServ::getFileNameWithUserId(Request &req, unsigned int userId, string 
     return resName;
 }
 
-string WebServ::getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
+string WebServ::
+getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
 {
-    userIdAssociated = -1;
+    userIdAssociated = 0;
     short namePrefixSize = MAX_USERID_DIGITS + 1; // size of ([MAX_USERID_DIGITS] + ['_'])
+
+    cout << "name man3ref xno " << namePrefixSize << endl;
 
     if (fileNameWithUserId.size() < namePrefixSize + 1) // 1 -> at least '_' and a character in the filename with the prefix
         throw RequestException("Invalid file name format", 400, req);
-    if (fileNameWithUserId[namePrefixSize] != '_')
+    cout << fileNameWithUserId << "where is problem " << fileNameWithUserId[namePrefixSize] << endl;
+    if (fileNameWithUserId[MAX_USERID_DIGITS] != '_')
         throw RequestException("Invalid file name format", 400, req);
-    
     string userIdFromFileName = fileNameWithUserId.substr(0, MAX_USERID_DIGITS);
 
     userIdAssociated = atoi(userIdFromFileName.c_str());
-    string originalName = fileNameWithUserId.substr(namePrefixSize + 1);
+    string originalName = fileNameWithUserId.substr(namePrefixSize);
     return originalName;
 }
 

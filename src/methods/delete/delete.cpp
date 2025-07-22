@@ -27,7 +27,7 @@ void WebServ::deleteMethod(Request &req, ServerNode &serv)
     try
     {
         requestChecks(req, serv, location, node);
-        req.fullResource = checkResource(req.fullResource);
+        req.fullResource = checkResource(req.fullResource, location);
         cout << "resPath is [ " << req.fullResource << " ]" << endl;
         // if (isDirectory(req.fullResource) == true)
         // {

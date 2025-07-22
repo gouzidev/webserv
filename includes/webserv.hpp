@@ -226,9 +226,15 @@ class WebServ
         void deleteMethod(Request &req, ServerNode &servNode);
         int server();
         void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
-        string getFileNameWithUserId(Request &req, unsigned int userId, string originalName); // will return the name with the user id in the front
-        string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); // will get the original name and set the id found in the saved name
+        string checkResource(string fullResource, string location);
+        void handleGetUpload(Request req, LocationNode node, User loggedUser, string location);
+
+        // will return the name with the user id in the front
+        string getFileNameWithUserId(Request &req, unsigned int userId, string originalName);
+        // will get the original name and set the id found in the saved name 
+        string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); 
         // void handleGetFile(Request req);
+        void dirList(string root, string location, Request req);
         void handleGetFile(Request req, map<string, string> &data);
         int serverLoop(int epollfd, struct epoll_event &ev, set<int> &activeSockets, map<int, ServerNode> &servSocketMap);
         void urlFormParser(string body, map<string, string> &queryParms);
