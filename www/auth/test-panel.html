@@ -89,20 +89,17 @@
                 }
             }
         });
-
         uploadForm.addEventListener('submit', function(e) {
             e.preventDefault();
             if (fileInput.files.length === 0) {
-                alert('Please select at least one file to test the upload.');
-                return;
+            alert('Please select at least one file to test the upload.');
+            return;
             }
             const formData = new FormData(this);
             fetch('/upload', { method: 'POST', body: formData })
             .then(response => response.text())
             .then(html => {
-                const newWindow = window.open();
-                newWindow.document.write(html);
-                newWindow.document.close();
+                document.body.innerHTML = html;
             })
             .catch(error => console.error('Error submitting form:', error));
         });

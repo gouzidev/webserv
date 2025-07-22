@@ -156,57 +156,11 @@ long long extractContentLen(Request &req, ServerNode &serv)
     return contentLen;
 }
 
-bool handleChunkedBodyStart(string &body, Request &req)
-{
-    // since i know this is chunked i know it must be  :
-    //      HEX\r\n
-    long hex = -1;
-    size_t i = 0;
-    string chunk;
-    string newBody;
-    string hexStr;
-    size_t startReadingIdx = 0;
-    size_t hexEndPos = body.find("\r\n", 0);
-    while (hexEndPos != string::npos)
-    {
-        hexStr = body.substr(i, hexEndPos - i);
-        hex = stringToHexLong(hexStr, req);
-        if (hex == 0)
-            break;
-
-        startReadingIdx = hexEndPos += 2; // skip the \r\n
-        chunk = body.substr(startReadingIdx, hex);
-        i = startReadingIdx + chunk.size();
-        cout << "will read chunk of size " << hex << " bytes, -> {{" << chunk.substr(20) << "..." << chunk.substr(chunk.size() - 20) << "}}" << ",  i -> " << i  << endl;
-        if (i > body.size() - 2)
-        {
-            cout << "Error: Reached the end of the body before finding the end of the chunked data." << endl;
-            throw RequestException("Invalid chunked body format", 400, req);
-        }
-        if (body[i] != '\r' || body[i + 1] != '\n')
-        {
-            cout << "Error: Expected '\\r\\n' after chunk data, but found: '" << body.substr(i, 2) << "'" << endl;
-            throw RequestException("Invalid chunked body format", 400, req);
-        }
-        i += 2;
-        newBody += chunk;
-        hexEndPos = body.find("\r\n", i);
-    }
-    body = newBody; // Update the original body with the parsed chunks
-    req.headers["content-length"] = toString(newBody.size());
-    return true;
-}
-
-bool parseChuncked(Request &req, ServerNode &serv)
-{
-    handleChunkedBodyStart(req.body, req);
-    return true;
-
-}
-
 void WebServ::postMethode(Request &req, ServerNode &serv)
 {
     string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
+    cout << "POST target {{ " << locationTarget  << "}}" << endl;
+
     string errorRes;
     LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
     if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
@@ -224,10 +178,18 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
      
     if (locationNode.redirect.second != "") // has redirection
     {
+        stringstream bodyLenSS;
+        bodyLenSS << req.bodyLen;
+        short httpRedirectionCode = locationNode.redirect.first;
+        string redirectLocation = locationNode.redirect.second;
+        cout << "body len -> " << req.bodyLen << endl;
+        cout << "body len -> " << req.body.size() << endl;
         string response;
-        response += "HTTP/1.1 " + ushortToStr(308) + " " + getStatusMessage(308) + " \r\n";
-        response +=  "Location: " + locationNode.redirect.second + "\r\n";
-        response += "Content-Length: 0\r\n\r\n";
+        response += "HTTP/1.1 " + ushortToStr(httpRedirectionCode) + " " + getStatusMessage(httpRedirectionCode) + " \r\n";
+        response +=  "Location: " + redirectLocation + "\r\n";
+        response += "Content-Length: " + bodyLenSS.str() + "\r\n\r\n";
+        response.append(req.body);
+        
         send(req.cfd, response.c_str(), response.length(), 0);
         return ;
     }
@@ -258,6 +220,8 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
         return ;
     }
+
+    cout << "location target is " << locationTarget << endl;
 
     if (locationNode.isProtected)
     {

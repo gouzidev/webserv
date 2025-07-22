@@ -39,6 +39,12 @@ LocationNode::LocationNode()
 
 WebServ::WebServ(char *filename)
 {
+    validRedirects.insert(301);
+    validRedirects.insert(302);
+    validRedirects.insert(303);
+    validRedirects.insert(304);
+    validRedirects.insert(307);
+    validRedirects.insert(308);
     MAXSERVERUPLOADS = 999;
     MAX_USERID_DIGITS = 3;
     currentUploadCount = 0;
@@ -59,6 +65,12 @@ WebServ::WebServ(char *filename)
 
 WebServ::WebServ(string filename)
 {
+    validRedirects.insert(301);
+    validRedirects.insert(302);
+    validRedirects.insert(303);
+    validRedirects.insert(304);
+    validRedirects.insert(307);
+    validRedirects.insert(308);
     MAXSERVERUPLOADS = 999;
     currentUploadCount = 0;
     generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";

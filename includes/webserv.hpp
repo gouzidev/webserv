@@ -193,6 +193,7 @@ class Session
 class WebServ
 {
     private:
+        set<short> validRedirects;
         bool criticalErr;
         vector<ServerNode> servNodes;
         map<string, ServerNode> hostServMap; // this map host:port to some server node

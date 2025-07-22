@@ -75,6 +75,7 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
     }
     else if (tokens[0] == "redirect")
     {
+
         if (tokens.size() < 2)
             throw ConfigException("redirect syntax is wrong, : 'redirect [error code?] [page], at line: " + toString(lineNum), 400);
         if (tokens.size() == 3)
@@ -84,9 +85,10 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
             istringstream redirect (tokens[1]);
             if (redirect.fail())
                 throw ConfigException("redirect syntax is wrong, error code must be digits only (3 digits) at line: " + toString(lineNum), 400);
-
             short redirectShort;
             redirect >> redirectShort;
+            if (!exists(validRedirects, redirectShort))
+                throw ConfigException("redirect syntax is wrong, error code must be a valid http redirection code (3 digits) at line: " + toString(lineNum), 400);
             locationNode.redirect.first = redirectShort;
             locationNode.redirect.second = tokens[2];
         }

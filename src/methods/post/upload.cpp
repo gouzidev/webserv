@@ -335,9 +335,6 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
     // `socket_chunk` holds the raw data exactly as it comes from the network.
     std::string socket_chunk = req.body;
     bytesTotal = req.bodyLen;
-    cout << req.body << endl;
-    cout << "bytesTotal size: " << bytesTotal << endl;
-    cout << "body -> " << req.body << endl;
     // `multipart_chunk` holds the clean, continuous data after de-chunking.
     // for normal requests, data moves directly from socket_chunk to multipart_chunk.
     std::string multipart_chunk;
@@ -456,7 +453,6 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
                     std::string headers = multipart_chunk.substr(0, headers_end_pos);
                     struct FileUploadData fileData = getContentDataFromHeaders(headers);
                     std::string filename = fileData.filename;
-                    cout << "File name: " << fileData.filename << ", Name: " << fileData.name << ", after processing -> " << filename << endl;
                     if (!filename.empty())
                     {
                         filename = getFileNameWithUserId(req, LoggedUser.getId(), filename);

@@ -287,21 +287,14 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
                         }
                         
                         string hostPort = getHostPort(req.headers["host"], serv.port);
-                        cout << "hostPort: " << hostPort << endl;
                         if (!exists(hostServMap, hostPort))
                             throw RequestException("host:port not recognizable", 500, req);
                         if (req.getReqType() == POST)
-                        {
                             postMethode(req, serv);
-                            cleanFd(readyFd, clientServMap, epollfd);
-                            continue;
-                        }
                         else if (req.getReqType() == GET)
-                        {
                             getMethode(req, serv);
-                            cleanFd(readyFd, clientServMap, epollfd);
-                            continue;
-                        }
+                        cleanFd(readyFd, clientServMap, epollfd);
+
                     }
 
                     catch (RequestException &requestException)

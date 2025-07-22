@@ -171,10 +171,6 @@ void WebServ::handleGetFile(Request req, map<string, string> &data)
 {
     string fileContent;
     req.resp.setStatusLine("HTTP/1.0 200 OK\r\n");
-    cout << "full res " << req.fullResource << endl;
-    // string fileName = checkResource(req.fullResource);
-    cout << "full res after " << req.fullResource << endl;
-
     if (req.mimeType == "text/html")
     {
         if (data.empty())
