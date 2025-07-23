@@ -1,0 +1,26 @@
+
+        </div>
+    </div>
+
+    <div class="server-status">
+        <span class="status-dot"></span>
+        WebServ v1.0 | Server Online
+    </div>
+    <script>
+        const deleteButtons = document.querySelectorAll('.delete-cross');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const filePath = this.getAttribute('data-filepath');
+
+                console.log(filePath);
+
+                fetch(filePath, {
+                    method: 'DELETE',
+                });
+            });
+        });
+
+    </script>
+
+</body>
+</html> 
