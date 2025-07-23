@@ -35,8 +35,6 @@ getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userI
     userIdAssociated = 0;
     short namePrefixSize = MAX_USERID_DIGITS + 1; // size of ([MAX_USERID_DIGITS] + ['_'])
 
-    cout << "name man3ref xno " << namePrefixSize << endl;
-
     if (fileNameWithUserId.size() < namePrefixSize + 1) // 1 -> at least '_' and a character in the filename with the prefix
         throw RequestException("Invalid file name format", 400, req);
     if (fileNameWithUserId[MAX_USERID_DIGITS] != '_')

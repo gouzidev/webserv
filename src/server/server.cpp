@@ -146,8 +146,8 @@ bool Request::fillHeaders(int fd)
     while (!completedHeaders)
     {
         ssize_t bytesRead = recv(fd, buff, BUFFSIZE, 0);
-        write(1, buff, bytesRead);
-        if (bytesRead <= 0) {
+        
+        if (bytesRead < 0) {
             throw NetworkException("recv failed", 500);
         }
         fullRequest.append(buff, bytesRead);

@@ -43,8 +43,7 @@ WebServ::WebServ(char *filename)
     validRedirects.insert(302);
     validRedirects.insert(303);
     validRedirects.insert(304);
-    validRedirects.insert(307);
-    validRedirects.insert(308);
+
     MAXSERVERUPLOADS = 999;
     MAX_USERID_DIGITS = 3;
     currentUploadCount = 0;
