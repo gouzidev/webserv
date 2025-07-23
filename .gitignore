@@ -6,4 +6,4 @@ webserv
 *.vscode
 /home/akoraich/webserv/badconf.conf
 /home/akoraich/webserv/cgi.conf
-/home/akoraich/webserv/www/upload
+/home/akoraich/webserv/www/upload/files
