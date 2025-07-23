@@ -172,18 +172,19 @@ string Request::getReqType()
     return reqType;
 }
 
-void Request::getMimeType()
+void WebServ::getMimeType(Request &req)
 {
-    string target = resource;
+    string target = req.resource;
     int i = target.size() - 1;
     while (target[i] != '.')
         i--;
     string mime = target.substr(i + 1);
+    string mimeType = req.mimeType;
     if (mime == "html")
         mimeType = "text/html";
     else if (mime == "mp4")
         mimeType = "video/mp4";
-    else if (mime == "py")
+    else if (mime == "py" || mime == "php" || mime == "bash" || mime == "sh")
         mimeType = "cgi";
     else if (mime == "zip")
         mimeType = "application/zip";
@@ -197,6 +198,7 @@ void Request::getMimeType()
         mimeType = "image/png";
     else
         mimeType = "not supported";
+    req.mimeType = mimeType;
 }
 
 string getLocation(Request &req, ServerNode &servNode)

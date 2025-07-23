@@ -94,7 +94,6 @@ class Request
         string getSessionKey();
         int isStartLineValid();
         string getReqType();
-        void getMimeType();
         string &getResource();
         string getHttpVer();
         void fillQuery(string queryStr);
@@ -231,6 +230,8 @@ class WebServ
         void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
         string checkResource(string fullResource, string location);
         void handleGetUpload(Request req, LocationNode node, User loggedUser, string location);
+
+        void getMimeType(Request &req);
 
         // will return the name with the user id in the front
         string getFileNameWithUserId(Request &req, unsigned int userId, string originalName);

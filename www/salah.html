@@ -5,9 +5,9 @@
 </head>
 <body>
     <h1>File Upload Test</h1>
-    <form method="post" enctype="multipart/form-data">
+    <form method="get" enctype="multipart/form-data">
         <label for="fileInput">Select a file:</label>
-        <input type="file" id="fileInput" name="userfile" accept="image/*">        <br><br>
+        <input type="text" name="username" value="test-user" placeholder="Username"><br><br>
         <input type="submit" value="Upload">
     </form>
 </body>

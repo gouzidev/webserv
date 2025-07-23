@@ -303,7 +303,7 @@ void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, s
     {
         req.fullResource = uploadResource;
         cout << "should be fileeee" << endl;
-        req.getMimeType();
+        getMimeType(req);
         handleGetFile(req, data);
     }
     else
@@ -328,10 +328,10 @@ void WebServ::getMethode(Request &req, ServerNode &serv)
             sessionKey = req.extractSessionId();
             if (!auth->isLoggedIn(sessionKey))
                 throw ConfigException("Unauthorised", 401);
-                Session session = auth->sessions.find(sessionKey)->second;
-                loggedUser = session.getUser();
-                data = loggedUser.getKeyValData();
-                cout << "user id " << userId << endl;
+            Session session = auth->sessions.find(sessionKey)->second;
+            loggedUser = session.getUser();
+            data = loggedUser.getKeyValData();
+            cout << "user id " << userId << endl;
         }
         if (location == "/upload")
             handleGetUpload(req, node, loggedUser, location);
@@ -348,7 +348,7 @@ void WebServ::getMethode(Request &req, ServerNode &serv)
         else if (isRegularFile(req.fullResource) == true)
         {
             cout << "should be fileeee" << endl;
-            req.getMimeType();
+            getMimeType(req);
             handleGetFile(req, data);
         }
         else
