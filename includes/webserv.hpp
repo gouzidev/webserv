@@ -230,6 +230,9 @@ class WebServ
         void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
         string checkResource(string fullResource, string location);
         void handleGetUpload(Request req, LocationNode node, User loggedUser, string location);
+        string uploadFile(string path, string root, Request req);
+        bool checkIndex(LocationNode node, Request req, string location);
+        string listUploadFiles(string root, Request req);
 
         void getMimeType(Request &req);
 

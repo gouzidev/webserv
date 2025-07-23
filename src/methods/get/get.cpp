@@ -36,7 +36,7 @@ string createDirList()
     return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><body>";
 }
 
-vector<string> getDirs(string mainDir, string location)
+vector<string> getDirs(string mainDir)
 {
     std::vector<std::string> dirs;
     DIR* dir = opendir(mainDir.c_str());
@@ -56,7 +56,7 @@ vector<string> getDirs(string mainDir, string location)
 
 void WebServ::dirList(string root, string location, Request req)
 {
-    vector<string> subDirs = getDirs(root, location);
+    vector<string> subDirs = getDirs(root);
     string dirlist = createDirList();
     dirlist += "<h1>DIRECTORY LISTING</h1><ul>";
     if (subDirs.empty() == true)
@@ -90,7 +90,43 @@ void WebServ::dirList(string root, string location, Request req)
     makeResponse(req, dirlist);
 }
 
-bool checkIndex(LocationNode node, Request req)
+string WebServ::listUploadFiles(string root, Request req)
+{
+    vector<string> subDirs = getDirs(root);
+    string dirlist;
+    string sessionKey = req.extractSessionId();
+    if (!auth->isLoggedIn(sessionKey))
+        throw ConfigException("Unauthorised", 401);
+    Session session = auth->sessions.find(sessionKey)->second;
+    User loggedUser = session.getUser();
+    unsigned int userId = loggedUser.getId();
+    unsigned int fileId;
+    cout << "user is " << loggedUser.getFirstName() << " id is " << userId << endl;
+    for (unsigned long i = 0; i < subDirs.size(); i++)
+    {
+        string fileWithoutId = getOriginalFileName(req, subDirs[i], fileId);
+        if (fileId != userId)
+            continue;
+        dirlist += "<div class=\"files-grid active\" id=\"gridView\">";
+        dirlist +=  "<div class=\"file-card\" data-filepath=\"/upload/files/" + subDirs[i] + "\">";
+        dirlist += fileWithoutId;
+        dirlist +=  "<button type=\"submit\" class=\"delete-cross\"  data-filepath=\"/upload/files/" + subDirs[i] + "\" title=\"Delete file\">×</button>";
+        dirlist += "</div></div>";
+    }
+    return dirlist;
+}
+
+string WebServ::uploadFile(string path, string root, Request req)
+{
+    map <string, string> data;
+    string filesStr = listUploadFiles(root + "/files/", req);
+    data["files"] = filesStr;
+    string fileContent = dynamicRender(path, data);
+    // fileContent += readFromFile("/home/akoraich/webserv/www/upload/files3.html");
+    return fileContent;
+}
+
+bool WebServ::checkIndex(LocationNode node, Request req, string location)
 {
     string fileContent;
     string fileName;
@@ -99,9 +135,10 @@ bool checkIndex(LocationNode node, Request req)
     {
         if(node.root != "")
             fileName = node.root + "/" + node.index[i];
-        // else
-        //      ;
-        fileContent = readFromFile(fileName);
+        if (location == "/upload")
+            fileContent = uploadFile(node.root + "/" + node.index[i], node.root, req); // fiiiiix
+        else
+            fileContent = readFromFile(fileName);
         if (fileContent != "")
         {
             req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
@@ -291,7 +328,7 @@ void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, s
     string uploadResource = node.root + "/" + getFileNameWithUserId(req, userId ,fileName); //will need updates
     if (isDirectory(req.fullResource) == true)
     {
-        if (node.index.empty() == true || checkIndex(node, req) == 1)
+        if (node.index.empty() == true || checkIndex(node, req, location) == 1)
         {
             if(node.autoIndex == true)
                 dirList(node.root, location, req);
@@ -337,7 +374,7 @@ void WebServ::getMethode(Request &req, ServerNode &serv)
             handleGetUpload(req, node, loggedUser, location);
         else if (isDirectory(req.fullResource) == true)
         {
-            if (node.index.empty() == true || checkIndex(node, req) == 1)
+            if (node.index.empty() == true || checkIndex(node, req, location) == 1)
             {
                 if(node.autoIndex == true)
                 dirList(node.root, location, req);
