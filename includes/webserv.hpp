@@ -2,6 +2,7 @@
 #define WEBSERV_HPP
 
 #include "Auth.hpp"
+#include "Parsing.hpp"
 
 #include <errno.h> // strictly forbidden, must remove later
 
@@ -43,10 +44,17 @@
 using namespace std;
 
 #define GETROOT "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nDate: Wed, 30 Apr 2025 14:18:33 GMT\r\nLast-Modified: Thu, 17 Oct 2019 07:18:26 GMT\r\nContent-Length: 133\r\n\r\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Document</title>\n</head>\n<body>\n    asmaaaaaaaaaaaaa<3\n</body>\n</html>"
-// #define GET 0
-// #define POST 1
-// #define DELETE 2
-// #define other 3
+
+#define MAXEVENTS 1024
+
+
+class ServerNode;
+
+class LocationNode;
+
+class User;
+
+class Session;
 
 #define BUFFSIZE 64000
 
@@ -54,16 +62,46 @@ using namespace std;
 
 typedef string REQUEST;
 
+enum ClientState
+{
+    READING_HEADERS,
+    READING_BODY,
+    WRITING_HEADERS,
+    WRITING_BODY,
+    DONE,
+};
+
+class Client
+{
+    public:
+        ClientState clientState;
+        int cfd; // client fd
+        int sfd; // server associated with client
+        int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
+        int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
+        Request request;
+        
+
+        string requestBuff;
+        string responseBuff;
+    
+        Client(Request &request);
+        Client(Request &request, int cfd);
+        Client(Request &request, int cfd, int sfd);
+        Client(Request &request, int cfd, int sfd, ClientState state);
+        Client &operator=(const Client &);
+};
+
 class Response
 {
-public:
-    string fullResponse;
-    string statusLine;
-    string headers;
-    vector<char> body;
-    void setStatusLine(string sttsLine);
-    void setHeaders(string header);
-    void setBody();
+    public:
+        string fullResponse;
+        string statusLine;
+        string headers;
+        vector<char> body;
+        void setStatusLine(string sttsLine);
+        void setHeaders(string header);
+        void setBody();
 };
 
 class Request
@@ -104,90 +142,7 @@ class Request
         Request(ServerNode &serv);
 };
 
-class LocationNode
-{
-    public:
-        LocationNode();
-        static set<string> possibleMethods;
-        static set<string> possibleCgiExts;
-        vector<string> headers;
-        set<string> methods;
 
-        // httpCode -> /location
-        pair <short, string> redirect;
-        string path;
-        string root;
-        vector<string> index;
-        bool autoIndex;
-        string uploadDir;
-        // long long clientMaxBodySize;
-        bool isProtected;
-        bool needContentLen;
-        map<string, string> cgiExts;
-};
-
-class ServerNode
-{
-    public:
-        ServerNode();
-        unsigned short port;
-        string hostIp;
-        string root;
-        string errorFolder;
-        string authFolder;
-        vector<LocationNode> locationNodes;
-        map<string, LocationNode> locationDict;
-        map<unsigned short, string> errorNodes;
-        string defaultErrorPage;
-        long long clientMaxBodySize; // in MB
-};
-
-class User
-{
-    private:
-        static unsigned int userCount;
-        unsigned int id;
-        string email;
-        string userName;
-        string firstName;
-        string lastName;
-        string password;
-        vector <string> uploads;
-
-    public:
-        User();
-        User(string email, string password);
-        User(string fName, string lName, string email, string password);
-        User(string fName, string lName, string userName, string email, string password);
-        map<string, string> getKeyValData();
-        const unsigned int &getId() const;
-        const string &getEmail() const;
-        const string &getFirstName() const;
-        const string &getLastName() const;
-        const string &getPassword() const;
-
-        void setEmail(string str);
-        void setFirstName(string str);
-        void setLastName(string str);
-        void setPassword(string str);
-};
-
-class Session
-{
-    private:
-        User &user;
-        string key;
-        long int expiredAt; // in seconds
-        long int createdAt; // in seconds
-    public:
-        Session(User &user);
-        User &getUser();
-        string &getKey();
-        long int const &getExpiredAt() const;
-        long int const &getCreatedAt() const;
-        string generateSessionKey(const string &email);
-        Session &operator=(const Session &session);
-};
 
 class WebServ
 {
@@ -235,7 +190,8 @@ class WebServ
         string listUploadFiles(string root, Request req);
 
         void getMimeType(Request &req);
-
+        void handleClientRead(Client &client);
+        void handleClientWrite(Client &client);
         // will return the name with the user id in the front
         string getFileNameWithUserId(Request &req, unsigned int userId, string originalName);
         // will get the original name and set the id found in the saved name 

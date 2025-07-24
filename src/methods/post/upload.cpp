@@ -1,14 +1,6 @@
 #include "../../../includes/webserv.hpp"
 #include "../../../includes/Debugger.hpp"
 #include "../../../includes/Exceptions.hpp"
-#include <string>
-
-
-
-void parseChunk(Request &req)
-{
-
-}
 
 struct FileUploadData
 {
@@ -29,8 +21,7 @@ string WebServ::getFileNameWithUserId(Request &req, unsigned int userId, string 
     return resName;
 }
 
-string WebServ::
-getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
+string WebServ::getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated)
 {
     userIdAssociated = 0;
     short namePrefixSize = MAX_USERID_DIGITS + 1; // size of ([MAX_USERID_DIGITS] + ['_'])
@@ -116,8 +107,6 @@ struct FileUploadData getUploadData(string &contentDisposition)
 bool checkIfChunked(Request &req)
 {
     if (exists(req.headers, "transfer-encoding"))
-
-
     {
         string transferEncoding = req.headers["transfer-encoding"];
         return transferEncoding == "chunked";
@@ -178,17 +167,10 @@ void writeChunk(Request &req, LocationNode &locationNode, string chunk, size_t c
     close(fd);
 }
 
-void handleChunkedUpload(Request &req, string bodyBoundary, ServerNode &serv, LocationNode &locationNode)
-{
-
-}
-
 bool verifyUpload(Request &req, ServerNode &serv, LocationNode &locationNode, size_t &boundaryPos)
 {
     string errorRes;
     if (locationNode.uploadDir == "")
-
-
     {
         errorRes  = getErrorResponse(405, ""); // method not allowed 
         send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
@@ -198,8 +180,6 @@ bool verifyUpload(Request &req, ServerNode &serv, LocationNode &locationNode, si
     string &contentType = req.headers["content-type"];
     boundaryPos = contentType.find("boundary=");
     if (boundaryPos == string::npos)
-
-
     {
         sendErrPageToClient(req.cfd, 400, serv);
         return false;

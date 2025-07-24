@@ -7,6 +7,54 @@ Request::Request(ServerNode &serv) : serv(serv)
     contentLen = 0;
 }
 
+Client::Client(Request &req): request(req)
+{
+    cfd = -1;
+    sfd = -1;
+    ifd = -1;
+    ofd = -1;
+    requestBuff = "";
+    responseBuff = "";
+    clientState = ClientState::READING_HEADERS;
+}
+
+Client::Client(Request &req, int cfd): request(req)
+{
+    this->cfd = cfd;
+    ifd = -1;
+    ofd = -1;
+    requestBuff = "";
+    responseBuff = "";
+    this->clientState = READING_HEADERS;
+}
+
+Client::Client(Request &req, int cfd, int sfd): request(req)
+{
+    this->cfd = cfd;
+    this->sfd = sfd;
+    ifd = -1;
+    ofd = -1;
+    requestBuff = "";
+    responseBuff = "";
+    this->clientState = READING_HEADERS;
+}
+
+Client::Client(Request &req, int cfd,  int sfd, ClientState state): request(req)
+{
+    this->cfd = cfd;
+    this->sfd = sfd;
+    ifd = -1;
+    ofd = -1;
+    requestBuff = "";
+    responseBuff = "";
+    this->clientState = state;
+}
+
+Client &Client::operator=(const Client &)
+{
+    return *this;
+}
+
 void Request::setStartLine(string line)
 {
     startLine = split(line, ' ');
@@ -135,6 +183,7 @@ void Request::setCookies()
     
     // Debugger::printMap("cookies", cookies);
 }
+
 void Request::setHeaders(string line) //needs checking for headers syntax
 {
     size_t sepPos = line.find_first_of(':');
@@ -258,8 +307,6 @@ char decodeHex(string &str, size_t &idx)
         decoded = str[idx];
     return decoded;
 }
-
-
 
 void WebServ::urlFormParser(string str, map <string, string> &queryParms)
 {

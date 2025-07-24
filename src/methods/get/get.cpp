@@ -250,11 +250,64 @@ void WebServ::handleGetFile(Request req, map<string, string> &data)
     }
     else
     {
-        cout << "here we should handle images" << endl;
-        // req.resp.headers += "Content-Type: image/jpeg\r\n";
-        cout << "full resource is " << req.fullResource << endl;
-        fileContent = sendBinaryResponse(req.fullResource);
-        makeResponse(req, fileContent);
+        cout << "Serving binary file: " << req.fullResource << endl;
+    
+        int filefd = open(req.fullResource.c_str(), O_RDONLY);
+        if (filefd == -1) {
+            cout << "Failed to open file: " << req.fullResource << endl;
+            sendErrPageToClient(req.cfd, 404, req.serv);
+            return;
+        }
+    
+        // Get file size
+        struct stat fileStat;
+        if (fstat(filefd, &fileStat) == -1) {
+            close(filefd);
+            sendErrPageToClient(req.cfd, 500, req.serv);
+            return;
+        }
+
+        // Send headers
+        stringstream contentLength;
+        contentLength << fileStat.st_size;
+        
+        string responseHeader = "HTTP/1.1 200 OK\r\n";
+        responseHeader += "Content-Type: " + req.mimeType + "\r\n";
+        responseHeader += "Content-Length: " + contentLength.str() + "\r\n\r\n";
+        
+        ssize_t headerSent = send(req.cfd, responseHeader.c_str(), responseHeader.size(), 0);
+        if (headerSent <= 0)
+        {
+            cout << "Failed to send headers" << endl;
+            close(filefd);
+            return;
+        }
+        char buff[BUFFSIZE];
+        ssize_t bytesRead;
+        ssize_t totalSent = 0;
+        bytesRead = 1;
+        do
+        {
+            bytesRead = read(filefd, buff, BUFFSIZE);
+            ssize_t bytesSent = 0;
+            ssize_t totalToSend = bytesRead;
+            
+            while (bytesSent < totalToSend)
+            {
+                ssize_t sent = send(req.cfd, buff + bytesSent, totalToSend - bytesSent, 0);
+                if (sent <= 0)
+                {
+                    cout << "Send failed after " << totalSent << " bytes" << endl;
+                    close(filefd);
+                    return;
+                }
+                bytesSent += sent;
+                totalSent += sent;
+            }
+        }
+        while (bytesRead > 0);
+        close(filefd);
+        cout << "File sent successfully: " << totalSent << " bytes" << endl;
     }
 }
 
@@ -294,33 +347,6 @@ void WebServ::requestChecks(Request &req, ServerNode &serv, string &location, Lo
         throw ConfigException(getStatusMessage(405), 405);
     req.fullResource = getFullResource(node.root, location, target);
 }
-
-// string getFileNameWithUserId(unsigned int userId, string originalName)
-// {
-//     stringstream ss;
-    
-//     ss << userId;
-//     string userIdStr = ss.str();
-//     int i = userIdStr.size();
-//     while (i++ < 3)
-//     {
-//         userIdStr.insert(0, "0");
-//     }
-//     string resName = userIdStr + "_" + originalName;
-//     return resName;
-// }
-
-// void handleGetUpload(Request req, User loggedUser)
-// {
-//     int userId = loggedUser.getId();
-//     string originalFileName;
-//     int i = 0;
-//     while (req.resource[i] != '/')
-//         i++;
-//     originalFileName = req.resource.substr(i);
-//     string fileNameWithId = getFileNameWithUserId(userId, originalFileName);
-
-// }
 
 void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, string location)
 {

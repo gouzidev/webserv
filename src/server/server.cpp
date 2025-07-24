@@ -89,6 +89,8 @@ int WebServ::server()
         servSocketMap[sock] = servIt->second;
         if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &ev) == -1)
             throw NetworkException("epoll_ctl failed", 500);
+        if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
+            throw NetworkException("epoll_ctl failed", 500);
         servIt++;
     }
     serverLoop(epollfd, ev, servSockets, servSocketMap);
@@ -135,7 +137,7 @@ string readLine(int fd, bool &error)
 
 bool Request::fillHeaders(int fd)
 {
-    char buff[BUFFSIZE + 1];
+    char buff[BUFFSIZE];
     
     size_t totalRead = 0;
     bool completedHeaders = false;
@@ -211,10 +213,10 @@ bool Request::fillHeaders(int fd)
 }
     
 
-bool cleanFd(int fdToClose, map<int, int> &clientServMap, int epollfd)
+bool cleanFd(int fdToClose, map<int, int> &clients, int epollfd)
 {
     close(fdToClose);
-    clientServMap.erase(fdToClose);
+    clients.erase(fdToClose);
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fdToClose, NULL);
 
     return true;
@@ -232,108 +234,78 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
 }
 
 
-bool parseChuncked()
+
+void WebServ::handleClientRead(Client &Client)
 {
-    return true;
+    
 }
+
+
+void WebServ::handleClientWrite(Client &Client)
+{
+    
+}
+
 
 int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSockets, map <int, ServerNode> &servSocketMap)
 {
-    bool error = false;
-    bool done;
-    int maxEvents = 1024;
-    struct epoll_event events[maxEvents];
-    socklen_t clientAddrSize = sizeof(struct sockaddr);
-    struct sockaddr clientAddr;
-    long contentLength;
-    map <int, int> clientServMap;
+    struct epoll_event events[MAXEVENTS];
+    map <int, Client> clients; // maps the client fd -> (to) -> Client
     time_t lastCleanup = time(0);
     while (1)
     {
-        try
+        int nfds = epoll_wait(epollfd, events, MAXEVENTS, -1);
+        if (nfds == -1)
+            throw NetworkException("epoll_wait failed", 500);
+        for (int i = 0 ; i < nfds; i++)
         {
-            int nfds = epoll_wait(epollfd, events, maxEvents, -1);
-            if (nfds == -1)
-                throw NetworkException("epoll_wait failed", 500);
-            for (int i = 0 ; i < nfds; i++)
+
+            int readyFd = events[i].data.fd;
+            // if the readyFd is in server Sockets, readyFd is a server fd, which means we have a new client, add it to the clients being monitored
+            if (exists(servSockets, readyFd)) // here readyFd is a server socket
             {
-                int readyFd = events[i].data.fd;
-                if (exists(servSockets, readyFd))
+                int serverSock = readyFd;
+                struct sockaddr clientAddr;
+                socklen_t clientAddrSize = sizeof(struct sockaddr);
+
+                while (true)
                 {
-                    // its  a  server, which means we have a new client, add it to the clients being monitored
-                    int client = accept(readyFd, &clientAddr, &clientAddrSize);  // check if fails
-                    if (client == -1)
+                    int clientSock = accept(readyFd, &clientAddr, &clientAddrSize);  // check if fails
+                    if (clientSock == -1)
+                    {
+                        if (errno == EWOULDBLOCK || errno == EAGAIN)
+                            break; // we done accepting
                         throw NetworkException("accept failed", 500);
-                    clientServMap[client] = readyFd;
-                    ev.events = EPOLLIN;
-                    ev.data.fd = client;
-                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client, &ev) == -1)
+                    }
+                    if (fcntl(clientSock, F_SETFL, O_NONBLOCK) == -1)
+                        throw NetworkException("fcntl failed", 500);
+                    ServerNode &serv = servSocketMap[serverSock];
+                    Request clientReq(serv);
+                    clients[clientSock] = Client(clientReq, clientSock, serverSock);
+                    ev.events = EPOLLIN | EPOLLET;
+                    ev.data.fd = clientSock;
+                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientSock, &ev) == -1)
                         throw NetworkException("epoll_ctl failed", 500);
                 }
-                else
-                {
-                    string rest;
-                    int servFd = clientServMap[readyFd];
-                    ServerNode serv = servSocketMap[servFd];
-                    Request req(serv);
-                    req.cfd = readyFd;
-                    try
-                    {
-                        req.fillHeaders(readyFd);
-                        req.setCookies();
-                        if (!exists(req.headers, "host"))
-                        {
-                            sendErrPageToClient(req.cfd, 400, serv);
-                            throw RequestException("could not find 'host' header", 400, req);
-                        }
-                        
-                        string hostPort = getHostPort(req.headers["host"], serv.port);
-                        if (!exists(hostServMap, hostPort))
-                            throw RequestException("host:port not recognizable", 500, req);
-                        cout << "waaaaaaaaaaaaaaaaaaaayli" << endl;
-                        cout << "req type -> " << req.reqType << endl;
-                        if (req.getReqType() == "POST")
-                        {
-                            postMethode(req, serv);
-                            cleanFd(readyFd, clientServMap, epollfd);
-                            continue;
-                        }
-                        else if (req.getReqType() == "GET")
-                        {
-                            getMethode(req, serv);
-                            cleanFd(readyFd, clientServMap, epollfd);
-                            continue;
-                        }
-                        else if (req.getReqType() == "DELETE")
-                        {
-                            deleteMethod(req, serv);
-                            cleanFd(readyFd, clientServMap, epollfd);
-                            continue;
-                        }
-                    }
-                    catch (RequestException &requestException)
-                    {
-                        Request req = requestException.getReq();
-                        short errorCode = requestException.getErrorCode();
-                        cout << "RequestException caught: " << requestException.what() << endl;
-                        sendErrPageToClient(readyFd, errorCode, req.serv);
-                        cleanFd(readyFd, clientServMap, epollfd);
-                        continue; // continue to the next iteration
-                    }
-                }
             }
-    
-            checkSessions(lastCleanup, auth);
-        }
-        // handle epoll_wait error
-        catch(const std::exception& e)
-        {
-            cout << "Exception caught in server loop: " << e.what() << endl;
-            std::cerr << e.what() << '\n';
-            return ERROR;
-        }
-        
+            else
+            {
+                int clientSock = readyFd;
+                Client &client = clients[clientSock];
+                if (events[i].events & EPOLLIN)
+                    handleClientRead(client);
+                else if (events[i].events & EPOLLOUT)
+                    handleClientWrite(client);
+            }
 
+            if (exists(clients, readyFd) && clients[readyFd].clientState == DONE)
+            {
+                Client &client = clients[readyFd];
+                close(client.cfd);
+                clients.erase(client.cfd);
+                epoll_ctl(epollfd, EPOLL_CTL_DEL, client.cfd, NULL);
+            }
+        }
     }
     return 0;
 }
