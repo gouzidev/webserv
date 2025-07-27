@@ -250,13 +250,23 @@ int WebServ::serverLoop()
             {
                 int clientSock = readyFd;
                 Client &client = clients.at(clientSock);
-                if (events[i].events & EPOLLIN)
-                    handleClientRead(client);
-                else if (events[i].events & EPOLLOUT)
-                    handleClientWrite(client);
+                try
+                {
+                    if (events[i].events & EPOLLIN)
+                        handleClientRead(client);
+                    else if (events[i].events & EPOLLOUT)
+                        handleClientWrite(client);
+                }
+                catch(HttpException &e)
+                {
+                    // here we will catch http exceptions. we will have the http code in obj -> e
+                        // we will use that to generate an error response that will be sent in next event with handleClientWrite.
+                }
+                
+
             }
 
-            if (exists(clients, readyFd) && clients.at(readyFd).clientState == DONE)
+            if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
             {
                 cleanClient(clients.at(readyFd));
             }

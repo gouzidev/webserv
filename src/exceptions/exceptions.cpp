@@ -98,3 +98,12 @@ short HeaderException::getErrorCode() const
 ConfigException::ConfigException(const string &msg, short errorCode) : WebServException("config error: " + msg, errorCode)
 {
 }
+
+HttpException::HttpException(short errorCode) : errorCode(errorCode)
+{
+}
+
+short HttpException::getErrorCode() const
+{
+    return errorCode;
+}

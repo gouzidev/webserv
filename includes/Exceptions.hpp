@@ -4,6 +4,16 @@
 #include <exception>
 #include "webserv.hpp"
 
+class HttpException: public exception
+{
+    public:
+        HttpException(short errorCode);
+        short getErrorCode() const;
+    protected:
+        short errorCode;
+};
+
+
 class WebServException: public exception
 {
     public:

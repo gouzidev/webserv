@@ -66,27 +66,41 @@ typedef string REQUEST;
 
 enum ClientState
 {
-    READING_HEADERS,
-    READING_BODY,
-    WRITING_HEADERS,
-    WRITING_BODY,
-    DONE,
+    // in handleClientRead
+    READING_HEADERS, // reading the headers from client 
+    
+    READING_BODY, // reading body (and processing it)
+
+
+    
+
+    // in handleClientWrite
+    SENDING_CHUNKS, // sending response to client after reading (in chunks)
+
+    SENDING_DONE, // clean the client here (after sending the response)
+
+    SENDING_ERROR, // send a http error (if a problem happened while reading the data or sending it, will set SENDING_DONE too to clean the client) 
 };
 
 class Client
 {
     public:
-        ClientState clientState;
+        ClientState clientState; // the state of our dear client (what interaction we are having with him (or her))
+
+        // file descriptors
         int cfd; // client fd
         int sfd; // server associated with client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
+
         Request &request;
         
 
+        // buffers
         string requestBuff;
         string responseBuff;
     
+        // calonical form
         Client(Request &request);
         Client(Request &request, int cfd);
         Client(Request &request, int cfd, int sfd);
