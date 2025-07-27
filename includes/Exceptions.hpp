@@ -7,9 +7,11 @@
 class HttpException: public exception
 {
     public:
-        HttpException(short errorCode);
+        HttpException(short errorCode, Client &client);
         short getErrorCode() const;
+        Client &getClient() const;
     protected:
+        Client &client;
         short errorCode;
 };
 

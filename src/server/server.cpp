@@ -190,7 +190,9 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
 
 void WebServ::handleClientRead(Client &Client)
 {
+    if (1)
     
+        throw HttpException(400, Client);
 }
 
 
@@ -257,10 +259,15 @@ int WebServ::serverLoop()
                     else if (events[i].events & EPOLLOUT)
                         handleClientWrite(client);
                 }
-                catch(HttpException &e)
+                catch (HttpException &e)
                 {
                     // here we will catch http exceptions. we will have the http code in obj -> e
-                        // we will use that to generate an error response that will be sent in next event with handleClientWrite.
+                        // we will use that to generate an error response that will be sent in next event with handleClientWrite in SENDING_ERROR state.
+                        // we have a client object that we can use to send the response inside the error obj
+
+                        Client client  = e.getClient();
+                        client.responseBuff = "error";
+                        client.clientState = SENDING_ERROR;
                 }
                 
 

@@ -99,11 +99,31 @@ ConfigException::ConfigException(const string &msg, short errorCode) : WebServEx
 {
 }
 
-HttpException::HttpException(short errorCode) : errorCode(errorCode)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+HttpException::HttpException(short errorCode, Client &client) : errorCode(errorCode), client(client)
 {
 }
 
 short HttpException::getErrorCode() const
 {
     return errorCode;
+}
+
+Client &HttpException::getClient() const
+{
+    return client;
 }
