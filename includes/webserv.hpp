@@ -93,8 +93,12 @@ class Client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
 
+        
         Request &request;
         
+
+        // track progress
+        size_t totalRead;
 
         // buffers
         string requestBuff;
@@ -210,6 +214,8 @@ class WebServ
         string uploadFile(string path, string root, Request req);
         bool checkIndex(LocationNode node, Request req, string location);
         string listUploadFiles(string root, Request req);
+        void parseHeaders(Client &client);
+        void parseBody(Client &client);
         void cleanClient(Client &client);
         void getMimeType(Request &req);
         void handleClientRead(Client &client);

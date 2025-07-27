@@ -87,84 +87,7 @@ void WebServ::server()
     }
     serverLoop();
 }
-
-bool Request::fillHeaders(int fd)
-{
-    char buff[BUFFSIZE];
-    
-    size_t totalRead = 0;
-    bool completedHeaders = false;
-    string fullRequest = "";
-    size_t headersEnd = -1;
-    long expectedContentLength = 0;
-
-    while (!completedHeaders)
-    {
-        ssize_t bytesRead = recv(fd, buff, BUFFSIZE, 0);
-        
-        if (bytesRead < 0) {
-            throw NetworkException("recv failed", 500);
-        }
-        fullRequest.append(buff, bytesRead);
-        
-        totalRead += bytesRead;
-        headersEnd = fullRequest.find("\r\n\r\n");
-        if (headersEnd != string::npos)
-        {
-            completedHeaders = true;
-        }
-    }
-
-    size_t bodyStart = headersEnd + 4;
-    if (bodyStart < fullRequest.size())
-    {
-        body = fullRequest.substr(bodyStart);
-        bodyLen = fullRequest.size() - bodyStart;
-    }
-    else
-    {
-        body = "";
-        bodyLen = 0;
-    }
-
-    size_t startLineEnd = fullRequest.find("\r\n");
-    if (startLineEnd == string::npos) {
-        throw NetworkException("Invalid start line", 400);
-    }
-    string startLine = fullRequest.substr(0, startLineEnd);
-    setStartLine(startLine);
-    isStartLineValid();
-    cout << "start line ->> "  << startLine << endl;
-
-
-    // Parse headers
-    size_t i = startLineEnd + 2;
-    while (i < headersEnd) {
-        size_t nextLineEnd = fullRequest.find("\r\n", i);
-        if (nextLineEnd == string::npos || nextLineEnd > headersEnd) {
-            break;
-        }
-        
-        string headerLine = fullRequest.substr(i, nextLineEnd - i);
-        setHeaders(headerLine);
-        
-        size_t colonPos = headerLine.find(':');
-        if (colonPos != string::npos) {
-            string key = headerLine.substr(0, colonPos);
-            string val = headerLine.substr(colonPos + 1);
-            key = trimWSpaces(key);
-            val = trimWSpaces(val);
-            transform(key.begin(), key.end(), key.begin(), ::tolower);
-            
-            if (key == "content-length")
-                expectedContentLength = atol(val.c_str());
-        }
-        i = nextLineEnd + 2;
-    }
-    
-    return true;
-}
-    
+   
 
 bool cleanFd(int fdToClose, map<int, int> &clients, int epollfd)
 {
@@ -186,17 +109,115 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
     return true;
 }
 
-
-
-void WebServ::handleClientRead(Client &Client)
+void WebServ::parseHeaders(Client &client)
 {
-    if (1)
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    string body;
+    size_t bodyLen;
+    size_t headersEnd;
+
+    size_t startLineEnd = buff.find("\r\n");
+    if (startLineEnd == string::npos)
+        return ;
+    string startLine = buff.substr(0, startLineEnd);
+    req.setStartLine(startLine);
+    req.isStartLineValid();
+    headersEnd = buff.find("\r\n\r\n");
+    if (headersEnd == string::npos)
+        return ;
+
+
+
+    size_t i = startLineEnd + 2;
+    while (i < headersEnd)
+    {
+        size_t nextLineEnd = buff.find("\r\n", i);
+        if (nextLineEnd == string::npos || nextLineEnd > headersEnd)
+        {
+            break;
+        }
+        
+        string headerLine = buff.substr(i, nextLineEnd - i);
+        req.setHeaders(headerLine);
+
+        size_t colonPos = headerLine.find(':');
+        if (colonPos != string::npos)
+        {
+            string key = headerLine.substr(0, colonPos);
+            string val = headerLine.substr(colonPos + 1);
+            key = trimWSpaces(key);
+            val = trimWSpaces(val);
+            transform(key.begin(), key.end(), key.begin(), ::tolower);
+            
+            if (key == "content-length")
+                req.contentLen = atol(val.c_str());
+        }
+        i = nextLineEnd + 2;
+    }
+
+
+    size_t bodyStart = headersEnd + 4;
+    if (bodyStart < buff.size())
+    {
+        body = buff.substr(bodyStart);
+        bodyLen = buff.size() - bodyStart;
+    }
+    else
+    {
+        body = "";
+        bodyLen = 0;
+    }
     
-        throw HttpException(400, Client);
+    // changing the state to read body next
+    client.clientState = READING_BODY;
+
+    client.requestBuff = body;
+
+
+}
+
+void WebServ::parseBody(Client &client)
+{
+    
+}
+
+void WebServ::handleClientRead(Client &client)
+{
+    ssize_t bytesRead;
+    char buff[BUFFSIZE];
+
+    bytesRead = recv(client.cfd, buff, BUFFSIZE, 0);
+
+    if (bytesRead < 0)
+        return ;
+    else if (bytesRead == 0)
+    {
+        client.clientState = SENDING_ERROR;
+        return ;
+    }
+
+    client.requestBuff.append(buff, bytesRead);
+
+
+
+    switch (client.clientState)
+    {
+        case READING_HEADERS:
+            parseHeaders(client);
+            break;
+
+        case READING_BODY:
+            parseBody(client);
+            break;
+        
+        default:
+            break;
+    }
 }
 
 
-void WebServ::handleClientWrite(Client &Client)
+void WebServ::handleClientWrite(Client &client)
 {
     
 }
