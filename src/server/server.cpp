@@ -36,7 +36,6 @@ int bindAndGetSock(struct addrinfo *&res)
     return sock;
 }
 
-
 string getHostPort(string host, unsigned short port)
 {
     size_t colPos = host.find(":");
@@ -50,18 +49,11 @@ string getHostPort(string host, unsigned short port)
     return host;
 }
 
-
-int WebServ::server()
+void WebServ::server()
 {
-    // servNameServMap
-    // Debugger::printCompleteDebugInfo(servNodes, hostServMap, servNameServMap);
     std::map<std::string, ServerNode>::iterator servIt = hostServMap.begin();
-    struct epoll_event ev;
     struct addrinfo *res;
-    set <int> servSockets;
-    map <int, ServerNode> servSocketMap;
     int sock;
-    int epollfd;
     struct addrinfo hints;
     // setup the server
     epollfd = epoll_create1(0);
@@ -93,46 +85,7 @@ int WebServ::server()
             throw NetworkException("epoll_ctl failed", 500);
         servIt++;
     }
-    serverLoop(epollfd, ev, servSockets, servSocketMap);
-    return 0;
-}
-
-// long extractContentLength(string &headerData, char *peek, long buffSize, bool &done)
-// {
-
-// }
-
-string readLine(int fd, bool &error)
-{
-    string line = "";
-    char c;
-    size_t bytesRead = 1;
-
-    bytesRead = recv(fd, &c, 1, 0);
-    if (bytesRead <= 0)
-    {
-        throw NetworkException("recv failed", 500);
-    }
-    while (bytesRead > 0)
-    {
-        if (c == '\r')
-        {
-            bytesRead = recv(fd, &c, 1, 0);
-            if (bytesRead < 0)
-            {
-                throw NetworkException("recv failed", 500);
-            }
-            if (c == '\n')
-                break;
-        }
-        line += c;
-        bytesRead = recv(fd, &c, 1, 0);
-        if (bytesRead <= 0)
-        {
-            throw NetworkException("recv failed", 500);
-        }
-    }
-    return line;
+    serverLoop();
 }
 
 bool Request::fillHeaders(int fd)
@@ -246,12 +199,16 @@ void WebServ::handleClientWrite(Client &Client)
     
 }
 
+void WebServ::cleanClient(Client &client)
+{
+    close(client.cfd);
+    clients.erase(client.cfd);
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, client.cfd, NULL);
+}
 
-int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSockets, map <int, ServerNode> &servSocketMap)
+int WebServ::serverLoop()
 {
     struct epoll_event events[MAXEVENTS];
-    map <int, Client> clients; // maps the client fd -> (to) -> Client
-    time_t lastCleanup = time(0);
     while (1)
     {
         int nfds = epoll_wait(epollfd, events, MAXEVENTS, -1);
@@ -281,7 +238,8 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
                         throw NetworkException("fcntl failed", 500);
                     ServerNode &serv = servSocketMap[serverSock];
                     Request clientReq(serv);
-                    clients[clientSock] = Client(clientReq, clientSock, serverSock);
+                    Client newClient = Client(clientReq, clientSock, serverSock);
+                    clients.insert(make_pair(clientSock, newClient));
                     ev.events = EPOLLIN | EPOLLET;
                     ev.data.fd = clientSock;
                     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientSock, &ev) == -1)
@@ -291,19 +249,16 @@ int WebServ::serverLoop(int epollfd, struct epoll_event &ev, set <int> &servSock
             else
             {
                 int clientSock = readyFd;
-                Client &client = clients[clientSock];
+                Client &client = clients.at(clientSock);
                 if (events[i].events & EPOLLIN)
                     handleClientRead(client);
                 else if (events[i].events & EPOLLOUT)
                     handleClientWrite(client);
             }
 
-            if (exists(clients, readyFd) && clients[readyFd].clientState == DONE)
+            if (exists(clients, readyFd) && clients.at(readyFd).clientState == DONE)
             {
-                Client &client = clients[readyFd];
-                close(client.cfd);
-                clients.erase(client.cfd);
-                epoll_ctl(epollfd, EPOLL_CTL_DEL, client.cfd, NULL);
+                cleanClient(clients.at(readyFd));
             }
         }
     }

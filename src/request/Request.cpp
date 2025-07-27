@@ -15,7 +15,7 @@ Client::Client(Request &req): request(req)
     ofd = -1;
     requestBuff = "";
     responseBuff = "";
-    clientState = ClientState::READING_HEADERS;
+    clientState = READING_HEADERS;
 }
 
 Client::Client(Request &req, int cfd): request(req)

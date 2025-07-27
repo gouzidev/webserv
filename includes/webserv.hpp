@@ -56,6 +56,8 @@ class User;
 
 class Session;
 
+class Request;
+
 #define BUFFSIZE 64000
 
 #define ERROR 1
@@ -79,7 +81,7 @@ class Client
         int sfd; // server associated with client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
-        Request request;
+        Request &request;
         
 
         string requestBuff;
@@ -147,6 +149,7 @@ class Request
 class WebServ
 {
     private:
+        int epollfd;
         set<short> validRedirects;
         bool criticalErr;
         vector<ServerNode> servNodes;
@@ -155,7 +158,12 @@ class WebServ
         bool logged;
         User loggedUser;
         Auth *auth; // auth instance (will manage the login and users)
+        map <int, Client> clients; // maps the client fd -> (to) -> Client
 
+        set<int> servSockets;
+        map<int, ServerNode> servSocketMap;
+        struct epoll_event ev;
+        
         // max possible number of files uploaded to the server -> 999
         short MAXSERVERUPLOADS;
 
@@ -181,14 +189,14 @@ class WebServ
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void postMethode(Request &req, ServerNode &servNode);
         void deleteMethod(Request &req, ServerNode &servNode);
-        int server();
+        void server();
         void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
         string checkResource(string fullResource, string location);
         void handleGetUpload(Request req, LocationNode node, User loggedUser, string location);
         string uploadFile(string path, string root, Request req);
         bool checkIndex(LocationNode node, Request req, string location);
         string listUploadFiles(string root, Request req);
-
+        void cleanClient(Client &client);
         void getMimeType(Request &req);
         void handleClientRead(Client &client);
         void handleClientWrite(Client &client);
@@ -199,7 +207,7 @@ class WebServ
         // void handleGetFile(Request req);
         void dirList(string root, string location, Request req);
         void handleGetFile(Request req, map<string, string> &data);
-        int serverLoop(int epollfd, struct epoll_event &ev, set<int> &activeSockets, map<int, ServerNode> &servSocketMap);
+        int serverLoop();
         void urlFormParser(string body, map<string, string> &queryParms);
         void handleLogin(Request &req, ServerNode &serv);
         void handleSignup(Request &req, ServerNode &serv);
