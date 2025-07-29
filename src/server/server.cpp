@@ -109,24 +109,40 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
     return true;
 }
 
-void WebServ::parseHeaders(Client &client)
+bool WebServ::processReqBody(Client &client) // will parse post body
+{
+    switch (client.bodyState)
+    {
+        case BODY_START:
+        {
+            // Add your body processing logic here
+            // For now, just return true to indicate processing is complete
+            return true;
+        }
+        default:
+            // Handle unexpected states
+            return false;
+    }
+}
+
+bool WebServ::parseHeaders(Client &client)
 {
     Request &req = client.request;
     string &buff = client.requestBuff;
-    string body;
-    size_t bodyLen;
     size_t headersEnd;
 
     size_t startLineEnd = buff.find("\r\n");
     if (startLineEnd == string::npos)
-        return ;
-    string startLine = buff.substr(0, startLineEnd);
-    req.setStartLine(startLine);
-    req.isStartLineValid();
+        return false;
+    if (req.startLine.empty())
+    {
+        string startLine = buff.substr(0, startLineEnd);
+        req.setStartLine(startLine);
+        req.isStartLineValid();
+    }
     headersEnd = buff.find("\r\n\r\n");
     if (headersEnd == string::npos)
-        return ;
-
+        return false;
 
 
     size_t i = startLineEnd + 2;
@@ -160,26 +176,83 @@ void WebServ::parseHeaders(Client &client)
     size_t bodyStart = headersEnd + 4;
     if (bodyStart < buff.size())
     {
-        body = buff.substr(bodyStart);
-        bodyLen = buff.size() - bodyStart;
+        client.requestBuff = buff.substr(bodyStart);
+        client.bodyBytesRead += client.requestBuff.size();
     }
     else
-    {
-        body = "";
-        bodyLen = 0;
-    }
-    
-    // changing the state to read body next
+        client.requestBuff = "";
+
     client.clientState = READING_BODY;
-
-    client.requestBuff = body;
-
-
+    client.bodyState = BODY_START;
+    // returning true means we parsed all the headers (we also changed the state)
+    return true;
 }
 
-void WebServ::parseBody(Client &client)
+bool WebServ::parseBody(Client &client)
+{
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    map <string, string> &headers = req.headers;
+
+    // the buffer will have data always cause we did a recv before
+    if (req.getReqType() == "GET" || req.getReqType() == "DELETE")
+    {
+        if (req.contentLen > 0)
+        {
+            if (buff.length() >= req.contentLen)
+            {
+                // process get and delete request
+                client.clientState = SENDING_CHUNKS;
+                buff.erase(0, req.contentLen); // ignoring the body but reading it
+                processCompleteRequest(client);
+                return true;
+            }
+            return false; // need more data so go back to epoll_wait
+        }
+        else
+        {
+            // no body expected for get and delete so handle the request!
+            processCompleteRequest(client);
+            return true;
+        }
+
+
+    }
+    else if (req.getReqType() == "POST")
+    {
+        return parsePostBody(client);
+    }
+}
+
+
+void WebServ::processCompleteRequest(Client &client)
 {
     
+}
+
+
+bool WebServ::parsePostBody(Client &client)
+{
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    map <string, string> &headers = req.headers;
+    // the buffer will have data always cause we did a recv before
+    switch (client.bodyState)
+    {
+        case BODY_START:
+            if (existsAndIs(headers, "transfer-encoding", "chunked"))
+            {
+                // parseChunked(client);
+            }
+            else
+            {
+                processReqBody(client);
+            }
+            break;
+        
+        default:
+            break;
+    }
 }
 
 void WebServ::handleClientRead(Client &client)
@@ -189,11 +262,10 @@ void WebServ::handleClientRead(Client &client)
 
     bytesRead = recv(client.cfd, buff, BUFFSIZE, 0);
 
-    if (bytesRead < 0)
-        return ;
-    else if (bytesRead == 0)
+    if (bytesRead <= 0)
     {
-        client.clientState = SENDING_ERROR;
+        if (bytesRead == 0)
+            client.clientState = READING_DONE;
         return ;
     }
 
@@ -201,18 +273,28 @@ void WebServ::handleClientRead(Client &client)
 
 
 
-    switch (client.clientState)
+    bool made_progress = true;
+    while (made_progress)
     {
-        case READING_HEADERS:
-            parseHeaders(client);
-            break;
+        made_progress = false;
+        switch (client.clientState)
+        {
+            case READING_HEADERS:
+                if (parseHeaders(client))
+                {
+                    parseBody(client);
+                    made_progress = true;
+                }
+                break;
+    
+            case READING_BODY:
+                if (parseBody(client))
+                    made_progress = true;
+                break;
 
-        case READING_BODY:
-            parseBody(client);
-            break;
-        
-        default:
-            break;
+            default:
+                break;
+        }
     }
 }
 

@@ -64,6 +64,14 @@ class Request;
 
 typedef string REQUEST;
 
+enum BodyState
+{
+    BODY_NONE,
+    BODY_START,
+    BODY_MIDDLE,
+    BODY_DONE,
+};
+
 enum ClientState
 {
     // in handleClientRead
@@ -72,7 +80,7 @@ enum ClientState
     READING_BODY, // reading body (and processing it)
 
 
-    
+    READING_DONE,
 
     // in handleClientWrite
     SENDING_CHUNKS, // sending response to client after reading (in chunks)
@@ -93,12 +101,14 @@ class Client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
 
+        BodyState bodyState;
         
         Request &request;
         
 
         // track progress
         size_t totalRead;
+        size_t bodyBytesRead;
 
         // buffers
         string requestBuff;
@@ -214,12 +224,18 @@ class WebServ
         string uploadFile(string path, string root, Request req);
         bool checkIndex(LocationNode node, Request req, string location);
         string listUploadFiles(string root, Request req);
-        void parseHeaders(Client &client);
-        void parseBody(Client &client);
+        bool parseHeaders(Client &client);
+        bool parseBody(Client &client);
+        bool processReqBody(Client &client);
+        bool parsePostBody(Client &client);
         void cleanClient(Client &client);
         void getMimeType(Request &req);
         void handleClientRead(Client &client);
         void handleClientWrite(Client &client);
+
+
+        void processCompleteRequest(Client &client);
+
         // will return the name with the user id in the front
         string getFileNameWithUserId(Request &req, unsigned int userId, string originalName);
         // will get the original name and set the id found in the saved name 
@@ -276,7 +292,7 @@ long long extractContentLen(Request &req, ServerNode &serv);
 vector<string> splitNoSpace(string &str, char delim);
 
 bool exists(map<string, string> &m, string key);
-
+bool existsAndIs(map <string, string> &m, string key, string val);
 bool strHas(string str, string sub);
 string checkResource(string fullResource);
 bool isDirectory(string& path);

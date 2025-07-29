@@ -338,11 +338,7 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
     std::string first_boundary_marker = "--" + rawBoundary;
 
     // === 2. CORRECTED UNIFIED MAIN LOOP ===
-    // this new loop structure is the main fix.
-    // it will run forever until we explicitly `break` out of it when parsing is
-    // completely finished or a fatal error occurs.
-    while (true)
-    {
+
         // --- LAYER 1: De-Chunker ---
         // fills the multipart_chunk with clean data
         if (isChunked)
@@ -506,36 +502,6 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
             }
         }
 
-        // if we are done, we can exit the main loop.
-        if (multipartState == pMultipartDone || (isChunked && chunkedState == pChunkEnd))
-        {
-            break;
-        }
-
-        // if we reach here, it means the parsers need more data.
-        bytesRead = recv(req.cfd, socket_read_buffer, BUFFSIZE, 0);
-        if (bytesRead > 0)
-        {
-            bytesTotal += bytesRead;
-            if (bytesTotal > clientMaxUploadSize)
-            {
-                if (filefd != -1)
-                {
-                    close(filefd);
-                    filefd = -1;
-                }
-                throw RequestException("Upload size exceeded", 413, req);
-            }
-            socket_chunk.append(socket_read_buffer, bytesRead);
-            
-        }
-        else
-        {
-            // if recv returns 0 or -1, the client has disconnected.
-            // break the loop and let the final check handle the error.
-            break;
-        }
-    }
     
     // === 3. FINAL CHECK & CLEANUP ===
     if (multipartState != pMultipartDone)
