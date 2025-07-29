@@ -122,6 +122,11 @@ bool WebServ::processReqBody(Client &client) // will parse post body
     if (contentLen == client.bodyBytesRead) // done.  this is usally when its a small request
     {
         processCompleteRequest(client);
+        ev.data.fd = client.cfd;
+        ev.events = EPOLLOUT | EPOLLET; // we are done reading,
+        client.clientState = SENDING_CHUNKS;
+        client.bodyState = BODY_DONE;
+        epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
         return true;
     }
 

@@ -18,15 +18,15 @@ void Auth::login(Client &client, string email, string password)
 
     if (!exists(users, email))
     {
+
         cout << "email not found in users" << endl;
-        sendErrPageToClient(cfd, 404, req.serv);
-        return ;
+        throw HttpException(404, client);
     }
     string dbPassword = users[email].getPassword();
     if (dbPassword != password)
     {
         cout << "password does not match" << endl;
-        sendErrPageToClient(cfd, 403, req.serv);
+        throw HttpException(401, client);
         return ;
     }
 
@@ -51,8 +51,7 @@ void Auth::signup(Client &client, string fName, string lName, string userName, s
     if (exists(users, email))
     {
         cout << "email already exists found in users" << endl;
-        sendErrPageToClient(cfd, 409, req.serv); // 409 conflict
-        return ;
+        throw HttpException(409, client);
     }
     User newUser(fName, lName, userName, email, password);
     users[email] = newUser;
@@ -74,7 +73,7 @@ void Auth::redirectToLogin(Client &client, int errorCode)
     Request &req = client.request;
     int cfd = client.cfd;
 
-    string loginFile = readFromFile("./www/login/login.html");
+    string loginFile = readFromFile("./www/login/login.html"); // must be changed !
     string response = "";
 
     response += "HTTP/1.1 " + ushortToStr(errorCode) + " " + getStatusMessage(errorCode) + " \r\n";

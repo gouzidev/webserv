@@ -10,7 +10,7 @@ void WebServ::handleLogin(Client &client)
 
     map < string , string > queryParams;
 
-    string body = req.body;
+    string body = client.requestBuff;
 
     if (!exists(req.headers, "content-type"))
     {
@@ -44,7 +44,7 @@ void WebServ::handleFormData(Client &client)
     string dataDivStr = "<div>";
     map < string , string > queryParams;
 
-    string body = req.body;
+    string body = client.requestBuff;
 
     if (!exists(req.headers, "content-type"))
     {
@@ -96,7 +96,7 @@ void WebServ::handleSignup(Client &client)
     ServerNode &serv = req.serv;
     string errorRes;
 
-    string body = req.body;
+    string body = client.requestBuff;
 
     if (!exists(req.headers, "content-type"))
     {
