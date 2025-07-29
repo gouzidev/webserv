@@ -271,21 +271,28 @@ struct FileUploadData getContentDataFromHeaders(const std::string& headers)
 }
 
 
+
 // The single, unified upload handler function
-void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locationNode)
+void WebServ::handleUpload(Client &client, LocationNode &locationNode)
 {
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
+
     long long clientMaxUploadSize = serv.clientMaxBodySize * 1024 * 1024;
     string sessionKey = req.extractSessionId();
     if (!auth->isLoggedIn(sessionKey))
     {
-        sendErrPageToClient(req.cfd, 401, serv);
-        return ;
+        cout << "unauthorized upload attempt" << endl;
+        throw HttpException(401, client);
     }
     User &LoggedUser = auth->sessions.find(sessionKey)->second.getUser();
 
-    long long contentLen = extractContentLen(req, serv);
+    long contentLen = client.request.contentLen;
     if (contentLen > clientMaxUploadSize)
-        throw RequestException("Upload size exceeded", 413, req);
+    {
+        cout << "upload size exceeds limit" << endl;
+        throw HttpException(413, client);
+    }
     string formDataDiv = "";
 
     // === 1. UNIFIED SETUP ===
@@ -327,8 +334,8 @@ void WebServ::handleUpload(Request &req, ServerNode &serv, LocationNode &locatio
     size_t headerBoundaryPos = contentType.find("boundary=");
     if (headerBoundaryPos == std::string::npos)
     {
-        sendErrPageToClient(req.cfd, 400, serv);
-        return;
+        cout << "boundary not found in content-type header" << endl;
+        throw HttpException(400, client);
     }
     
     // -- boundary strings for the multipart parser --

@@ -11,8 +11,11 @@ Auth::Auth()
     users[asma.getEmail()] = asma;
 }
 
-void Auth::login(int cfd, string email, string password, Request &req)
+void Auth::login(Client &client, string email, string password)
 {
+    Request &req = client.request;
+    int cfd = client.cfd;
+
     if (!exists(users, email))
     {
         cout << "email not found in users" << endl;
@@ -37,11 +40,14 @@ void Auth::login(int cfd, string email, string password, Request &req)
     response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
     response += "Content-Length: 0\r\n\r\n";
-    send(cfd, response.c_str(), response.length(), 0);
+    client.responseBuff = response;
 }
 
-void Auth::signup(int cfd, string fName, string lName, string userName, string email, string password, Request &req)
+void Auth::signup(Client &client, string fName, string lName, string userName, string email, string password)
 {
+    Request &req = client.request;
+    int cfd = client.cfd;
+
     if (exists(users, email))
     {
         cout << "email already exists found in users" << endl;
@@ -60,11 +66,14 @@ void Auth::signup(int cfd, string fName, string lName, string userName, string e
     response +=  "Content-Type: text/html\r\n";
     response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n\r\n";
-    send(cfd, response.c_str(), response.length(), 0);
+    client.responseBuff = response;
 }
 
-void Auth::redirectToLogin(int cfd, int errorCode)
+void Auth::redirectToLogin(Client &client, int errorCode)
 {
+    Request &req = client.request;
+    int cfd = client.cfd;
+
     string loginFile = readFromFile("./www/login/login.html");
     string response = "";
 
@@ -72,7 +81,7 @@ void Auth::redirectToLogin(int cfd, int errorCode)
     response +=  "Content-Type: text/html\r\n";
     response +=  "Content-Length: " + ushortToStr(loginFile.size()) + "\r\n\r\n";
     response += loginFile;
-    send(cfd, response.c_str(), response.length(), 0);
+    client.responseBuff = response;
 }
 
 bool Auth::isLoggedIn(string sessionKey)
@@ -80,35 +89,41 @@ bool Auth::isLoggedIn(string sessionKey)
     return exists(sessions, sessionKey);
 }
 
-void Auth::redirectToPage(int cfd, string page, int errorCode)
+void Auth::redirectToPage(Client &client, string page, int errorCode)
 {
+    Request &req = client.request;
+    int cfd = client.cfd;
+
     string response;
     string file = readFromFile(page);
     response += "HTTP/1.1 " + ushortToStr(errorCode) + " " + getStatusMessage(errorCode) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
     response +=  "Content-Length: " + ushortToStr(file.size()) + "\r\n\r\n";
     response += file;
-    send(cfd, response.c_str(), response.length(), 0);
+    client.responseBuff = response;
 }
 
-// void Auth::redirectToError(int cfd, ServerNode &serv, map <string, string> &errorData)
+// void Auth::redirectToError(Client &client, ServerNode &serv, map <string, string> &errorData)
 // {
 //     string defaultErrorPage = serv.errorNodes[]
 //     string errorResponse = dynamicRender()
 // }
 
-void Auth::logout(int cfd, string sessionKey, ServerNode &serv)
+void Auth::logout(Client &client, string sessionKey)
 {
+    Request &req = client.request;
+    int cfd = client.cfd;
+
     if (exists(sessions, sessionKey))
     {
         cout << "user logged out successfully" << endl;
         sessions.erase(sessionKey);
-        redirectToLogin(cfd, 200);
+        redirectToLogin(client, 200);
     }
     else
     {
         cout << "session key not found" << endl;
-        redirectToLogin(cfd, 401);
+        redirectToLogin(client, 401);
     }
 }
 

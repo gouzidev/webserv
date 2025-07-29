@@ -2,8 +2,10 @@
 #include "../../../includes/Debugger.hpp"
 #include "../../../includes/Exceptions.hpp"
 
-void WebServ::handleLogin(Request &req, ServerNode &serv)
+void WebServ::handleLogin(Client &client)
 {
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
     string errorRes;
 
     map < string , string > queryParams;
@@ -13,32 +15,31 @@ void WebServ::handleLogin(Request &req, ServerNode &serv)
     if (!exists(req.headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;
-        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
-        send(req.cfd, testResponse, strlen(testResponse), 0);
-        return ;
+        throw HttpException(400, client);
     }
     if (!strHas(body, "email=") || !strHas(body, "password="))
     {
-        errorRes = getErrorResponse(400, "please provide an email and password");
-        send(req.cfd, errorRes.c_str(), strlen(errorRes.c_str()), 0);
-        return ;
+        cerr << "please provide an email and password" << endl;
+        throw HttpException(400, client);
     }
 
     urlFormParser(body, queryParams);
 
     if (!exists(queryParams, string("email")) || !exists(queryParams, string("password")))
     {
-        sendErrPageToClient(req.cfd, 400, serv);
-        return ;
+        cerr << "email or password not found in query params" << endl;
+        throw HttpException(400, client);
     }
     string email = queryParams["email"];
     string password = queryParams["password"];
 
-    auth->login(req.cfd, email, password, req);
+    auth->login(client, email, password);
 }
 
-void WebServ::handleFormData(Request &req, ServerNode &serv)
+void WebServ::handleFormData(Client &client)
 {
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
     string errorRes;
     string dataDivStr = "<div>";
     map < string , string > queryParams;
@@ -48,9 +49,7 @@ void WebServ::handleFormData(Request &req, ServerNode &serv)
     if (!exists(req.headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;
-        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
-        send(req.cfd, testResponse, strlen(testResponse), 0);
-        return ;
+        throw HttpException(400, client);
     }
 
     urlFormParser(body, queryParams);
@@ -76,7 +75,7 @@ void WebServ::handleFormData(Request &req, ServerNode &serv)
     response +=  "Content-Length: " + ushortToStr(page.size()) + "\r\n\r\n";
     response += page;
 
-    send(req.cfd, response.c_str(), response.size(), 0);
+    client.responseBuff = response;
     
 }
 
@@ -91,8 +90,10 @@ string WebServ::getDataStrInDiv(string &name, string &value)
     return dataDivStr;
 }
 
-void WebServ::handleSignup(Request &req, ServerNode &serv)
+void WebServ::handleSignup(Client &client)
 {
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
     string errorRes;
 
     string body = req.body;
@@ -100,17 +101,14 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
     if (!exists(req.headers, "content-type"))
     {
         cerr << "send a host and content-type mf" << endl;
-        const char *testResponse = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 18\r\n\r\nBad Client Request";
-        send(req.cfd, testResponse, strlen(testResponse), 0);
-        return ;
+        throw HttpException(400, client);
     }
 
     if (!strHas(body, "firstName=") || !strHas(body, "lastName=")
         || !strHas(body, "email=") || !strHas(body, "password="))
     {
-        errorRes = getErrorResponse(400, "please provide an email and password");
-        send(req.cfd, errorRes.c_str(), strlen(errorRes.c_str()), 0);
-        return ;
+        cerr << "please provide firstName, lastName, email and password" << endl;
+        throw HttpException(400, client);
     }
     map < string , string > queryParams;
     urlFormParser(body, queryParams);
@@ -118,8 +116,8 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
         || !exists(queryParams, string("email")) || !exists(queryParams, string("password"))
         )
     {
-        sendErrPageToClient(req.cfd, 400, serv);
-        return ;
+        cerr << "firstName, lastName, email or password not found in query params" << endl;
+        throw HttpException(400, client);
     }
     string userName;
     if (exists(queryParams, "userName"))
@@ -129,86 +127,81 @@ void WebServ::handleSignup(Request &req, ServerNode &serv)
     string email = queryParams["email"];
     string password = queryParams["password"];
 
-    auth->signup(req.cfd, fName, userName, lName, email, password, req);
+    auth->signup(client, fName, userName, lName, email, password);
 }
 
-void WebServ::handleLogout(Request &req, ServerNode &serv)
+void WebServ::handleLogout(Client &client)
 {
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
     cout << "handling logout" << endl;
     string sessionKey = req.getSessionKey();
-    auth->logout(req.cfd, sessionKey, serv);
+    auth->logout(client, sessionKey);
 }
 
-long long extractContentLen(Request &req, ServerNode &serv)
-{
-    if (!exists(req.headers, "content-length"))
-        throw RequestException("could not find 'content-length' header", 400, req);
-    string contentLenStr = req.headers.find("content-length")->second;
-    contentLenStr = trimWSpaces(contentLenStr);
-    if (!strAllDigit(contentLenStr))
-        throw RequestException("content-length: '" + contentLenStr + "' is not a number", 400, req);
+// long long extractContentLen(Client &client)
+// {
+//     Request &req = client.request;
+//     ServerNode &serv = req.serv;
+//     if (!exists(req.headers, "content-length"))
+//     {
+//         cerr << "could not find 'content-length' header" << endl;
+//         throw HttpException(400, client);
+//     }
+//     string contentLenStr = req.headers.find("content-length")->second;
+//     contentLenStr = trimWSpaces(contentLenStr);
+//     if (!strAllDigit(contentLenStr))
+//     {
+//         cerr << "content-length is not a number: " << contentLenStr << endl;
+//         throw  HttpException(400, client);
+//     }
 
-    istringstream contentLenStream (contentLenStr);
-    if (contentLenStream.fail())
-        throw RequestException("failed to parse content-length: '" + contentLenStr + "' it is not a number", 400, req);
-    long long contentLen;
-    contentLenStream >> contentLen;
-    return contentLen;
-}
+//     istringstream contentLenStream (contentLenStr);
+//     if (contentLenStream.fail())
+//     {
+//         cerr << "content-length stream failed" << endl;
+//         throw HttpException(400, client);
+//     }
+//     long long contentLen;
+//     contentLenStream >> contentLen;
+//     return contentLen;
+// }
 
-void WebServ::postMethode(Request &req, ServerNode &serv)
+void WebServ::postMethode(Client &client)
 {
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    map <string, string> &headers = req.headers;
+    ServerNode &serv = req.serv;
     string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
     cout << "POST target {{ " << locationTarget  << "}}" << endl;
 
     string errorRes;
     LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
     if (!exists(locationNode.methods, string("POST"))) // methods are stored in upper case
-    {
-        errorRes  = getErrorResponse(405, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
-    cout << "handling post request" << endl;
+        throw HttpException(405, client);
     vector <string> startLine = req.getStartLine();
     string &location = req.getResource();
-    map <string, string> &headers = req.getHeaders();
-    string key = "host";
 
-     
-    if (locationNode.redirect.second != "") // has redirection
-    {
-        stringstream bodyLenSS;
-        bodyLenSS << req.bodyLen;
-        short httpRedirectionCode = locationNode.redirect.first;
-        string redirectLocation = locationNode.redirect.second;
-        cout << "body len -> " << req.bodyLen << endl;
-        cout << "body len -> " << req.body.size() << endl;
-        string response;
-        response += "HTTP/1.1 " + ushortToStr(httpRedirectionCode) + " " + getStatusMessage(httpRedirectionCode) + " \r\n";
-        response +=  "Location: " + redirectLocation + "\r\n";
-        response += "Content-Length: " + bodyLenSS.str() + "\r\n\r\n";
-        response.append(req.body);
-        
-        send(req.cfd, response.c_str(), response.length(), 0);
-        return ;
-    }
     if (!exists(req.headers, "content-length"))
     {
         // sendErrPageToClient(req.cfd, 400, serv);
-        throw RequestException("could not find 'content-length'", 400, req);
+        cout << "could not find 'content-length'" << endl;
+        throw HttpException(400, client);
     }
-    long long contentLen = extractContentLen(req, serv); // stored in MB
+    long long contentLen = req.contentLen; // stored in MB
     if (contentLen <= 0 && locationNode.needContentLen)
     {
         // sendErrPageToClient(req.cfd, 400, serv);
-        throw RequestException("content length is not valid", 400, req);
+        cout << "content length is not valid" << endl;
+        throw HttpException(400, client);
     }
 
     if (!exists(req.headers, "content-type"))
     {
         // sendErrPageToClient(req.cfd, 400, serv);
-        throw RequestException("could not find 'content-type'", 400, req);
+        cout << "could not find 'content-type'" << endl;
+        throw HttpException(400, client);
     }
     string contentType = headers.find("content-type")->second;
     string rootFolder = serv.root;
@@ -216,9 +209,7 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     if (locationTarget == "") // doesnt exist
     {
         cout << "location not found in server node for target -> " << req.getResource() << endl;
-        errorRes  = getErrorResponse(404, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
+        throw HttpException(404, client);
     }
 
     cout << "location target is " << locationTarget << endl;
@@ -228,8 +219,8 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         string sessionKey = req.extractSessionId();
         if (!auth->isLoggedIn(sessionKey))
         {
-            sendErrPageToClient(req.cfd, 401, serv);
-            return ;
+            cout << "un auth" << endl;
+            throw HttpException(401, client);
         }
     }
 
@@ -238,18 +229,18 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
     if (contentType == "application/x-www-form-urlencoded") // handle form post request
     {
         if (locationTarget == "/login")
-            handleLogin(req, serv);
+            handleLogin(client);
         else if (locationTarget == "/signup")
-            handleSignup(req, serv);
+            handleSignup(client);
         else if (locationTarget == "/logout")
-            handleLogout(req, serv);
+            handleLogout(client);
         else
-            handleFormData(req, serv);
+            handleFormData(client);
     }   
     else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
     {
         cout << "handling file upload" << endl;
-        handleUpload(req, serv, locationNode);
+        handleUpload(client, locationNode);
     }
     else
     {
@@ -263,4 +254,6 @@ void WebServ::postMethode(Request &req, ServerNode &serv)
         send(req.cfd, successResponse, strlen(successResponse), 0);
 
     }
+    client.requestBuff.clear();
+    client.clientState = SENDING_CHUNKS;
 }

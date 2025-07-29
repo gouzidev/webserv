@@ -111,18 +111,20 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
 
 bool WebServ::processReqBody(Client &client) // will parse post body
 {
-    switch (client.bodyState)
+    long contentLen = client.request.contentLen;
+    
+    if (contentLen < BUFFSIZE) // lets just accumilate in the buffer the entire body
     {
-        case BODY_START:
-        {
-            // Add your body processing logic here
-            // For now, just return true to indicate processing is complete
-            return true;
-        }
-        default:
-            // Handle unexpected states
-            return false;
+
     }
+
+
+    if (contentLen == client.bodyBytesRead) // done.  this is usally when its a small request
+    {
+        processCompleteRequest(client);
+        return true;
+    }
+
 }
 
 bool WebServ::parseHeaders(Client &client)
@@ -155,7 +157,7 @@ bool WebServ::parseHeaders(Client &client)
         }
         
         string headerLine = buff.substr(i, nextLineEnd - i);
-        req.setHeaders(headerLine);
+        req.setHeader(headerLine);
 
         size_t colonPos = headerLine.find(':');
         if (colonPos != string::npos)
@@ -227,7 +229,13 @@ bool WebServ::parseBody(Client &client)
 
 void WebServ::processCompleteRequest(Client &client)
 {
-    
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    map <string, string> &headers = req.headers;
+    if (req.getReqType() == "POST")
+    {
+        postMethode(client);
+    }
 }
 
 
@@ -248,10 +256,11 @@ bool WebServ::parsePostBody(Client &client)
             {
                 processReqBody(client);
             }
+            return true;
             break;
         
         default:
-            break;
+            return false;
     }
 }
 

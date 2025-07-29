@@ -188,7 +188,7 @@ void Request::setCookies()
     // Debugger::printMap("cookies", cookies);
 }
 
-void Request::setHeaders(string line) //needs checking for headers syntax
+void Request::setHeader(string line) //needs checking for headers syntax
 {
     size_t sepPos = line.find_first_of(':');
     if (sepPos == line.npos)
@@ -204,11 +204,6 @@ void Request::setHeaders(string line) //needs checking for headers syntax
     transform(key.begin(), key.end(), key.begin(), ::tolower); // Field names are case-insensitive rfc 4.2 msg headers
     pair <string, string> p = make_pair(key, val);
     headers.insert(p);
-
-    if (key == "content-length")
-    {
-        contentLen = extractContentLen(*this, serv);
-    }
 }
 
 // for the body parsing : If a message is received with both a

@@ -14,6 +14,7 @@ using namespace std;
 class Request;
 class ServerNode;
 class WebServ;
+class Client;
 
 
 class User
@@ -67,12 +68,12 @@ class Auth
 {
     public:
         char *generalErrorResponse;
-        void login(int cfd, string email, string password, Request &req);
-        void signup(int cfd, string fName, string lName, string userName, string email, string password, Request &req);
-        void logout(int cfd, string sessionKey, ServerNode &serv);
+        void login(Client &client, string email, string password);
+        void signup(Client &client, string fName, string lName, string userName, string email, string password);
+        void logout(Client &client, string sessionKey);
         void cleanUpSessions();
-        void redirectToPage(int cfd, string page, int errorCode);
-        void redirectToLogin(int cfd, int errorCode);
+        void redirectToPage(Client &client, string page, int errorCode);
+        void redirectToLogin(Client &client, int errorCode);
         bool isLoggedIn(string sessionKey);
         Auth();
         map < string, User> &getUsers();

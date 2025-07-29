@@ -130,7 +130,7 @@ class Response
         string headers;
         vector<char> body;
         void setStatusLine(string sttsLine);
-        void setHeaders(string header);
+        void setHeader(string header);
         void setBody();
 };
 
@@ -157,7 +157,7 @@ class Request
     public:
         int cfd; // client fd
         void setStartLine(string);
-        void setHeaders(string line);
+        void setHeader(string line);
         void setBody(string line);
         string getSessionKey();
         int isStartLineValid();
@@ -215,7 +215,7 @@ class WebServ
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
-        void postMethode(Request &req, ServerNode &servNode);
+        void postMethode(Client &client);
         void deleteMethod(Request &req, ServerNode &servNode);
         void server();
         void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
@@ -245,11 +245,11 @@ class WebServ
         void handleGetFile(Request req, map<string, string> &data);
         int serverLoop();
         void urlFormParser(string body, map<string, string> &queryParms);
-        void handleLogin(Request &req, ServerNode &serv);
-        void handleSignup(Request &req, ServerNode &serv);
-        void handleLogout(Request &req, ServerNode &serv);
-        void handleUpload(Request &req, ServerNode &serv, LocationNode &locationNode);
-        void handleFormData(Request &req, ServerNode &serv);
+        void handleLogin(Client &client);
+        void handleSignup(Client &client);
+        void handleLogout(Client &client);
+        void handleUpload(Client &client, LocationNode &locationNode);
+        void handleFormData(Client &client);
         string getDataStrInDiv(string &name, string &value);
         
 };
