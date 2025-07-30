@@ -47,6 +47,29 @@ using namespace std;
 
 #define MAXEVENTS 1024
 
+enum ParserState
+{
+    pSearchingForBoundary,
+    pParsingHeaders,
+    pStreamingBody,
+    pDone
+};
+
+enum MultipartState
+{
+    pMultipartBoundary,
+    pMultipartHeaders,
+    pMultipartBody,
+    pMultipartDone
+};
+
+// States for the de-chunker
+enum ChunkedState
+{
+    pChunkSize,
+    pChunkData,
+    pChunkEnd
+};
 
 class ServerNode;
 
@@ -130,8 +153,34 @@ class Response
         string headers;
         vector<char> body;
         void setStatusLine(string sttsLine);
-        void setHeader(string header);
+        void setHeaders(string header);
         void setBody();
+};
+
+struct UploadData
+{
+    bool isInit;
+    MultipartState multipartState;
+    ChunkedState chunkedState;
+    // byte tracking
+    ssize_t bytesRead;
+    ssize_t bytesTotal;
+
+    // current content type
+    std::string contentType;
+
+
+    std::string filename;
+    std::string name;
+
+    // boundary vars
+    size_t headerBoundaryPos;
+    std::string rawBoundary;
+    std::string boundary_marker;
+    std::string end_boundary_marker;
+    std::string first_boundary_marker;
+
+    UploadData();
 };
 
 class Request
@@ -152,6 +201,7 @@ class Request
         void setCookies();
         unsigned short error;
         long contentLen;
+        struct UploadData uploadData;
         map <string, string> cookies;
 
     public:
@@ -227,6 +277,7 @@ class WebServ
         bool parseHeaders(Client &client);
         bool parseBody(Client &client);
         bool processReqBody(Client &client);
+        bool processReqBodyChunk(Client &client);
         bool parsePostBody(Client &client);
         void cleanClient(Client &client);
         void getMimeType(Request &req);
@@ -278,6 +329,8 @@ string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);
 
 string dynamicRender(string path, map<string, string> &data); // for html files
+
+bool checkIfChunked(Request &req);
 
 string getLocation(Request &req, ServerNode &servNode); // resource no location is the rest of location part
 

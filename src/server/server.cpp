@@ -109,25 +109,44 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
     return true;
 }
 
+bool WebServ::processReqBodyChunk(Client &client)
+{
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
+    string contentType = client.request.headers["content-type"];
+    
+    if (contentType == "application/x-www-form-urlencoded") // handle form post request
+    {
+        // handleFormData(client);
+    }   
+    else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
+    {
+        cout << "handling file upload" << endl;
+        
+
+    }
+
+    return true;
+}
+
 bool WebServ::processReqBody(Client &client) // will parse post body
 {
     long contentLen = client.request.contentLen;
     
-    if (contentLen < BUFFSIZE) // lets just accumilate in the buffer the entire body
-    {
 
-    }
 
 
     if (contentLen == client.bodyBytesRead) // done.  this is usally when its a small request
     {
         processCompleteRequest(client);
-        ev.data.fd = client.cfd;
-        ev.events = EPOLLOUT | EPOLLET; // we are done reading,
-        client.clientState = SENDING_CHUNKS;
-        client.bodyState = BODY_DONE;
-        epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
         return true;
+    }
+
+
+    else if (contentLen > BUFFSIZE)
+    {
+        processReqBodyChunk(client);
+        return false;
     }
 
 }
@@ -195,7 +214,7 @@ bool WebServ::parseHeaders(Client &client)
     return true;
 }
 
-bool WebServ::parseBody(Client &client)
+bool WebServ::parseBody(Client &client) // returning true means task is done
 {
     Request &req = client.request;
     string &buff = client.requestBuff;
@@ -241,6 +260,23 @@ void WebServ::processCompleteRequest(Client &client)
     {
         postMethode(client);
     }
+    else if (req.getReqType() == "GET")
+    {
+        getMethode(req, req.serv);
+    }
+    else if (req.getReqType() == "DELETE")
+    {
+        deleteMethod(req, req.serv);
+    }
+    else
+    {
+        cout << "Unknown request type: " << req.getReqType() << endl;
+        throw HttpException(501, client); // Not Implemented
+    }
+    ev.data.fd = client.cfd;
+    ev.events = EPOLLOUT | EPOLLET; // we are done reading,
+    client.clientState = SENDING_CHUNKS;
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
 }
 
 
@@ -253,15 +289,7 @@ bool WebServ::parsePostBody(Client &client)
     switch (client.bodyState)
     {
         case BODY_START:
-            if (existsAndIs(headers, "transfer-encoding", "chunked"))
-            {
-                // parseChunked(client);
-            }
-            else
-            {
-                processReqBody(client);
-            }
-            return true;
+            return processReqBody(client);
             break;
         
         default:
@@ -346,7 +374,7 @@ int WebServ::serverLoop()
 
                 while (true)
                 {
-                    int clientSock = accept(readyFd, &clientAddr, &clientAddrSize);  // check if fails
+                    int clientSock = accept(serverSock, &clientAddr, &clientAddrSize);  // check if fails
                     if (clientSock == -1)
                     {
                         if (errno == EWOULDBLOCK || errno == EAGAIN)
@@ -365,7 +393,7 @@ int WebServ::serverLoop()
                         throw NetworkException("epoll_ctl failed", 500);
                 }
             }
-            else
+            else // client already exists
             {
                 int clientSock = readyFd;
                 Client &client = clients.at(clientSock);

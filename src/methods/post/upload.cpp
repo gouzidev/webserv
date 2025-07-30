@@ -188,29 +188,7 @@ bool verifyUpload(Request &req, ServerNode &serv, LocationNode &locationNode, si
 }
 
 
-enum ParserState
-{
-    pSearchingForBoundary,
-    pParsingHeaders,
-    pStreamingBody,
-    pDone
-};
 
-enum MultipartState
-{
-    pMultipartBoundary,
-    pMultipartHeaders,
-    pMultipartBody,
-    pMultipartDone
-};
-
-// States for the de-chunker
-enum ChunkedState
-{
-    pChunkSize,
-    pChunkData,
-    pChunkEnd
-};
 
 // Your helper function to get the filename
 std::string getFilenameFromHeaders(const std::string& headers)

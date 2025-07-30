@@ -5,6 +5,9 @@
 Request::Request(ServerNode &serv) : serv(serv)
 {
     contentLen = 0;
+    uploadData.multipartState = pMultipartBoundary;
+    uploadData.chunkedState = pChunkSize;
+    
 }
 
 Client::Client(Request &req): request(req)
@@ -58,6 +61,12 @@ Client &Client::operator=(const Client &)
 {
     return *this;
 }
+
+UploadData::UploadData()
+{
+    multipartState = pMultipartBoundary;
+    chunkedState = pChunkSize;
+};
 
 void Request::setStartLine(string line)
 {
