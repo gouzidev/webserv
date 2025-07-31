@@ -434,11 +434,11 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
             }
             else
             {
-                size_t write_size = 0;
-                if (data->multipart_chunk.length() > data->boundary_marker.length())
-                {
-                    write_size = data->multipart_chunk.length() - data->boundary_marker.length();
-                }
+                size_t write_size = data->multipart_chunk.length();
+                // if (data->multipart_chunk.length() > data->boundary_marker.length())
+                // {
+                //     write_size = data->multipart_chunk.length() - data->boundary_marker.length();
+                // }
                 if (data->filefd != -1 && write_size > 0)
                 {
                     write(data->filefd, data->multipart_chunk.c_str(), write_size);
@@ -458,6 +458,8 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
         {
             close(data->filefd);
         }
+        delete req.uploadData;
+        req.uploadData = NULL;
     }
     else if (data->multipartState == pMultipartDone) // means we are done.
     {
@@ -466,12 +468,18 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
         {
             close(data->filefd);
         }
+        delete req.uploadData;
+        req.uploadData = NULL;
         std::cout << "Success: Upload finished.\n";
         // auth->redirectToPage(req.cfd, "./www/auth/profile.html", 200); // Your success logic
     }
-    data->socket_chunk = data->multipart_chunk;
-    data->multipart_chunk.clear();
-    client.requestBuff.clear();
+    else // more to read
+    {
+        data->socket_chunk = data->multipart_chunk;
+        data->multipart_chunk.clear();
+        client.requestBuff.clear();
+    }
+    
 
     // map <string, string> dataMap;
     // dataMap["data"] =  formDataDiv;

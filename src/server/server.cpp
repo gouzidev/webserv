@@ -156,6 +156,9 @@ void Request::setHeaders(string &buff, size_t startLineEnd, size_t headersEnd)
             
             if (key == "content-length")
                 contentLen = atol(val.c_str());
+            else if (key == "transfer-encoding" && val == "chunked") 
+                isChunked = true;
+
         }
         i = nextLineEnd + 2;
     }
@@ -216,7 +219,8 @@ bool WebServ::parseHeaders(Client &client)
         return false; // still not done -> read more
 
     req.contentLen = -1;
-   
+    req.isChunked = false;
+
     req.setHeaders(buff, startLineEnd, headersEnd);
     req.verifyHeaders(client); // currently verifying post only
 
