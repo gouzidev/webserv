@@ -255,7 +255,7 @@ bool WebServ::handleBodyStart(Client &client) // return true means we are done h
     if (req.reqType == "POST")
     {
         // first lets handle super short requests like for /login ...
-        if (req.contentType == ContentType::wwwURLEncoded_t)
+        if (req.contentType == wwwURLEncoded_t)
         {
             if (locationTarget == "/login")
                 handleLogin(client);
@@ -267,11 +267,11 @@ bool WebServ::handleBodyStart(Client &client) // return true means we are done h
                 handleFormData(client);
             setClientReadyToRecvData(client);
         }
-        else if (req.contentType == ContentType::textPlain_t)
+        else if (req.contentType == textPlain_t)
         {
             handleFormData(client);
         }
-        else if (req.contentType == ContentType::multipartFormData_t)
+        else if (req.contentType == multipartFormData_t)
         {
             handleUpload(client, locationNode);
         }
@@ -281,6 +281,7 @@ bool WebServ::handleBodyStart(Client &client) // return true means we are done h
         }
         return true;
     }
+    return false;
 }
 
 bool WebServ::parseBody(Client &client) // returning true means task is done
@@ -292,11 +293,11 @@ bool WebServ::parseBody(Client &client) // returning true means task is done
     // the buffer will have data always cause we did a recv before
     switch (client.bodyState)
     {
-        case BodyState::BODY_START:
+        case BODY_START:
             // first time
                 handleBodyStart(client);
             break;
-        case BodyState::BODY_DONE:
+        case BODY_DONE:
             return true;
         default:
             break;
@@ -342,8 +343,8 @@ void WebServ::handleClientRead(Client &client)
             case READING_HEADERS:
                 if (parseHeaders(client))
                 {
-                    parseBody(client);
-                    made_progress = true;
+                    if(parseBody(client))
+                        made_progress = true;
                 }
                 break;
 

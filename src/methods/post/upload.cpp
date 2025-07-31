@@ -266,13 +266,17 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     // User &LoggedUser = auth->sessions.find(sessionKey)->second.getUser();
 
     string formDataDiv = "";
-
+    UploadData *data;
     if (req.uploadData == NULL) // first time -> init it
     {
- 
         req.uploadData = new UploadData(client);
     }
-    UploadData *data = req.uploadData;
+    else
+    {
+        req.uploadData->socket_chunk.append(client.requestBuff);
+    }
+    data = req.uploadData;
+
 
     // === 1. UNIFIED SETUP ===
     // this section prepares all variables needed for both normal and chunked uploads.
@@ -388,7 +392,6 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                     data->multipartState = pMultipartDone;
                 else
                     data->multipartState = pMultipartBody;
-                data->multipartState = pMultipartBody;
                 multipart_progress = true;
             }
         }
@@ -397,7 +400,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
             size_t end_boundary_pos = data->multipart_chunk.find(data->end_boundary_marker);
             size_t next_boundary_pos = data->multipart_chunk.find(data->boundary_marker);
 
-            if (next_boundary_pos != string::npos)
+            if (next_boundary_pos != string::npos && next_boundary_pos != end_boundary_pos)
             {
                 if (data->filefd != -1)
                 {
@@ -447,7 +450,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
 
     
     // === 3. FINAL CHECK & CLEANUP ===
-    if (data->multipartState != pMultipartDone)
+    if (data->multipartState == pMultipartError)
     {
         client.clientState = SENDING_ERROR;
         std::cerr << "Error: Upload finished unexpectedly.\n";
@@ -456,17 +459,23 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
             close(data->filefd);
         }
     }
-    else
+    else if (data->multipartState == pMultipartDone) // means we are done.
     {
         client.clientState = SENDING_CHUNKS;
+        if (data->filefd != -1)
+        {
+            close(data->filefd);
+        }
         std::cout << "Success: Upload finished.\n";
         // auth->redirectToPage(req.cfd, "./www/auth/profile.html", 200); // Your success logic
     }
     data->socket_chunk = data->multipart_chunk;
+    data->multipart_chunk.clear();
+    client.requestBuff.clear();
 
-    map <string, string> dataMap;
-    dataMap["data"] =  formDataDiv;
-    string page = dynamicRender("./www/auth/form.html", dataMap);
-    req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-    makeResponse(req, page);
+    // map <string, string> dataMap;
+    // dataMap["data"] =  formDataDiv;
+    // string page = dynamicRender("./www/auth/form.html", dataMap);
+    // req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+    // makeResponse(req, page);
 }

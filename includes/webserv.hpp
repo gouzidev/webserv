@@ -60,6 +60,7 @@ enum MultipartState
     pMultipartBoundary,
     pMultipartHeaders,
     pMultipartBody,
+    pMultipartError,
     pMultipartDone
 };
 
