@@ -109,29 +109,6 @@ bool checkSessions(time_t &lastCleanup, Auth *auth)
     return true;
 }
 
-bool WebServ::processReqBodyChunk(Client &client)
-{
-    Request &req = client.request;
-    ServerNode &serv = req.serv;
-    string contentType = client.request.headers["content-type"];
-    
-    if (req.contentType == textPlain_t)
-    {
-
-    }
-    else if (req.contentType == wwwURLEncoded_t) // handle form post request
-    {
-        // handleFormData(client);
-    }   
-    else if (req.contentType == multipartFormData_t) // handle file upload
-    {
-        cout << "handling file upload" << endl;
-        
-
-    }
-
-    return true;
-}
 
 void Request::setHeaders(string &buff, size_t startLineEnd, size_t headersEnd)
 {
