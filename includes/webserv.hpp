@@ -89,7 +89,6 @@ typedef string REQUEST;
 
 enum BodyState
 {
-    BODY_NONE,
     BODY_START,
     BODY_MIDDLE,
     BODY_DONE,
@@ -124,7 +123,7 @@ class Client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
 
-        BodyState bodyState;
+        BodyState bodyState; // this state to manage reading the body
         
         Request &request;
         
@@ -159,28 +158,38 @@ class Response
 
 struct UploadData
 {
-    bool isInit;
     MultipartState multipartState;
     ChunkedState chunkedState;
-    // byte tracking
-    ssize_t bytesRead;
-    ssize_t bytesTotal;
 
-    // current content type
+    // current content type header without boundary
     std::string contentType;
 
+    int filefd;
 
+    string multipart_chunk;
+    string socket_chunk;
     std::string filename;
     std::string name;
+    bool isChunked;
+    size_t remaining_in_chunk;
 
     // boundary vars
-    size_t headerBoundaryPos;
     std::string rawBoundary;
     std::string boundary_marker;
     std::string end_boundary_marker;
     std::string first_boundary_marker;
 
-    UploadData();
+    char socket_read_buffer[BUFFSIZE];
+
+    UploadData(Client &client);
+};
+
+enum ContentType
+{
+    textPlain_t,
+    wwwURLEncoded_t,
+    multipartFormData_t,
+    OTHER_t
 };
 
 class Request
@@ -201,13 +210,20 @@ class Request
         void setCookies();
         unsigned short error;
         long contentLen;
-        struct UploadData uploadData;
+        struct UploadData *uploadData;
         map <string, string> cookies;
+
+        bool isChunked;
+        ContentType contentType;    // text/plain
+                                    // application/x-www-form-urlencoded
+                                    //   multipart/form-data                 
+        
 
     public:
         int cfd; // client fd
         void setStartLine(string);
         void setHeader(string line);
+        void setHeaders(string &buff, size_t startLineEnd, size_t headersEnd);
         void setBody(string line);
         string getSessionKey();
         int isStartLineValid();
@@ -220,6 +236,7 @@ class Request
         bool fillHeaders(int fd);
         vector<string> &getBody();
         Request(ServerNode &serv);
+        void verifyHeaders(Client &client);
 };
 
 
@@ -276,14 +293,14 @@ class WebServ
         string listUploadFiles(string root, Request req);
         bool parseHeaders(Client &client);
         bool parseBody(Client &client);
-        bool processReqBody(Client &client);
         bool processReqBodyChunk(Client &client);
-        bool parsePostBody(Client &client);
+        bool handleBodyStart(Client &client);
         void cleanClient(Client &client);
         void getMimeType(Request &req);
         void handleClientRead(Client &client);
         void handleClientWrite(Client &client);
 
+        void setClientReadyToRecvData(Client &client);  // this will set the right flags for epoll, and make client ready to handle the data sent to him, will make call to handleClientWrite possible
 
         void processCompleteRequest(Client &client);
 
@@ -329,8 +346,6 @@ string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);
 
 string dynamicRender(string path, map<string, string> &data); // for html files
-
-bool checkIfChunked(Request &req);
 
 string getLocation(Request &req, ServerNode &servNode); // resource no location is the rest of location part
 

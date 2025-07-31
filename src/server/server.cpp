@@ -115,11 +115,15 @@ bool WebServ::processReqBodyChunk(Client &client)
     ServerNode &serv = req.serv;
     string contentType = client.request.headers["content-type"];
     
-    if (contentType == "application/x-www-form-urlencoded") // handle form post request
+    if (req.contentType == textPlain_t)
+    {
+
+    }
+    else if (req.contentType == wwwURLEncoded_t) // handle form post request
     {
         // handleFormData(client);
     }   
-    else if (startsWith(contentType, "multipart/form-data; boundary=")) // handle file upload
+    else if (req.contentType == multipartFormData_t) // handle file upload
     {
         cout << "handling file upload" << endl;
         
@@ -129,59 +133,17 @@ bool WebServ::processReqBodyChunk(Client &client)
     return true;
 }
 
-bool WebServ::processReqBody(Client &client) // will parse post body
+void Request::setHeaders(string &buff, size_t startLineEnd, size_t headersEnd)
 {
-    long contentLen = client.request.contentLen;
-    
-
-
-
-    if (contentLen == client.bodyBytesRead) // done.  this is usally when its a small request
-    {
-        processCompleteRequest(client);
-        return true;
-    }
-
-
-    else if (contentLen > BUFFSIZE)
-    {
-        processReqBodyChunk(client);
-        return false;
-    }
-
-}
-
-bool WebServ::parseHeaders(Client &client)
-{
-    Request &req = client.request;
-    string &buff = client.requestBuff;
-    size_t headersEnd;
-
-    size_t startLineEnd = buff.find("\r\n");
-    if (startLineEnd == string::npos)
-        return false;
-    if (req.startLine.empty())
-    {
-        string startLine = buff.substr(0, startLineEnd);
-        req.setStartLine(startLine);
-        req.isStartLineValid();
-    }
-    headersEnd = buff.find("\r\n\r\n");
-    if (headersEnd == string::npos)
-        return false;
-
-
     size_t i = startLineEnd + 2;
     while (i < headersEnd)
     {
         size_t nextLineEnd = buff.find("\r\n", i);
-        if (nextLineEnd == string::npos || nextLineEnd > headersEnd)
-        {
+        if (nextLineEnd > headersEnd)
             break;
-        }
         
         string headerLine = buff.substr(i, nextLineEnd - i);
-        req.setHeader(headerLine);
+        setHeader(headerLine);
 
         size_t colonPos = headerLine.find(':');
         if (colonPos != string::npos)
@@ -193,17 +155,76 @@ bool WebServ::parseHeaders(Client &client)
             transform(key.begin(), key.end(), key.begin(), ::tolower);
             
             if (key == "content-length")
-                req.contentLen = atol(val.c_str());
+                contentLen = atol(val.c_str());
         }
         i = nextLineEnd + 2;
     }
+}
 
+void Request::verifyHeaders(Client &client)
+{
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    size_t headersEnd;
+    map <string, string> &headers = req.headers;
+
+    if (req.reqType == "POST")
+    {
+        if (!exists(headers, "content-length") && !exists(headers, "transfer-encoding"))
+        {
+            cerr << "bad request, no content type and no transfer encoding" << endl;
+            throw HttpException(413, client); // payload too large
+        }
+        if (exists(headers, "content-type"))
+        {
+            string &contentType = headers.at("content-type");
+            if (contentType == "text/plain")
+                req.contentType = textPlain_t;
+            else if (contentType == "application/x-www-form-urlencoded")
+                req.contentType = wwwURLEncoded_t;
+            else if (startsWith(contentType, "multipart/form-data; boundary="))
+                req.contentType = multipartFormData_t;
+            else
+                req.contentType = OTHER_t;
+        }
+        else if (exists(headers, "content-type") && req.contentLen > 0) // bad request
+        {
+            throw HttpException(400, client); // no content-type but body is present
+        }
+    }
+}
+
+bool WebServ::parseHeaders(Client &client)
+{
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    size_t headersEnd;
+    map <string, string> &headers = req.headers;
+
+
+    size_t startLineEnd = buff.find("\r\n");
+    if (startLineEnd == string::npos)
+        return false; // still not done -> read more
+    if (req.startLine.empty())
+    {
+        string startLine = buff.substr(0, startLineEnd);
+        req.setStartLine(startLine);
+        req.isStartLineValid();
+    }
+    headersEnd = buff.find("\r\n\r\n");
+    if (headersEnd == string::npos)
+        return false; // still not done -> read more
+
+    req.contentLen = -1;
+   
+    req.setHeaders(buff, startLineEnd, headersEnd);
+    req.verifyHeaders(client); // currently verifying post only
 
     size_t bodyStart = headersEnd + 4;
     if (bodyStart < buff.size())
     {
         client.requestBuff = buff.substr(bodyStart);
-        client.bodyBytesRead += client.requestBuff.size();
+        client.bodyBytesRead = client.requestBuff.size();
     }
     else
         client.requestBuff = "";
@@ -214,6 +235,54 @@ bool WebServ::parseHeaders(Client &client)
     return true;
 }
 
+bool WebServ::handleBodyStart(Client &client) // return true means we are done handlign the body
+{
+    Request &req = client.request;
+    string &buff = client.requestBuff;
+    map <string, string> &headers = req.headers;
+    ServerNode &serv = req.serv;
+    string locationTarget = getLocation(req, serv); // will get "/" if the location is not in the server--
+    LocationNode locationNode = serv.locationDict.find(locationTarget)->second;
+    if (locationNode.isProtected)
+    {
+        string sessionKey = req.extractSessionId();
+        if (!auth->isLoggedIn(sessionKey))
+        {
+            cout << "un auth" << endl;
+            throw HttpException(401, client);
+        }
+    }
+    if (req.reqType == "POST")
+    {
+        // first lets handle super short requests like for /login ...
+        if (req.contentType == ContentType::wwwURLEncoded_t)
+        {
+            if (locationTarget == "/login")
+                handleLogin(client);
+            else if (locationTarget == "/signup")
+                handleSignup(client);
+            else if (locationTarget == "/logout")
+                handleLogout(client);
+            else
+                handleFormData(client);
+            setClientReadyToRecvData(client);
+        }
+        else if (req.contentType == ContentType::textPlain_t)
+        {
+            handleFormData(client);
+        }
+        else if (req.contentType == ContentType::multipartFormData_t)
+        {
+            handleUpload(client, locationNode);
+        }
+        else
+        {
+            handleFormData(client);
+        }
+        return true;
+    }
+}
+
 bool WebServ::parseBody(Client &client) // returning true means task is done
 {
     Request &req = client.request;
@@ -221,80 +290,30 @@ bool WebServ::parseBody(Client &client) // returning true means task is done
     map <string, string> &headers = req.headers;
 
     // the buffer will have data always cause we did a recv before
-    if (req.getReqType() == "GET" || req.getReqType() == "DELETE")
-    {
-        if (req.contentLen > 0)
-        {
-            if (buff.length() >= req.contentLen)
-            {
-                // process get and delete request
-                client.clientState = SENDING_CHUNKS;
-                buff.erase(0, req.contentLen); // ignoring the body but reading it
-                processCompleteRequest(client);
-                return true;
-            }
-            return false; // need more data so go back to epoll_wait
-        }
-        else
-        {
-            // no body expected for get and delete so handle the request!
-            processCompleteRequest(client);
-            return true;
-        }
-
-
-    }
-    else if (req.getReqType() == "POST")
-    {
-        return parsePostBody(client);
-    }
-}
-
-
-void WebServ::processCompleteRequest(Client &client)
-{
-    Request &req = client.request;
-    string &buff = client.requestBuff;
-    map <string, string> &headers = req.headers;
-    if (req.getReqType() == "POST")
-    {
-        postMethode(client);
-    }
-    else if (req.getReqType() == "GET")
-    {
-        getMethode(req, req.serv);
-    }
-    else if (req.getReqType() == "DELETE")
-    {
-        deleteMethod(req, req.serv);
-    }
-    else
-    {
-        cout << "Unknown request type: " << req.getReqType() << endl;
-        throw HttpException(501, client); // Not Implemented
-    }
-    ev.data.fd = client.cfd;
-    ev.events = EPOLLOUT | EPOLLET; // we are done reading,
-    client.clientState = SENDING_CHUNKS;
-    epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
-}
-
-
-bool WebServ::parsePostBody(Client &client)
-{
-    Request &req = client.request;
-    string &buff = client.requestBuff;
-    map <string, string> &headers = req.headers;
-    // the buffer will have data always cause we did a recv before
     switch (client.bodyState)
     {
-        case BODY_START:
-            return processReqBody(client);
+        case BodyState::BODY_START:
+            // first time
+            handleBodyStart(client);
+
             break;
-        
+        case BodyState::BODY_DONE:
+            return true;
         default:
-            return false;
+            break;
     }
+
+
+    return false;
+}
+
+void WebServ::setClientReadyToRecvData(Client &client)
+{
+    ev.data.fd = client.cfd;
+    ev.events = EPOLLOUT | EPOLLET; // we are done reading,
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
+    client.clientState = SENDING_CHUNKS;
+    client.bodyState = BODY_DONE;
 }
 
 void WebServ::handleClientRead(Client &client)
@@ -328,7 +347,7 @@ void WebServ::handleClientRead(Client &client)
                     made_progress = true;
                 }
                 break;
-    
+
             case READING_BODY:
                 if (parseBody(client))
                     made_progress = true;

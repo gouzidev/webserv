@@ -5,8 +5,7 @@
 Request::Request(ServerNode &serv) : serv(serv)
 {
     contentLen = 0;
-    uploadData.multipartState = pMultipartBoundary;
-    uploadData.chunkedState = pChunkSize;
+    uploadData = NULL;
     
 }
 
@@ -19,7 +18,7 @@ Client::Client(Request &req): request(req)
     requestBuff = "";
     responseBuff = "";
     clientState = READING_HEADERS;
-    bodyState = BODY_NONE;
+    bodyState = BODY_START;
 }
 
 Client::Client(Request &req, int cfd): request(req)
@@ -30,7 +29,7 @@ Client::Client(Request &req, int cfd): request(req)
     requestBuff = "";
     responseBuff = "";
     this->clientState = READING_HEADERS;
-    bodyState = BODY_NONE;
+    bodyState = BODY_START;
 }
 
 Client::Client(Request &req, int cfd, int sfd): request(req)
@@ -42,7 +41,7 @@ Client::Client(Request &req, int cfd, int sfd): request(req)
     requestBuff = "";
     responseBuff = "";
     this->clientState = READING_HEADERS;
-    bodyState = BODY_NONE;
+    bodyState = BODY_START;
 }
 
 Client::Client(Request &req, int cfd,  int sfd, ClientState state): request(req)
@@ -54,7 +53,7 @@ Client::Client(Request &req, int cfd,  int sfd, ClientState state): request(req)
     requestBuff = "";
     responseBuff = "";
     this->clientState = state;
-    bodyState = BODY_NONE;
+    bodyState = BODY_START;
 }
 
 Client &Client::operator=(const Client &)
@@ -62,10 +61,35 @@ Client &Client::operator=(const Client &)
     return *this;
 }
 
-UploadData::UploadData()
+UploadData::UploadData(Client &client)
 {
+    Request &req = client.request;
+    ServerNode &serv = req.serv;
+    map <string, string> &headers = req.headers;
+    string &contentTypeHeader = headers["content-type"];
+    
     multipartState = pMultipartBoundary;
     chunkedState = pChunkSize;
+
+    size_t headerBoundaryPos = contentType.find("boundary=");
+    if (headerBoundaryPos == std::string::npos)
+    {
+        cout << "boundary not found in content-type header" << endl;
+        throw HttpException(400, client);
+    }
+    rawBoundary = contentTypeHeader.substr(headerBoundaryPos + 9);
+    boundary_marker = "\r\n--" + rawBoundary;
+    end_boundary_marker = boundary_marker + "--\r\n"; // recently added \r\n bcause when i debugged, i found out the data ends with it.
+    first_boundary_marker = "--" + rawBoundary;
+
+
+    remaining_in_chunk = 0;
+    socket_chunk  = "";
+    multipart_chunk = "";
+    isChunked = client.request.isChunked;
+
+    filefd = -1;
+    
 };
 
 void Request::setStartLine(string line)
@@ -347,6 +371,10 @@ void WebServ::urlFormParser(string str, map <string, string> &queryParms)
     }
     if (!key.empty())
         queryParms[key] = temp;
+    else if (!temp.empty())
+    {
+        queryParms[temp] = "";
+    }
 }
 
 int Request::isStartLineValid()

@@ -403,7 +403,6 @@ void WebServ::getMethode(Request &req, ServerNode &serv)
             Session session = auth->sessions.find(sessionKey)->second;
             loggedUser = session.getUser();
             data = loggedUser.getKeyValData();
-            cout << "user id " << userId << endl;
         }
         if (location == "/upload")
             handleGetUpload(req, node, loggedUser, location);

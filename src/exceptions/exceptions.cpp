@@ -114,7 +114,7 @@ ConfigException::ConfigException(const string &msg, short errorCode) : WebServEx
 
 
 
-HttpException::HttpException(short errorCode, Client &client) : errorCode(errorCode), client(client)
+HttpException::HttpException(short errorCode, Client &client) : client(client), errorCode(errorCode)
 {
 }
 

@@ -1,7 +1,6 @@
 #ifndef AUTH_HPP
 #define AUTH_HPP
 
-using namespace std;
 
 #include "../includes/webserv.hpp"
 // containers
@@ -10,6 +9,9 @@ using namespace std;
 #include <vector>
 
 #include <string>
+
+using namespace std;
+
 
 class Request;
 class ServerNode;
