@@ -103,11 +103,11 @@ enum ClientState
     READING_BODY, // reading body (and processing it)
 
     // in handleClientWrite
-    SENDING_CHUNKS, // sending response to client after reading (in chunks)
+    WRITING_RESPONSE, // default state when writing in the response buffer, if the response is small it will be sent if it's big the state will change to WRITING_RESPONSE
 
-    SENDING_DONE, // clean the client here (after sending the response)
+    WRITING_DONE, // clean the client here (after sending the response)
 
-    SENDING_ERROR, // send a http error (if a problem happened while reading the data or sending it, will set SENDING_DONE too to clean the client) 
+    WRITING_ERROR, // send a http error (if a problem happened while reading the data or sending it, will set WRITING_DONE too to clean the client) 
 };
 
 class Client
@@ -120,12 +120,11 @@ class Client
         int sfd; // server associated with client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
-
+        bool is_eof;
         BodyState bodyState; // this state to manage reading the body
         
         Request &request;
-        
-
+        long lastReadPosition; // where i stopped reading from my file in case of sending response with chunks
         // track progress
         size_t totalRead;
         size_t bodyBytesRead;
@@ -281,18 +280,18 @@ class WebServ
         void handleServerBlock(ServerNode &servNode, vector<string> &tokens, size_t &lineNum);
         void handleLocationLine(LocationNode &locationNode, vector<string> &tokens, size_t &lineNum);
         void parseLocation(ServerNode &serverNode, ifstream &configFile, string &line, size_t &lineNum);
-        void getMethode(Request &req, ServerNode &serverNode);
+        void getMethode(Client &client);
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
         void postMethode(Client &client);
         void deleteMethod(Request &req, ServerNode &servNode);
         void server();
-        void requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node);
+        void requestChecks(Client &client, string &location, LocationNode &node);
         string checkResource(string fullResource, string location);
         void handleGetUpload(Request req, LocationNode node, User loggedUser, string location);
         string uploadFile(string path, string root, Request req);
-        bool checkIndex(LocationNode node, Request req, string location);
+        bool checkIndex(LocationNode node, Client &client, string location);
         string listUploadFiles(string root, Request req);
         bool parseHeaders(Client &client);
         bool parseBody(Client &client);
@@ -313,7 +312,7 @@ class WebServ
         string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); 
         // void handleGetFile(Request req);
         void dirList(string root, string location, Request req);
-        void handleGetFile(Request req, map<string, string> &data);
+        void handleGetFile(Client &client, map<string, string> &data);
         int serverLoop();
         void urlFormParser(string body, map<string, string> &queryParms);
         void handleLogin(Client &client);
@@ -354,7 +353,8 @@ string getLocation(Request &req, ServerNode &servNode); // resource no location 
 
 string getErrorResponse(unsigned short errorCode, string body);
 
-string readFromFile(string path); // for html files
+// for html files
+std::string readChunkFromFile(Client &client);
 
 string getStatusMessage(unsigned short code);
 

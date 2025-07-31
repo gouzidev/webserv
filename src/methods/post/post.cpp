@@ -523,5 +523,5 @@ void WebServ::postMethode(Client &client)
 
     }
     client.requestBuff.clear();
-    client.clientState = SENDING_CHUNKS;
+    client.clientState = WRITING_RESPONSE;
 }

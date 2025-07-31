@@ -227,7 +227,11 @@ bool WebServ::parseHeaders(Client &client)
         client.bodyBytesRead = client.requestBuff.size();
     }
     else
+    {
         client.requestBuff = "";
+        setClientReadyToRecvData(client);
+        return false;
+    }
 
     client.clientState = READING_BODY;
     client.bodyState = BODY_START;
@@ -312,7 +316,7 @@ void WebServ::setClientReadyToRecvData(Client &client)
     ev.data.fd = client.cfd;
     ev.events = EPOLLOUT | EPOLLET; // we are done reading,
     epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
-    client.clientState = SENDING_CHUNKS;
+    client.clientState = WRITING_RESPONSE;
     client.bodyState = BODY_DONE;
 }
 
@@ -326,13 +330,11 @@ void WebServ::handleClientRead(Client &client)
     if (bytesRead <= 0)
     {
         if (bytesRead == 0)
-            client.clientState = SENDING_CHUNKS;
+            client.clientState = WRITING_RESPONSE;
         return ;
     }
 
     client.requestBuff.append(buff, bytesRead);
-
-
 
     bool made_progress = true;
     while (made_progress)
@@ -347,7 +349,6 @@ void WebServ::handleClientRead(Client &client)
                         made_progress = true;
                 }
                 break;
-
             case READING_BODY:
                 if (parseBody(client))
                     made_progress = true;
@@ -359,10 +360,13 @@ void WebServ::handleClientRead(Client &client)
     }
 }
 
-
 void WebServ::handleClientWrite(Client &client)
 {
-    
+    if (client.clientState == WRITING_RESPONSE)
+        if (client.request.getReqType() == "GET")
+            getMethode(client);
+    else if (client.clientState == WRITING_DONE)
+        return;
 }
 
 void WebServ::cleanClient(Client &client)
@@ -382,7 +386,6 @@ int WebServ::serverLoop()
             throw NetworkException("epoll_wait failed", 500);
         for (int i = 0 ; i < nfds; i++)
         {
-
             int readyFd = events[i].data.fd;
             // if the readyFd is in server Sockets, readyFd is a server fd, which means we have a new client, add it to the clients being monitored
             if (exists(servSockets, readyFd)) // here readyFd is a server socket
@@ -390,7 +393,6 @@ int WebServ::serverLoop()
                 int serverSock = readyFd;
                 struct sockaddr clientAddr;
                 socklen_t clientAddrSize = sizeof(struct sockaddr);
-
                 while (true)
                 {
                     int clientSock = accept(serverSock, &clientAddr, &clientAddrSize);  // check if fails
@@ -421,23 +423,24 @@ int WebServ::serverLoop()
                     if (events[i].events & EPOLLIN)
                         handleClientRead(client);
                     else if (events[i].events & EPOLLOUT)
+                    {
+                        client.clientState = WRITING_RESPONSE;
                         handleClientWrite(client);
+                    }
                 }
                 catch (HttpException &e)
                 {
                     // here we will catch http exceptions. we will have the http code in obj -> e
-                        // we will use that to generate an error response that will be sent in next event with handleClientWrite in SENDING_ERROR state.
+                        // we will use that to generate an error response that will be sent in next event with handleClientWrite in WRITING_ERROR state.
                         // we have a client object that we can use to send the response inside the error obj
 
                         Client client  = e.getClient();
                         client.responseBuff = "error";
-                        client.clientState = SENDING_ERROR;
+                        client.clientState = WRITING_ERROR;
                 }
-                
 
             }
-
-            if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
+            if (exists(clients, readyFd) && clients.at(readyFd).clientState == WRITING_DONE)
             {
                 cleanClient(clients.at(readyFd));
             }

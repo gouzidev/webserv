@@ -452,7 +452,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     // === 3. FINAL CHECK & CLEANUP ===
     if (data->multipartState == pMultipartError)
     {
-        client.clientState = SENDING_ERROR;
+        client.clientState = WRITING_ERROR;
         std::cerr << "Error: Upload finished unexpectedly.\n";
         if (data->filefd != -1)
         {
@@ -461,7 +461,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     }
     else if (data->multipartState == pMultipartDone) // means we are done.
     {
-        client.clientState = SENDING_CHUNKS;
+        client.clientState = WRITING_RESPONSE;
         if (data->filefd != -1)
         {
             close(data->filefd);

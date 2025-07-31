@@ -73,7 +73,7 @@ void Auth::redirectToLogin(Client &client, int errorCode)
     Request &req = client.request;
     int cfd = client.cfd;
 
-    string loginFile = readFromFile("./www/login/login.html"); // must be changed !
+    string loginFile = readChunkFromFile(client); // must be changed !
     string response = "";
 
     response += "HTTP/1.1 " + ushortToStr(errorCode) + " " + getStatusMessage(errorCode) + " \r\n";
@@ -94,7 +94,7 @@ void Auth::redirectToPage(Client &client, string page, int errorCode)
     int cfd = client.cfd;
 
     string response;
-    string file = readFromFile(page);
+    string file = readChunkFromFile(client);
     response += "HTTP/1.1 " + ushortToStr(errorCode) + " " + getStatusMessage(errorCode) + " \r\n";
     response +=  "Content-Type: text/html\r\n";
     response +=  "Content-Length: " + ushortToStr(file.size()) + "\r\n\r\n";

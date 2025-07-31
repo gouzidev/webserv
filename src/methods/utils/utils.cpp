@@ -2,32 +2,94 @@
 #include "../../../includes/Debugger.hpp"
 #include "../../../includes/Exceptions.hpp"
 
-string readFromFile(string path) // for html files
+// string readChunkFromFile(string path) // for html files
+// {
+//     // (void)path;
+//     string content;
+//     std::ifstream file(path.c_str());
+//     if (file)
+//     {
+//         string line;
+//         // cout << "Reading file: " << path << endl;
+//         while (getline(file, line))
+//         {
+//             // cout << "line is " << line << endl;
+//             // cout << "last char is [" << line[line.size() - 1] << "]" << endl;
+//            content += line;
+//         }
+//         // cout << "content is " << content << endl;
+//         file.close();
+//         return content;
+//     }
+//     else
+//     {
+//         cout << "Error opening file: " << path << endl;
+//         return "";
+//     }
+//     return "";
+// }
+
+
+std::string readChunkFromFile(Client &client)
 {
-    // (void)path;
-    string content;
-    // char path_[] = "/home/akoraich/ourwebserve/www/asma.html";
-    std::ifstream file(path.c_str());
-    if (file)
-    {
-        string line;
-        // cout << "Reading file: " << path << endl;
-        while (getline(file, line))
-        {
-            // cout << "line is " << line << endl;
-            // cout << "last char is [" << line[line.size() - 1] << "]" << endl;
-           content += line;
-        }
-        // cout << "content is " << content << endl;
-        file.close();
-        return content;
-    }
-    else
-    {
-        cout << "Error opening file: " << path << endl;
+std::string chunkContent;
+    std::ifstream file(client.request.fullResource.c_str(), std::ios::binary); // Open in binary mode for raw byte reading
+
+    client.is_eof = false; // Assume not EOF until proven otherwise
+
+    if (!file.is_open()) {
+        std::cerr << "Error opening file" << std::endl;
         return "";
     }
-    return "";
+
+    // Seek to the last read position
+    file.seekg(client.lastReadPosition);
+
+    // Check if seeking failed (e.g., position is beyond EOF)
+    if (file.fail() && client.lastReadPosition != 0) { // Only if not starting from 0 and it failed
+        std::cerr << "Error seeking to position " << client.lastReadPosition << std::endl;
+        file.clear(); // Clear the error flags
+        file.seekg(0, std::ios::end); // Move to the end to get actual file size
+        if (file.tellg() <= client.lastReadPosition) {
+             client.is_eof = true; // If target position is beyond actual EOF
+             file.close();
+             return "";
+        }
+        file.seekg(client.lastReadPosition); // Try seeking again, perhaps it's just past the end of a partial read
+    }
+
+
+    char* buffer = new char[BUFFSIZE + 1]; // +1 for null terminator for string conversion
+    
+    file.read(buffer, BUFFSIZE); // Attempt to read BUFFSIZE bytes
+    size_t bytesActuallyRead = file.gcount(); // Get the number of bytes actually extracted
+
+    if (bytesActuallyRead > 0) {
+        buffer[bytesActuallyRead] = '\0'; // Null-terminate the portion read
+        chunkContent.assign(buffer);      // Assign to string
+    }
+
+    delete[] buffer; // Free the allocated memory
+
+    // After attempting to read, check the stream state
+    if (file.eof() || bytesActuallyRead < BUFFSIZE) {
+        // If eofbit is set OR we read less than requested (and not due to an error),
+        // it means we've hit or passed the end of the file.
+        client.is_eof = true;
+        client.clientState = WRITING_DONE;
+    }
+
+    // Update the last read position
+    client.lastReadPosition = file.tellg();
+    if (client.lastReadPosition == -1 && client.is_eof) { // If tellg returns -1 at EOF, keep it at the end
+         // This can happen if you read exactly to EOF and then tellg() might indicate failure.
+         // A more robust way would be to get the total file size and compare.
+         // For now, if is_eof is true and tellg is -1, it confirms EOF.
+    }
+
+
+    file.close();
+    return chunkContent;
 }
 
 // pair <string, string> parseData(string line)
@@ -158,16 +220,16 @@ void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servN
     string errorPageName;
     string errorPageStr;
     map <string , string> errorData;
-    if (exists(servNode.errorNodes, errCode))
-    {
-        errorPageName = servNode.errorNodes[errCode]; 
-        errorPageStr = readFromFile(errorPageName);
-    }
-    else
-    {
+    // if (exists(servNode.errorNodes, errCode))
+    // {
+    //     errorPageName = servNode.errorNodes[errCode]; 
+    //     errorPageStr = readChunkFromFile(errorPageName);
+    // }
+    // else
+    // {
         errorData = getErrorData(errCode);
         errorPageStr = dynamicRender(servNode.defaultErrorPage, errorData);
-    }
+    // }
     errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + getStatusMessage(errCode) + " \r\n";
     errorRes +=  "Content-Type: text/html\r\n";
     errorRes +=  "Content-Length: " + ushortToStr(errorPageStr.size()) + "\r\n\r\n";
@@ -175,5 +237,3 @@ void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servN
     send(clientfd, errorRes.c_str(), errorRes.length(), 0);
 
 }
-
-

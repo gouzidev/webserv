@@ -16,11 +16,11 @@ void Response::setStatusLine(string sttsLine)
 void makeResponse(Request req, string fileContent)
 {
     std::stringstream ss;
-    ss << fileContent.length();
+    ss << BUFFSIZE;
     string contentLength = ss.str();
     // "\r\n";
     // "Hello, World!";
-    // string File = readFromFile(indexPath);
+    // string File = readChunkFromFile(indexPath);
 
     // const char *testResponse =
     // "HTTP/1.1 200 OK\r\n"
@@ -128,11 +128,11 @@ string WebServ::uploadFile(string path, string root, Request req)
     string filesStr = listUploadFiles(root + "/files/", req);
     data["files"] = filesStr;
     string fileContent = dynamicRender(path, data);
-    // fileContent += readFromFile("/home/akoraich/webserv/www/upload/files3.html");
+    // fileContent += readChunkFromFile("/home/akoraich/webserv/www/upload/files3.html");
     return fileContent;
 }
 
-bool WebServ::checkIndex(LocationNode node, Request req, string location)
+bool WebServ::checkIndex(LocationNode node, Client &client, string location)
 {
     string fileContent;
     string fileName;
@@ -141,18 +141,18 @@ bool WebServ::checkIndex(LocationNode node, Request req, string location)
     {
         if(node.root != "")
             fileName = node.root + "/" + node.index[i];
-        if (location == "/upload")
-            fileContent = uploadFile(node.root + "/" + node.index[i], node.root, req); // fiiiiix
+        // if (location == "/upload")
+        //     fileContent = uploadFile(node.root + "/" + node.index[i], node.root, client.request); // fiiiiix
         else
-            fileContent = readFromFile(fileName);
+            fileContent = readChunkFromFile(client);
         if (fileContent != "")
         {
-            req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-            makeResponse(req, fileContent);
+            client.request.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+            makeResponse(client.request, fileContent);
             return 0;
         }
     }
-    throw ConfigException("couldnt find the index", 500);
+    throw HttpException(500, client);
 }
 
 // string getFilePath(Request req)
@@ -164,7 +164,7 @@ bool WebServ::checkIndex(LocationNode node, Request req, string location)
 // void WebServ::handleGetFile(Request req)
 // {
 //     req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-//     string fileContent = readFromFile(req.fullResource);
+//     string fileContent = readChunkFromFile(req.fullResource);
 //     makeResponse(req, fileContent);
 // }
 
@@ -224,38 +224,38 @@ string runCgi(Request req)
     return (cgiOutput);
 }
 
-void WebServ::handleGetFile(Request req, map<string, string> &data)
+void WebServ::handleGetFile(Client &client, map<string, string> &data)
 {
     string fileContent;
-    req.resp.setStatusLine("HTTP/1.0 200 OK\r\n");
-    if (req.mimeType == "text/html")
+    client.request.resp.setStatusLine("HTTP/1.0 200 OK\r\n");
+    if (client.request.mimeType == "text/html")
     {
-        if (data.empty())
-            fileContent = readFromFile(req.fullResource);
-        else
-            fileContent = dynamicRender(req.fullResource, data);
-        makeResponse(req, fileContent);
+        // if (data.empty())
+            fileContent = readChunkFromFile(client);
+        // else
+        //     fileContent = dynamicRender(client.request.fullResource, data);
+        makeResponse(client.request, fileContent);
     }
-    else if (req.mimeType == "cgi")
+    else if (client.request.mimeType == "cgi")
     {
-        req.mimeType = "text";
-        fileContent = runCgi(req);
-        makeResponse(req, fileContent);
+        client.request.mimeType = "text";
+        fileContent = runCgi(client.request);
+        makeResponse(client.request, fileContent);
     }
-    else if (req.mimeType == "not supported")
+    else if (client.request.mimeType == "not supported")
     {
-        req.mimeType = "text";
+        client.request.mimeType = "text";
         fileContent = "this file type is not supported";
-        makeResponse(req, fileContent);
+        makeResponse(client.request, fileContent);
     }
     else
     {
-        cout << "Serving binary file: " << req.fullResource << endl;
+        cout << "Serving binary file: " << client.request.fullResource << endl;
     
-        int filefd = open(req.fullResource.c_str(), O_RDONLY);
+        int filefd = open(client.request.fullResource.c_str(), O_RDONLY);
         if (filefd == -1) {
-            cout << "Failed to open file: " << req.fullResource << endl;
-            sendErrPageToClient(req.cfd, 404, req.serv);
+            cout << "Failed to open file: " << client.request.fullResource << endl;
+            sendErrPageToClient(client.request.cfd, 404, client.request.serv);
             return;
         }
     
@@ -263,7 +263,7 @@ void WebServ::handleGetFile(Request req, map<string, string> &data)
         struct stat fileStat;
         if (fstat(filefd, &fileStat) == -1) {
             close(filefd);
-            sendErrPageToClient(req.cfd, 500, req.serv);
+            sendErrPageToClient(client.request.cfd, 500, client.request.serv);
             return;
         }
 
@@ -272,10 +272,10 @@ void WebServ::handleGetFile(Request req, map<string, string> &data)
         contentLength << fileStat.st_size;
         
         string responseHeader = "HTTP/1.1 200 OK\r\n";
-        responseHeader += "Content-Type: " + req.mimeType + "\r\n";
+        responseHeader += "Content-Type: " + client.request.mimeType + "\r\n";
         responseHeader += "Content-Length: " + contentLength.str() + "\r\n\r\n";
         
-        ssize_t headerSent = send(req.cfd, responseHeader.c_str(), responseHeader.size(), 0);
+        ssize_t headerSent = send(client.request.cfd, responseHeader.c_str(), responseHeader.size(), 0);
         if (headerSent <= 0)
         {
             cout << "Failed to send headers" << endl;
@@ -294,7 +294,7 @@ void WebServ::handleGetFile(Request req, map<string, string> &data)
             
             while (bytesSent < totalToSend)
             {
-                ssize_t sent = send(req.cfd, buff + bytesSent, totalToSend - bytesSent, 0);
+                ssize_t sent = send(client.request.cfd, buff + bytesSent, totalToSend - bytesSent, 0);
                 if (sent <= 0)
                 {
                     cout << "Send failed after " << totalSent << " bytes" << endl;
@@ -335,54 +335,54 @@ string getFullResource(string root, string location, string target)
     return root + path;
 }
 
-void WebServ::requestChecks(Request &req, ServerNode &serv, string &location, LocationNode &node)
+void WebServ::requestChecks(Client &client, string &location, LocationNode &node)
 {
-    string target = req.getResource();
+    string target = client.request.getResource();
     cout << "target is " << target << endl;
-    location = getLocation(req, serv);
+    location = getLocation(client.request, client.request.serv);
     if (location == "")
-        throw ConfigException("forbidden request", 404);
-    node = serv.locationDict.find(location)->second;
-    if (!exists(node.methods, req.getReqType()))
-        throw ConfigException(getStatusMessage(405), 405);
-    req.fullResource = getFullResource(node.root, location, target);
+        throw HttpException(404, client);
+    node = client.request.serv.locationDict.find(location)->second;
+    if (!exists(node.methods, client.request.getReqType()))
+        throw HttpException(405, client);
+    client.request.fullResource = getFullResource(node.root, location, target);
 }
 
-void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, string location)
-{
-    unsigned int userId = loggedUser.getId();
-    map <string, string> data = loggedUser.getKeyValData();
-    int i = req.fullResource.size();
-    while (i > 0)
-    {
-        if (req.fullResource[i - 1] == '/')
-           break;
-        i--;
-    }
-    string fileName = req.fullResource.substr(i);
-    string uploadResource = node.root + "/" + getFileNameWithUserId(req, userId ,fileName); //will need updates
-    if (isDirectory(req.fullResource) == true)
-    {
-        if (node.index.empty() == true || checkIndex(node, req, location) == 1)
-        {
-            if(node.autoIndex == true)
-                dirList(node.root, location, req);
-            else
-                throw ConfigException("forbidden request", 404);
-        }
-    }
-    else if (isRegularFile(uploadResource) == true)
-    {
-        req.fullResource = uploadResource;
-        cout << "should be fileeee" << endl;
-        getMimeType(req);
-        handleGetFile(req, data);
-    }
-    else
-        throw ConfigException("anaaa", 404);
-}
+// void WebServ::handleGetUpload(Request req, LocationNode node, User loggedUser, string location)
+// {
+//     unsigned int userId = loggedUser.getId();
+//     map <string, string> data = loggedUser.getKeyValData();
+//     int i = req.fullResource.size();
+//     while (i > 0)
+//     {
+//         if (req.fullResource[i - 1] == '/')
+//            break;
+//         i--;
+//     }
+//     string fileName = req.fullResource.substr(i);
+//     string uploadResource = node.root + "/" + getFileNameWithUserId(req, userId ,fileName); //will need updates
+//     if (isDirectory(req.fullResource) == true)
+//     {
+//         if (node.index.empty() == true || checkIndex(node, req, location) == 1)
+//         {
+//             if(node.autoIndex == true)
+//                 dirList(node.root, location, req);
+//             else
+//                 throw ConfigException("forbidden request", 404);
+//         }
+//     }
+//     else if (isRegularFile(uploadResource) == true)
+//     {
+//         req.fullResource = uploadResource;
+//         cout << "should be fileeee" << endl;
+//         getMimeType(req);
+//         handleGetFile(req, data);
+//     }
+//     else
+//         throw ConfigException("anaaa", 404);
+// }
 
-void WebServ::getMethode(Request &req, ServerNode &serv)
+void WebServ::getMethode(Client &client)
 {
     string sessionKey;
     map <string, string> data ;
@@ -392,44 +392,44 @@ void WebServ::getMethode(Request &req, ServerNode &serv)
     unsigned int userId;
     try
     {
-        requestChecks(req, serv, location, node);
+        requestChecks(client, location, node);
         //if location  is upload : 1. same as is protected 2. use encoding function (check if the user id is the same as the one in the file)
-        req.fullResource = checkResource(req.fullResource, location);
+        client.request.fullResource = checkResource(client.request.fullResource, location);
         if (node.isProtected)
         {
-            sessionKey = req.extractSessionId();
+            sessionKey = client.request.extractSessionId();
             if (!auth->isLoggedIn(sessionKey))
-                throw ConfigException("Unauthorised", 401);
+                throw HttpException(401, client);
             Session session = auth->sessions.find(sessionKey)->second;
             loggedUser = session.getUser();
             data = loggedUser.getKeyValData();
         }
-        if (location == "/upload")
-            handleGetUpload(req, node, loggedUser, location);
-        else if (isDirectory(req.fullResource) == true)
+        // if (location == "/upload")
+        //     handleGetUpload(client.request, node, loggedUser, location);
+        // if (isDirectory(client.request.fullResource) == true)
+        // {
+        //     if (node.index.empty() == true || checkIndex(node, client, location) == 1)
+        //     {
+        //         if(node.autoIndex == true)
+        //         dirList(node.root, location, client.request);
+        //         else
+        //         throw HttpException(404, client);
+        //     }
+        // }
+        if (isRegularFile(client.request.fullResource) == true)
         {
-            if (node.index.empty() == true || checkIndex(node, req, location) == 1)
-            {
-                if(node.autoIndex == true)
-                dirList(node.root, location, req);
-                else
-                throw ConfigException("forbidden request", 404);
-            }
-        }
-        else if (isRegularFile(req.fullResource) == true)
-        {
-            cout << "should be fileeee" << endl;
-            getMimeType(req);
-            handleGetFile(req, data);
+            getMimeType(client.request);
+            handleGetFile(client, data);
         }
         else
         {
-            throw ConfigException("Not Found", 404);
+            throw HttpException(404, client);
         }
     }
-    catch(ConfigException& e)
+    catch(HttpException& e)
     {
-        sendErrPageToClient(req.cfd, e.getErrorCode(), req.serv);
-        std::cerr << e.what() << '\n';
+        Client client  = e.getClient();
+        client.responseBuff = "error";
+        client.clientState = WRITING_ERROR;
     }
 }
