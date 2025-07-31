@@ -311,7 +311,8 @@ class WebServ
         // will get the original name and set the id found in the saved name 
         string getOriginalFileName(Request &req, string fileNameWithUserId, unsigned int &userIdAssociated); 
         // void handleGetFile(Request req);
-        void dirList(string root, string location, Request req);
+        void dirList(string root, string location, Client &client);
+
         void handleGetFile(Client &client, map<string, string> &data);
         int serverLoop();
         void urlFormParser(string body, map<string, string> &queryParms);
@@ -324,7 +325,8 @@ class WebServ
         
 };
 
-void makeResponse(Request req, string fileContent);
+void makeResponse(Client &client, string fileContent);
+
 
 void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
 string getQuickResponse(short errCode, string fileStr);

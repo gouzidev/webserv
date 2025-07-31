@@ -13,10 +13,10 @@ void Response::setStatusLine(string sttsLine)
     statusLine = sttsLine;
 }
 
-void makeResponse(Request req, string fileContent)
+void makeResponse(Client &client, string fileContent)
 {
     std::stringstream ss;
-    ss << BUFFSIZE;
+    ss << fileContent.length();
     string contentLength = ss.str();
     // "\r\n";
     // "Hello, World!";
@@ -26,9 +26,10 @@ void makeResponse(Request req, string fileContent)
     // "HTTP/1.1 200 OK\r\n"
     // "Content-Type: text/plain\r\n"
     // "Content-Length: " + strlen(File.c_str()) + "\r\n";
-    req.resp.fullResponse = req.resp.statusLine + "Content-Type: " + req.mimeType + "\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
-    // cout << "response is [ " << req.resp.fullResponse << " ]" << endl;
-    send(req.cfd, req.resp.fullResponse.c_str(), req.resp.fullResponse.size(), 0);
+    client.request.resp.fullResponse = client.request.resp.statusLine + "Content-Type: " + client.request.mimeType + "\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
+    cout << "response is [ " << client.request.resp.fullResponse << " ]" << endl;
+    send(client.cfd, client.request.resp.fullResponse.c_str(), client.request.resp.fullResponse.size(), 0);
+
 }
 
 string createDirList()
@@ -54,7 +55,7 @@ vector<string> getDirs(string mainDir)
     return dirs;
 }
 
-void WebServ::dirList(string root, string location, Request req)
+void WebServ::dirList(string root, string location, Client &client)
 {
     vector<string> subDirs = getDirs(root);
     User loggedUser;
@@ -67,7 +68,7 @@ void WebServ::dirList(string root, string location, Request req)
     
     if (location == "/upload")
     {
-        sessionKey = req.extractSessionId();
+        sessionKey = client.request.extractSessionId();
         if(!auth->isLoggedIn(sessionKey))
             throw ConfigException("Unauthorised", 401);
         Session session = auth->sessions.find(sessionKey)->second;
@@ -82,7 +83,7 @@ void WebServ::dirList(string root, string location, Request req)
         else if (location == "/upload")
         {
             unsigned int fileId;
-            string fileWithoutId = getOriginalFileName(req, subDirs[i], fileId);
+            string fileWithoutId = getOriginalFileName(client.request, subDirs[i], fileId);
             if (fileId != userId)
                 continue;
             dirlist += "<li><a href=\"" + location + "/" + fileWithoutId + "\">" + fileWithoutId + "</a></li>";
@@ -92,8 +93,8 @@ void WebServ::dirList(string root, string location, Request req)
     }
 
     dirlist += "</ul></body></html>";
-    req.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-    makeResponse(req, dirlist);
+    client.request.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
+    makeResponse(client, dirlist);
 }
 
 string WebServ::listUploadFiles(string root, Request req)
@@ -148,7 +149,7 @@ bool WebServ::checkIndex(LocationNode node, Client &client, string location)
         if (fileContent != "")
         {
             client.request.resp.setStatusLine("HTTP/1.1 200 OK\r\n");
-            makeResponse(client.request, fileContent);
+            makeResponse(client, fileContent);
             return 0;
         }
     }
@@ -230,23 +231,24 @@ void WebServ::handleGetFile(Client &client, map<string, string> &data)
     client.request.resp.setStatusLine("HTTP/1.0 200 OK\r\n");
     if (client.request.mimeType == "text/html")
     {
+        cout << "is text" << endl;
         // if (data.empty())
             fileContent = readChunkFromFile(client);
         // else
         //     fileContent = dynamicRender(client.request.fullResource, data);
-        makeResponse(client.request, fileContent);
+        makeResponse(client, fileContent);
     }
     else if (client.request.mimeType == "cgi")
     {
         client.request.mimeType = "text";
         fileContent = runCgi(client.request);
-        makeResponse(client.request, fileContent);
+        makeResponse(client, fileContent);
     }
     else if (client.request.mimeType == "not supported")
     {
         client.request.mimeType = "text";
         fileContent = "this file type is not supported";
-        makeResponse(client.request, fileContent);
+        makeResponse(client, fileContent);
     }
     else
     {
@@ -332,7 +334,7 @@ string getFullResource(string root, string location, string target)
     if (location == target)
         return root;
     string path = target.substr(location.size());
-    return root + path;
+    return root + "/" + path;
 }
 
 void WebServ::requestChecks(Client &client, string &location, LocationNode &node)
@@ -395,6 +397,7 @@ void WebServ::getMethode(Client &client)
         requestChecks(client, location, node);
         //if location  is upload : 1. same as is protected 2. use encoding function (check if the user id is the same as the one in the file)
         client.request.fullResource = checkResource(client.request.fullResource, location);
+        cout << " full resource is " << client.request.fullResource << endl;
         if (node.isProtected)
         {
             sessionKey = client.request.extractSessionId();
@@ -406,23 +409,25 @@ void WebServ::getMethode(Client &client)
         }
         // if (location == "/upload")
         //     handleGetUpload(client.request, node, loggedUser, location);
-        // if (isDirectory(client.request.fullResource) == true)
-        // {
-        //     if (node.index.empty() == true || checkIndex(node, client, location) == 1)
-        //     {
-        //         if(node.autoIndex == true)
-        //         dirList(node.root, location, client.request);
-        //         else
-        //         throw HttpException(404, client);
-        //     }
-        // }
+        if (isDirectory(client.request.fullResource) == true)
+        {
+            if (node.index.empty() == true || checkIndex(node, client, location) == 1)
+            {
+                if(node.autoIndex == true)
+                    dirList(node.root, location, client);
+                else
+                throw HttpException(404, client);
+            }
+        }
         if (isRegularFile(client.request.fullResource) == true)
         {
+            cout << "wiwiwiwi file " << endl;
             getMimeType(client.request);
             handleGetFile(client, data);
         }
         else
         {
+            cout << "nonononononon " << endl;
             throw HttpException(404, client);
         }
     }
