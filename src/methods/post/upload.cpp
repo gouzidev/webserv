@@ -274,6 +274,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     else
     {
         req.uploadData->socket_chunk.append(client.requestBuff);
+        client.requestBuff.clear();
     }
     data = req.uploadData;
 

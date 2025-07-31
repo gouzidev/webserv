@@ -237,3 +237,16 @@ void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servN
     send(clientfd, errorRes.c_str(), errorRes.length(), 0);
 
 }
+
+string getSmallErrPage(unsigned short errCode)
+{
+    string errorRes;
+    string errorMsg;
+    errorMsg = getStatusMessage(errCode);
+
+    errorRes += "HTTP/1.1 " + ushortToStr(errCode) + " " + errorMsg + " \r\n";
+    errorRes +=  "Content-Type: text/html\r\n";
+    errorRes +=  "Content-Length: " + ushortToStr(errorMsg.size()) + "\r\n\r\n";
+    errorRes += errorMsg;
+    return errorRes;
+}
