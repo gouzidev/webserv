@@ -108,6 +108,8 @@ enum ClientState
     WRITING_DONE, // clean the client here (after sending the response)
 
     WRITING_ERROR, // send a http error (if a problem happened while reading the data or sending it, will set WRITING_DONE too to clean the client) 
+
+    SENDING_DONE,
 };
 
 class Client
@@ -322,7 +324,7 @@ class WebServ
         void handleUpload(Client &client, LocationNode &locationNode);
         void handleFormData(Client &client);
         string getDataStrInDiv(string &name, string &value);
-        
+
 };
 
 void makeResponse(Client &client, string fileContent);

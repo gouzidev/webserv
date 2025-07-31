@@ -29,7 +29,8 @@ void makeResponse(Client &client, string fileContent)
     client.request.resp.fullResponse = client.request.resp.statusLine + "Content-Type: " + client.request.mimeType + "\r\n" + "Content-Length: " + contentLength + "\r\n\r\n" + fileContent;
     cout << "response is [ " << client.request.resp.fullResponse << " ]" << endl;
     send(client.cfd, client.request.resp.fullResponse.c_str(), client.request.resp.fullResponse.size(), 0);
-
+    if (client.clientState == WRITING_DONE)
+        client.clientState = SENDING_DONE;
 }
 
 string createDirList()
@@ -136,16 +137,19 @@ string WebServ::uploadFile(string path, string root, Request req)
 bool WebServ::checkIndex(LocationNode node, Client &client, string location)
 {
     string fileContent;
-    string fileName;
 
     for (unsigned long i = 0; i < node.index.size() ; i++)
     {
         if(node.root != "")
-            fileName = node.root + "/" + node.index[i];
+        {
+            client.request.fullResource = node.root + "/" + node.index[i];
+        }
         // if (location == "/upload")
         //     fileContent = uploadFile(node.root + "/" + node.index[i], node.root, client.request); // fiiiiix
-        else
-            fileContent = readChunkFromFile(client);
+        
+        cout << "is dir and there is index  " << client.request.fullResource << endl;
+        
+        fileContent = readChunkFromFile(client);
         if (fileContent != "")
         {
             client.request.resp.setStatusLine("HTTP/1.1 200 OK\r\n");

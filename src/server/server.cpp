@@ -311,7 +311,7 @@ bool WebServ::parseBody(Client &client) // returning true means task is done
             break;
     }
 
-
+    client.clientState = WRITING_RESPONSE;
     return false;
 }
 
@@ -369,7 +369,7 @@ void WebServ::handleClientWrite(Client &client)
     if (client.clientState == WRITING_RESPONSE)
         if (client.request.getReqType() == "GET")
             getMethode(client);
-    else if (client.clientState == WRITING_DONE)
+    if (client.clientState == SENDING_DONE)
         return;
 }
 
@@ -428,7 +428,7 @@ int WebServ::serverLoop()
                         handleClientRead(client);
                     else if (events[i].events & EPOLLOUT)
                     {
-                        client.clientState = WRITING_RESPONSE;
+                        
                         handleClientWrite(client);
                     }
                 }
@@ -444,7 +444,7 @@ int WebServ::serverLoop()
                 }
 
             }
-            if (exists(clients, readyFd) && clients.at(readyFd).clientState == WRITING_DONE)
+            if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
             {
                 cleanClient(clients.at(readyFd));
             }
