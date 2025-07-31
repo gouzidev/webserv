@@ -88,12 +88,7 @@ class Request;
 
 typedef string REQUEST;
 
-enum BodyState
-{
-    BODY_START,
-    BODY_MIDDLE,
-    BODY_DONE,
-};
+
 
 enum ClientState
 {
@@ -108,6 +103,8 @@ enum ClientState
     WRITING_DONE, // clean the client here (after sending the response)
 
     WRITING_ERROR, // send a http error (if a problem happened while reading the data or sending it, will set WRITING_DONE too to clean the client) 
+
+    SENDING_DONE // we sent the full respose to our beloved client 
 };
 
 class Client
@@ -121,7 +118,6 @@ class Client
         int ifd; // input  file desciptor -> will be used with get  request (open an input  file to send chunks from it)
         int ofd; // output file desciptor -> will be used with post request (open an output file to recv chunks to   it)
         bool is_eof;
-        BodyState bodyState; // this state to manage reading the body
         
         Request &request;
         long lastReadPosition; // where i stopped reading from my file in case of sending response with chunks
@@ -296,13 +292,12 @@ class WebServ
         bool parseHeaders(Client &client);
         bool parseBody(Client &client);
         bool processReqBodyChunk(Client &client);
-        bool handleBodyStart(Client &client);
         void cleanClient(Client &client);
         void getMimeType(Request &req);
         void handleClientRead(Client &client);
         void handleClientWrite(Client &client);
 
-        void setClientReadyToRecvData(Client &client);  // this will set the right flags for epoll, and make client ready to handle the data sent to him, will make call to handleClientWrite possible
+        void setClientReadyToRecvData(Client &client, bool error);  // this will set the right flags for epoll, and make client ready to handle the data sent to him, will make call to handleClientWrite possible
 
         void processCompleteRequest(Client &client);
 
@@ -327,6 +322,7 @@ class WebServ
 
 void makeResponse(Client &client, string fileContent);
 
+string getSmallErrPage(unsigned short errCode);
 
 void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
 string getQuickResponse(short errCode, string fileStr);

@@ -210,18 +210,18 @@ bool WebServ::parseHeaders(Client &client)
     else
     {
         client.requestBuff = "";
-        setClientReadyToRecvData(client);
+        setClientReadyToRecvData(client, false);
         return false;
     }
 
     client.clientState = READING_BODY;
-    client.bodyState = BODY_START;
     // returning true means we parsed all the headers (we also changed the state)
     return true;
 }
 
-bool WebServ::handleBodyStart(Client &client) // return true means we are done handlign the body
+bool WebServ::parseBody(Client &client) // returning true means task is done
 {
+
     Request &req = client.request;
     string &buff = client.requestBuff;
     map <string, string> &headers = req.headers;
@@ -250,7 +250,7 @@ bool WebServ::handleBodyStart(Client &client) // return true means we are done h
                 handleLogout(client);
             else
                 handleFormData(client);
-            setClientReadyToRecvData(client);
+            setClientReadyToRecvData(client, false);
         }
         else if (req.contentType == textPlain_t)
         {
@@ -269,36 +269,15 @@ bool WebServ::handleBodyStart(Client &client) // return true means we are done h
     return false;
 }
 
-bool WebServ::parseBody(Client &client) // returning true means task is done
-{
-    Request &req = client.request;
-    string &buff = client.requestBuff;
-    map <string, string> &headers = req.headers;
-
-    // the buffer will have data always cause we did a recv before
-    switch (client.bodyState)
-    {
-        case BODY_START:
-            // first time
-                handleBodyStart(client);
-            break;
-        case BODY_DONE:
-            return true;
-        default:
-            break;
-    }
-
-
-    return false;
-}
-
-void WebServ::setClientReadyToRecvData(Client &client)
+void WebServ::setClientReadyToRecvData(Client &client, bool error)
 {
     ev.data.fd = client.cfd;
     ev.events = EPOLLOUT | EPOLLET; // we are done reading,
     epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
-    client.clientState = WRITING_RESPONSE;
-    client.bodyState = BODY_DONE;
+    if (error)
+        client.clientState = WRITING_ERROR;
+    else
+        client.clientState = WRITING_RESPONSE;
 }
 
 void WebServ::handleClientRead(Client &client)
@@ -312,7 +291,7 @@ void WebServ::handleClientRead(Client &client)
     {
         if (bytesRead == 0)
             client.clientState = WRITING_RESPONSE;
-        return ;
+        return cleanClient(client);
     }
 
     client.requestBuff.append(buff, bytesRead);
@@ -344,10 +323,26 @@ void WebServ::handleClientRead(Client &client)
 void WebServ::handleClientWrite(Client &client)
 {
     if (client.clientState == WRITING_RESPONSE)
+    {
         if (client.request.getReqType() == "GET")
             getMethode(client);
-    else if (client.clientState == WRITING_DONE)
-        return;
+    }
+    else if (client.clientState == WRITING_DONE) // there is something in the buffer that needs to be sent (after post only .. maybe)
+    {
+
+    }
+    else if (client.clientState == WRITING_ERROR) // the responseBuff will already be filled just send it
+    {
+        // handle errors aka send or write
+        ssize_t err = send(client.cfd, client.responseBuff.c_str(), client.responseBuff.size(), 0);
+        if (err == -1)
+            cleanClient(client);
+        client.clientState = SENDING_DONE;
+    }
+    // else if (client.clientState == SENDING_DONE)
+    // {
+        
+    // }
 }
 
 void WebServ::cleanClient(Client &client)
@@ -404,24 +399,22 @@ int WebServ::serverLoop()
                     if (events[i].events & EPOLLIN)
                         handleClientRead(client);
                     else if (events[i].events & EPOLLOUT)
-                    {
-                        client.clientState = WRITING_RESPONSE;
                         handleClientWrite(client);
-                    }
                 }
                 catch (HttpException &e)
                 {
+                    cout << "catched an exception of error -> " << e.getErrorCode() << endl;
                     // here we will catch http exceptions. we will have the http code in obj -> e
                         // we will use that to generate an error response that will be sent in next event with handleClientWrite in WRITING_ERROR state.
                         // we have a client object that we can use to send the response inside the error obj
 
-                        Client client  = e.getClient();
-                        client.responseBuff = "error";
-                        client.clientState = WRITING_ERROR;
+                        Client &client  = e.getClient();
+                        client.responseBuff = getSmallErrPage(e.getErrorCode());
+                        setClientReadyToRecvData(client, true);
                 }
 
             }
-            if (exists(clients, readyFd) && clients.at(readyFd).clientState == WRITING_DONE)
+            if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
             {
                 cleanClient(clients.at(readyFd));
             }

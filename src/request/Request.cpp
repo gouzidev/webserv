@@ -18,7 +18,6 @@ Client::Client(Request &req): request(req)
     requestBuff = "";
     responseBuff = "";
     clientState = READING_HEADERS;
-    bodyState = BODY_START;
 }
 
 Client::Client(Request &req, int cfd): request(req)
@@ -29,7 +28,6 @@ Client::Client(Request &req, int cfd): request(req)
     requestBuff = "";
     responseBuff = "";
     this->clientState = READING_HEADERS;
-    bodyState = BODY_START;
 }
 
 Client::Client(Request &req, int cfd, int sfd): request(req)
@@ -41,7 +39,6 @@ Client::Client(Request &req, int cfd, int sfd): request(req)
     requestBuff = "";
     responseBuff = "";
     this->clientState = READING_HEADERS;
-    bodyState = BODY_START;
 }
 
 Client::Client(Request &req, int cfd,  int sfd, ClientState state): request(req)
@@ -53,7 +50,6 @@ Client::Client(Request &req, int cfd,  int sfd, ClientState state): request(req)
     requestBuff = "";
     responseBuff = "";
     this->clientState = state;
-    bodyState = BODY_START;
 }
 
 Client &Client::operator=(const Client &)
