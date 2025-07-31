@@ -250,12 +250,12 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
 
     long long clientMaxUploadSize = serv.clientMaxBodySize * 1024 * 1024;
     string sessionKey = req.extractSessionId();
-    if (!auth->isLoggedIn(sessionKey))
-    {
-        cout << "unauthorized upload attempt" << endl;
-        throw HttpException(401, client);
-    }
-    User &LoggedUser = auth->sessions.find(sessionKey)->second.getUser();
+
+    // if (!auth->isLoggedIn(sessionKey))
+    // {
+    //     cout << "unauthorized upload attempt" << endl;
+    //     throw HttpException(401, client);
+    // }
 
     long contentLen = client.request.contentLen;
     if (contentLen > clientMaxUploadSize)
@@ -263,10 +263,13 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
         cout << "upload size exceeds limit" << endl;
         throw HttpException(413, client);
     }
+    // User &LoggedUser = auth->sessions.find(sessionKey)->second.getUser();
+
     string formDataDiv = "";
 
     if (req.uploadData == NULL) // first time -> init it
     {
+ 
         req.uploadData = new UploadData(client);
     }
     UploadData *data = req.uploadData;
@@ -277,52 +280,21 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     // first, determine the transfer type. This flag controls which logic path we take.
     bool isChunked = data->isChunked; // done
 
-    // -- State for the Multipart Parser --
-    // this state machine handles the actual file content (boundaries, headers, body).
-    MultipartState multipartState = data->multipartState;
-    int filefd = data->filefd;
-    string filename = data->filename;
-    string name = data->name;
-
-
-    // -- State for the De-Chunker (only used if isChunked is true) --
-    // this state machine handles the chunked encoding itself (e.g., "4\r\nWiki\r\n").
-    ChunkedState chunkedState = data->chunkedState; // done
-    size_t remaining_in_chunk = data->remaining_in_chunk; // done
-    
-    // -- Buffers --
-    // `socket_chunk` holds the raw data exactly as it comes from the network.
-    string socket_chunk = client.requestBuff; // almost 
-    // `multipart_chunk` holds the clean, continuous data after de-chunking.
-    // for normal requests, data moves directly from socket_chunk to multipart_chunk.
-    string multipart_chunk = data->multipart_chunk; // done
-
-    // -- Network variables --
-    char socket_read_buffer[BUFFSIZE]; // done
-
-    string &contentType = req.headers["content-type"]; // done
-    size_t headerBoundaryPos = contentType.find("boundary=");  // discard
   
-    // done
-    string rawBoundary = contentType.substr(headerBoundaryPos + 9);
-    string boundary_marker = "\r\n--" + rawBoundary;
-    string end_boundary_marker = boundary_marker + "--\r\n"; // recently added \r\n bcause when i debugged, i found out the data ends with it.
-    string first_boundary_marker = "--" + rawBoundary;
-
     // --- LAYER 1: De-Chunker ---
     // fills the multipart_chunk with clean data
     if (isChunked)
     {
         bool chunk_progress = true; // discard
-        while (chunk_progress && chunkedState != pChunkEnd)
+        while (chunk_progress && data->chunkedState != pChunkEnd)
         {
             chunk_progress = false;
-            if (chunkedState == pChunkSize)
+            if (data->chunkedState == pChunkSize)
             {
-                size_t pos = socket_chunk.find("\r\n");
+                size_t pos = data->socket_chunk.find("\r\n");
                 if (pos != string::npos)
                 {
-                    string hex_size = socket_chunk.substr(0, pos);
+                    string hex_size = data->socket_chunk.substr(0, pos);
                     if (hex_size.empty()) { break; }
                     
                     // handle the specific exception your function throws.
@@ -330,31 +302,31 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                         data->remaining_in_chunk = stringToHexLong(hex_size, req);
                     } catch (const RequestException& e) {
                         // Handle malformed hex value by stopping the process.
-                        multipartState = pMultipartDone;
+                        data->multipartState = pMultipartDone;
                         break;
                     }
 
-                    socket_chunk.erase(0, pos + 2);
+                    data->socket_chunk.erase(0, pos + 2);
 
                     if (data->remaining_in_chunk == 0)
                     {
-                        chunkedState = pChunkEnd;
+                        data->chunkedState = pChunkEnd;
                     }
                     else
                     {
-                        chunkedState = pChunkData;
+                        data->chunkedState = pChunkData;
                     }
                     chunk_progress = true;
                 }
             }
-            else if (chunkedState == pChunkData)
+            else if (data->chunkedState == pChunkData)
             {
                 // **FIX**: We must have the data AND the trailing "\r\n".
-                if (socket_chunk.length() >= data->remaining_in_chunk + 2)
+                if (data->socket_chunk.length() >= data->remaining_in_chunk + 2)
                 {
-                    data->multipart_chunk.append(socket_chunk, 0, data->remaining_in_chunk);
-                    socket_chunk.erase(0, data->remaining_in_chunk + 2);
-                    chunkedState = pChunkSize;
+                    data->multipart_chunk.append(data->socket_chunk, 0, data->remaining_in_chunk);
+                    data->socket_chunk.erase(0, data->remaining_in_chunk + 2);
+                    data->chunkedState = pChunkSize;
                     chunk_progress = true;
                 }
             }
@@ -362,23 +334,23 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     }
     else
     {
-        data->multipart_chunk.append(socket_chunk);
-        socket_chunk.clear();
+        data->multipart_chunk.append(data->socket_chunk);
+        data->socket_chunk.clear();
     }
 
     // --- LAYER 2: MULTIPART CONTENT PARSING ---
     // this layer operates on the clean `data->multipart_chunk`.
     bool multipart_progress = true;
-    while (multipart_progress && multipartState != pMultipartDone)
+    while (multipart_progress && data->multipartState != pMultipartDone)
     {
         multipart_progress = false;
 
-        if (multipartState == pMultipartBoundary)
+        if (data->multipartState == pMultipartBoundary)
         {
-            size_t boundary_pos = data->multipart_chunk.find(first_boundary_marker);
+            size_t boundary_pos = data->multipart_chunk.find(data->first_boundary_marker);
             if (boundary_pos != 0)
             {
-                boundary_pos = data->multipart_chunk.find(boundary_marker);
+                boundary_pos = data->multipart_chunk.find(data->boundary_marker);
             }
             if (boundary_pos != string::npos)
             {
@@ -386,12 +358,12 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                 if (line_end_pos != string::npos)
                 {
                     data->multipart_chunk.erase(0, line_end_pos + 2);
-                    multipartState = pMultipartHeaders;
+                    data->multipartState = pMultipartHeaders;
                     multipart_progress = true;
                 }
             }
         }
-        else if (multipartState == pMultipartHeaders)
+        else if (data->multipartState == pMultipartHeaders)
         {
             size_t headers_end_pos = data->multipart_chunk.find("\r\n\r\n");
             if (headers_end_pos != string::npos)
@@ -401,28 +373,29 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                 string filename = fileData.filename;
                 if (!filename.empty())
                 {
-                    filename = getFileNameWithUserId(req, LoggedUser.getId(), filename);
+                    filename = getFileNameWithUserId(req, 5, filename);
+                    // filename = getFileNameWithUserId(req, LoggedUser.getId(), filename);
                     string filepath = locationNode.uploadDir + "/" + filename;
                     data->filefd = open(filepath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
                 }
                 else
                 {
-                    name = fileData.name;
+                    data->name = fileData.name;
                 }
                 data->multipart_chunk.erase(0, headers_end_pos + 4);
 
-                if (data->multipart_chunk == end_boundary_marker)
-                    multipartState = pMultipartDone;
+                if (data->multipart_chunk == data->end_boundary_marker)
+                    data->multipartState = pMultipartDone;
                 else
-                    multipartState = pMultipartBody;
-                multipartState = pMultipartBody;
+                    data->multipartState = pMultipartBody;
+                data->multipartState = pMultipartBody;
                 multipart_progress = true;
             }
         }
-        else if (multipartState == pMultipartBody)
+        else if (data->multipartState == pMultipartBody)
         {
-            size_t end_boundary_pos = data->multipart_chunk.find(end_boundary_marker);
-            size_t next_boundary_pos = data->multipart_chunk.find(boundary_marker);
+            size_t end_boundary_pos = data->multipart_chunk.find(data->end_boundary_marker);
+            size_t next_boundary_pos = data->multipart_chunk.find(data->boundary_marker);
 
             if (next_boundary_pos != string::npos)
             {
@@ -435,13 +408,13 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                 else 
                 {
                     string value = data->multipart_chunk.substr(0, next_boundary_pos);
-                    formDataDiv += getDataStrInDiv(name, value);
+                    formDataDiv += getDataStrInDiv(data->name, value);
                 }
                 data->multipart_chunk.erase(0, next_boundary_pos);
-                if (data->multipart_chunk == end_boundary_marker)
-                    multipartState = pMultipartDone;
+                if (data->multipart_chunk == data->end_boundary_marker)
+                    data->multipartState = pMultipartDone;
                 else
-                    multipartState = pMultipartBoundary;
+                    data->multipartState = pMultipartBoundary;
                 multipart_progress = true;
             }
             
@@ -453,15 +426,15 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                     close(data->filefd);
                     data->filefd = -1;
                 }
-                multipartState = pMultipartDone;
+                data->multipartState = pMultipartDone;
                 multipart_progress = true;
             }
             else
             {
                 size_t write_size = 0;
-                if (data->multipart_chunk.length() > boundary_marker.length())
+                if (data->multipart_chunk.length() > data->boundary_marker.length())
                 {
-                    write_size = data->multipart_chunk.length() - boundary_marker.length();
+                    write_size = data->multipart_chunk.length() - data->boundary_marker.length();
                 }
                 if (data->filefd != -1 && write_size > 0)
                 {
@@ -474,19 +447,22 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
 
     
     // === 3. FINAL CHECK & CLEANUP ===
-    if (multipartState != pMultipartDone)
+    if (data->multipartState != pMultipartDone)
     {
+        client.clientState = SENDING_ERROR;
         std::cerr << "Error: Upload finished unexpectedly.\n";
         if (data->filefd != -1)
         {
-            close(filefd);
+            close(data->filefd);
         }
     }
     else
     {
+        client.clientState = SENDING_CHUNKS;
         std::cout << "Success: Upload finished.\n";
         // auth->redirectToPage(req.cfd, "./www/auth/profile.html", 200); // Your success logic
     }
+    data->socket_chunk = data->multipart_chunk;
 
     map <string, string> dataMap;
     dataMap["data"] =  formDataDiv;

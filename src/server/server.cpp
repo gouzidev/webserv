@@ -294,8 +294,7 @@ bool WebServ::parseBody(Client &client) // returning true means task is done
     {
         case BodyState::BODY_START:
             // first time
-            handleBodyStart(client);
-
+                handleBodyStart(client);
             break;
         case BodyState::BODY_DONE:
             return true;
@@ -326,7 +325,7 @@ void WebServ::handleClientRead(Client &client)
     if (bytesRead <= 0)
     {
         if (bytesRead == 0)
-            client.clientState = READING_DONE;
+            client.clientState = SENDING_CHUNKS;
         return ;
     }
 

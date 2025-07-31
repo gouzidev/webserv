@@ -71,7 +71,7 @@ UploadData::UploadData(Client &client)
     multipartState = pMultipartBoundary;
     chunkedState = pChunkSize;
 
-    size_t headerBoundaryPos = contentType.find("boundary=");
+    size_t headerBoundaryPos = contentTypeHeader.find("boundary=");
     if (headerBoundaryPos == std::string::npos)
     {
         cout << "boundary not found in content-type header" << endl;
@@ -84,11 +84,12 @@ UploadData::UploadData(Client &client)
 
 
     remaining_in_chunk = 0;
-    socket_chunk  = "";
     multipart_chunk = "";
     isChunked = client.request.isChunked;
 
     filefd = -1;
+
+    socket_chunk = client.requestBuff;
     
 };
 

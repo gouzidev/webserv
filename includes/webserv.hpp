@@ -101,9 +101,6 @@ enum ClientState
     
     READING_BODY, // reading body (and processing it)
 
-
-    READING_DONE,
-
     // in handleClientWrite
     SENDING_CHUNKS, // sending response to client after reading (in chunks)
 
@@ -158,7 +155,11 @@ class Response
 
 struct UploadData
 {
+    // -- State for the Multipart Parser --
+    // this state machine handles the actual file content (boundaries, headers, body).
     MultipartState multipartState;
+
+    // this state machine handles the chunked encoding itself (e.g., "4\r\nWiki\r\n").
     ChunkedState chunkedState;
 
     // current content type header without boundary
@@ -166,7 +167,10 @@ struct UploadData
 
     int filefd;
 
+    // `multipart_chunk` holds the clean, continuous data after de-chunking.
+    // for normal requests, data moves directly from socket_chunk to multipart_chunk.
     string multipart_chunk;
+    // `socket_chunk` holds the raw data exactly as it comes from the network.
     string socket_chunk;
     std::string filename;
     std::string name;
@@ -178,8 +182,6 @@ struct UploadData
     std::string boundary_marker;
     std::string end_boundary_marker;
     std::string first_boundary_marker;
-
-    char socket_read_buffer[BUFFSIZE];
 
     UploadData(Client &client);
 };
