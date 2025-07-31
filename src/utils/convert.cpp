@@ -10,7 +10,7 @@ string ushortToStr(unsigned short port)
     return portStr;
 }
 
-long stringToHexLong(std::string str, Request &req)
+long WebServ::stringToHexLong(std::string str, Client &client)
 {
     long res = 0;
     std::string hexChars = "0123456789abcdef";
@@ -18,7 +18,7 @@ long stringToHexLong(std::string str, Request &req)
     {
         size_t pos = hexChars.find(str[i]);
         if (pos == std::string::npos)
-            throw RequestException("invalid hex string", 400, req);
+            throw HttpException(400, client);
         res *= 16;
         long temp = (long) pos;
         res += temp;

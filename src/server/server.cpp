@@ -347,9 +347,12 @@ void WebServ::handleClientWrite(Client &client)
 
 void WebServ::cleanClient(Client &client)
 {
-    close(client.cfd);
-    clients.erase(client.cfd);
+    
+    if (client.cfd != -1)
+        close(client.cfd);
     epoll_ctl(epollfd, EPOLL_CTL_DEL, client.cfd, NULL);
+    if (exists(clients, client.cfd))
+        clients.erase(client.cfd);
 }
 
 int WebServ::serverLoop()
@@ -412,7 +415,6 @@ int WebServ::serverLoop()
                         client.responseBuff = getSmallErrPage(e.getErrorCode());
                         setClientReadyToRecvData(client, true);
                 }
-
             }
             if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
             {

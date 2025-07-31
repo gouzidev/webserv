@@ -300,7 +300,7 @@ class WebServ
         void setClientReadyToRecvData(Client &client, bool error);  // this will set the right flags for epoll, and make client ready to handle the data sent to him, will make call to handleClientWrite possible
 
         void processCompleteRequest(Client &client);
-
+        long stringToHexLong(string str, Client &client);
         // will return the name with the user id in the front
         string getFileNameWithUserId(Request &req, unsigned int userId, string originalName);
         // will get the original name and set the id found in the saved name 
@@ -340,7 +340,6 @@ bool validPath(string path);
 
 string ushortToStr(unsigned short port);
 char decodeHex(string &str, size_t &idx);
-long stringToHexLong(string str, Request &req);
 
 string removeTrailingCR(string str);
 string getHostPort(string host, unsigned short port);

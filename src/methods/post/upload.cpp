@@ -140,25 +140,6 @@ int openCurrFile(Request &req, LocationNode &locationNode, string fileName)
     return fd;
 }
 
-void writeChunk(Request &req, LocationNode &locationNode, string chunk, size_t chunkSize, string fileName)
-{
-    string errorRes;
-    string path = locationNode.uploadDir;
-    string newFile = path + "/" + fileName;
-
-    int fd = open(newFile.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
-    if (fd == -1)
-
-
-    {
-        errorRes  = getErrorResponse(500, ""); // method not allowed 
-        send(req.cfd, errorRes.c_str(), errorRes.length(), 0);
-        return ;
-    }
-    write(fd, chunk.c_str(), chunkSize);
-    close(fd);
-}
-
 bool verifyUpload(Request &req, ServerNode &serv, LocationNode &locationNode, size_t &boundaryPos)
 {
     string errorRes;
@@ -279,9 +260,6 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     data = req.uploadData;
 
 
-    // === 1. UNIFIED SETUP ===
-    // this section prepares all variables needed for both normal and chunked uploads.
-
     // first, determine the transfer type. This flag controls which logic path we take.
     bool isChunked = data->isChunked; // done
 
@@ -290,7 +268,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     // fills the multipart_chunk with clean data
     if (isChunked)
     {
-        bool chunk_progress = true; // discard
+        bool chunk_progress = true;
         while (chunk_progress && data->chunkedState != pChunkEnd)
         {
             chunk_progress = false;
@@ -300,16 +278,12 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
                 if (pos != string::npos)
                 {
                     string hex_size = data->socket_chunk.substr(0, pos);
-                    if (hex_size.empty()) { break; }
-                    
-                    // handle the specific exception your function throws.
-                    try {
-                        data->remaining_in_chunk = stringToHexLong(hex_size, req);
-                    } catch (const RequestException& e) {
-                        // Handle malformed hex value by stopping the process.
-                        data->multipartState = pMultipartDone;
+                    if (hex_size.empty())
+                    {
                         break;
                     }
+                    
+                    data->remaining_in_chunk = stringToHexLong(hex_size, client);
 
                     data->socket_chunk.erase(0, pos + 2);
 
@@ -326,7 +300,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
             }
             else if (data->chunkedState == pChunkData)
             {
-                // **FIX**: We must have the data AND the trailing "\r\n".
+                // we must have the data AND the trailing "\r\n".
                 if (data->socket_chunk.length() >= data->remaining_in_chunk + 2)
                 {
                     data->multipart_chunk.append(data->socket_chunk, 0, data->remaining_in_chunk);
@@ -343,7 +317,6 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
         data->socket_chunk.clear();
     }
 
-    // --- LAYER 2: MULTIPART CONTENT PARSING ---
     // this layer operates on the clean `data->multipart_chunk`.
     bool multipart_progress = true;
     while (multipart_progress && data->multipartState != pMultipartDone)
@@ -450,7 +423,6 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
     }
 
     
-    // === 3. FINAL CHECK & CLEANUP ===
     if (data->multipartState == pMultipartError)
     {
         client.clientState = WRITING_ERROR;
@@ -472,7 +444,7 @@ void WebServ::handleUpload(Client &client, LocationNode &locationNode)
         delete req.uploadData;
         req.uploadData = NULL;
         std::cout << "Success: Upload finished.\n";
-        // auth->redirectToPage(req.cfd, "./www/auth/profile.html", 200); // Your success logic
+        auth->redirectToPage(client, "./www/auth/profile.html", 200); // Your success logic
     }
     else // more to read
     {
