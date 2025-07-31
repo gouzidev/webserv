@@ -82,7 +82,7 @@ class Session;
 
 class Request;
 
-#define BUFFSIZE 64000
+#define BUFFSIZE 1000000
 
 #define ERROR 1
 
