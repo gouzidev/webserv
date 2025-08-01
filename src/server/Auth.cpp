@@ -36,10 +36,11 @@ void Auth::login(Client &client, string email, string password)
 
     sessions.insert(make_pair(sessionKey, newSession));
 
+    string page = getSmallPageStatusCode(200);
     response += "HTTP/1.1 " + ushortToStr(301) + " " + getStatusMessage(301) + " \r\n";
     response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
-    response += "Content-Length: 0\r\n\r\n";
+    response += "Content-Length: " + ulongToStr(page.size()) + "\r\n\r\n";
     client.responseBuff = response;
 }
 
@@ -65,6 +66,21 @@ void Auth::signup(Client &client, string fName, string lName, string userName, s
     response +=  "Content-Type: text/html\r\n";
     response +=  "Location: /auth/dashboard.html\r\n";
     response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n\r\n";
+    client.responseBuff = response;
+}
+
+string Auth::getRedirectionRequest(Client &client, ushort statusCode, string location)
+{
+    Request &req = client.request;
+    int cfd = client.cfd;
+
+    // if (isLoggedIn()); // get session key to pass it too
+    string response = "";
+
+    response += "HTTP/1.1 " + ushortToStr(statusCode) + " " + getStatusMessage(statusCode) + " \r\n";
+    response +=  "Location: " + location + "\r\n";
+    // response += "Set-Cookie: sessionId=" + newSession.getKey() + "; Path=/; HttpOnly; Max-Age=3600\r\n";
+    response += "Content-Length: 0\r\n\r\n";
     client.responseBuff = response;
 }
 

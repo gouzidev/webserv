@@ -242,11 +242,11 @@ bool WebServ::parseBody(Client &client) // returning true means task is done
         // first lets handle super short requests like for /login ...
         if (req.contentType == wwwURLEncoded_t)
         {
-            if (locationTarget == "/login")
+            if (locationTarget == serv.loginLocation)
                 handleLogin(client);
-            else if (locationTarget == "/signup")
+            else if (locationTarget == serv.signupLocation)
                 handleSignup(client);
-            else if (locationTarget == "/logout")
+            else if (locationTarget == serv.logoutLocation)
                 handleLogout(client);
             else
                 handleFormData(client);
@@ -278,6 +278,17 @@ void WebServ::setClientReadyToRecvData(Client &client, bool error)
         client.clientState = WRITING_ERROR;
     else
         client.clientState = WRITING_RESPONSE;
+    client.requestBuff.clear(); // just in case..
+}
+
+void WebServ::setClientReadyToSendData(Client &client)
+{
+    ev.data.fd = client.cfd;
+    ev.events = EPOLLIN | EPOLLET; // we are done reading,
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, client.cfd, &ev);
+    client.clientState = READING_HEADERS;
+    client.requestBuff.clear(); // just in case..
+    client.responseBuff.clear(); // just in case..
 }
 
 void WebServ::handleClientRead(Client &client)
@@ -326,6 +337,15 @@ void WebServ::handleClientWrite(Client &client)
     {
         if (client.request.getReqType() == "GET")
             getMethode(client);
+        else
+        {
+            ssize_t err = send(client.cfd, client.responseBuff.c_str(), client.responseBuff.size(), 0);
+            if (err == -1)
+                cleanClient(client);
+            client.clientState = SENDING_DONE;
+            
+        }
+
     }
     else if (client.clientState == WRITING_DONE) // there is something in the buffer that needs to be sent (after post only .. maybe)
     {
@@ -363,63 +383,71 @@ int WebServ::serverLoop()
         int nfds = epoll_wait(epollfd, events, MAXEVENTS, -1);
         if (nfds == -1)
             throw NetworkException("epoll_wait failed", 500);
-        for (int i = 0 ; i < nfds; i++)
+        try
         {
-            int readyFd = events[i].data.fd;
-            // if the readyFd is in server Sockets, readyFd is a server fd, which means we have a new client, add it to the clients being monitored
-            if (exists(servSockets, readyFd)) // here readyFd is a server socket
+            for (int i = 0 ; i < nfds; i++)
             {
-                int serverSock = readyFd;
-                struct sockaddr clientAddr;
-                socklen_t clientAddrSize = sizeof(struct sockaddr);
-                while (true)
+                int readyFd = events[i].data.fd;
+                // if the readyFd is in server Sockets, readyFd is a server fd, which means we have a new client, add it to the clients being monitored
+                if (exists(servSockets, readyFd)) // here readyFd is a server socket
                 {
-                    int clientSock = accept(serverSock, &clientAddr, &clientAddrSize);  // check if fails
-                    if (clientSock == -1)
+                    int serverSock = readyFd;
+                    struct sockaddr clientAddr;
+                    socklen_t clientAddrSize = sizeof(struct sockaddr);
+                    while (true)
                     {
-                        if (errno == EWOULDBLOCK || errno == EAGAIN)
-                            break; // we done accepting
-                        throw NetworkException("accept failed", 500);
+                        int clientSock = accept(serverSock, &clientAddr, &clientAddrSize);  // check if fails
+                        if (clientSock == -1)
+                        {
+                            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                                break; // we done accepting
+                            throw NetworkException("accept failed", 500);
+                        }
+                        if (fcntl(clientSock, F_SETFL, O_NONBLOCK) == -1)
+                            throw NetworkException("fcntl failed", 500);
+                        ServerNode &serv = servSocketMap[serverSock];
+                        Request clientReq(serv);
+                        Client newClient = Client(clientReq, clientSock, serverSock);
+                        clients.insert(make_pair(clientSock, newClient));
+                        ev.events = EPOLLIN | EPOLLET;
+                        ev.data.fd = clientSock;
+                        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientSock, &ev) == -1)
+                            throw NetworkException("epoll_ctl failed", 500);
                     }
-                    if (fcntl(clientSock, F_SETFL, O_NONBLOCK) == -1)
-                        throw NetworkException("fcntl failed", 500);
-                    ServerNode &serv = servSocketMap[serverSock];
-                    Request clientReq(serv);
-                    Client newClient = Client(clientReq, clientSock, serverSock);
-                    clients.insert(make_pair(clientSock, newClient));
-                    ev.events = EPOLLIN | EPOLLET;
-                    ev.data.fd = clientSock;
-                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientSock, &ev) == -1)
-                        throw NetworkException("epoll_ctl failed", 500);
                 }
-            }
-            else // client already exists
-            {
-                int clientSock = readyFd;
-                Client &client = clients.at(clientSock);
-                try
+                else // client already exists
                 {
+                    int clientSock = readyFd;
+                    Client &client = clients.at(clientSock);
+
                     if (events[i].events & EPOLLIN)
                         handleClientRead(client);
                     else if (events[i].events & EPOLLOUT)
                         handleClientWrite(client);
-                }
-                catch (HttpException &e)
-                {
-                    cout << "catched an exception of error -> " << e.getErrorCode() << endl;
-                    // here we will catch http exceptions. we will have the http code in obj -> e
-                        // we will use that to generate an error response that will be sent in next event with handleClientWrite in WRITING_ERROR state.
-                        // we have a client object that we can use to send the response inside the error obj
 
-                        Client &client  = e.getClient();
-                        client.responseBuff = getSmallErrPage(e.getErrorCode());
-                        setClientReadyToRecvData(client, true);
+                }
+                if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
+                {
+                    Client &deerClient = clients.at(readyFd);
+                    if (!deerClient.keepAlive)
+                        cleanClient(clients.at(readyFd));
+                    else
+                    {
+                        setClientReadyToSendData(deerClient);
+                    }
                 }
             }
-            if (exists(clients, readyFd) && clients.at(readyFd).clientState == SENDING_DONE)
-            {
-                cleanClient(clients.at(readyFd));
-            }
+        }
+        catch (HttpException &e)
+        {
+            cout << "catched an exception of error -> " << e.getErrorCode() << endl;
+            // here we will catch http exceptions. we will have the http code in obj -> e
+                // we will use that to generate an error response that will be sent in next event with handleClientWrite in WRITING_ERROR state.
+                // we have a client object that we can use to send the response inside the error obj
+
+            Client &client  = e.getClient();
+            client.responseBuff = getSmallPageStatusCode(e.getErrorCode());
+            setClientReadyToRecvData(client, true);
         }
     }
     return 0;

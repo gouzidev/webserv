@@ -238,7 +238,7 @@ void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servN
 
 }
 
-string getSmallErrPage(unsigned short errCode)
+string getSmallPageStatusCode(unsigned short errCode)
 {
     string errorRes;
     string errorMsg;

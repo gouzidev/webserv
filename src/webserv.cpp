@@ -1,7 +1,7 @@
 #include "../includes/webserv.hpp"
 
 set <string> LocationNode::possibleCgiExts;
-set <string> LocationNode::possibleMethods;
+set <string> WebServ::possibleMethods;
 
 unsigned int User::userCount;
 
@@ -14,15 +14,13 @@ ServerNode::ServerNode()
     root = "";
     errorFolder = "";
     authFolder = "";
+    loginLocation = "";
+    signupLocation = "";
+    logoutLocation = "";
 }
 
 LocationNode::LocationNode()
 {
-    possibleMethods.insert("DELETE");
-    possibleMethods.insert("GET");
-    possibleMethods.insert("POST");
-
-
     possibleCgiExts.insert(".py");
     possibleCgiExts.insert(".php");
     autoIndex = true;
@@ -43,7 +41,9 @@ WebServ::WebServ(char *filename)
     validRedirects.insert(302);
     validRedirects.insert(303);
     validRedirects.insert(304);
-
+    possibleMethods.insert("DELETE");
+    possibleMethods.insert("GET");
+    possibleMethods.insert("POST");
     MAXSERVERUPLOADS = 999;
     MAX_USERID_DIGITS = 3;
     currentUploadCount = 0;
@@ -70,6 +70,9 @@ WebServ::WebServ(string filename)
     validRedirects.insert(304);
     validRedirects.insert(307);
     validRedirects.insert(308);
+    possibleMethods.insert("DELETE");
+    possibleMethods.insert("GET");
+    possibleMethods.insert("POST");
     MAXSERVERUPLOADS = 999;
     currentUploadCount = 0;
     generalErrorResponse = (char *)"HTTP/1.1 500 INTERNAL SERVER ERROR\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nServer Error";

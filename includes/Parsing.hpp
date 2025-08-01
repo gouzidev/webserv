@@ -17,7 +17,6 @@ class LocationNode
 {
     public:
         LocationNode();
-        static set<string> possibleMethods;
         static set<string> possibleCgiExts;
         vector<string> headers;
         set<string> methods;
@@ -49,6 +48,14 @@ class ServerNode
         map<unsigned short, string> errorNodes;
         string defaultErrorPage;
         long long clientMaxBodySize; // in MB
+
+
+        // login
+        string loginLocation; // usally /login
+        string signupLocation; // usally /signup
+        string logoutLocation; // usally /logout
+
+
 };
 
 #endif

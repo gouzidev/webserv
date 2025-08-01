@@ -100,6 +100,7 @@ enum ClientState
     // in handleClientWrite
     WRITING_RESPONSE, // default state when writing in the response buffer, if the response is small it will be sent if it's big the state will change to WRITING_RESPONSE
 
+
     WRITING_DONE, // clean the client here (after sending the response)
 
     WRITING_ERROR, // send a http error (if a problem happened while reading the data or sending it, will set WRITING_DONE too to clean the client) 
@@ -129,6 +130,7 @@ class Client
         string requestBuff;
         string responseBuff;
     
+        bool keepAlive;
         // calonical form
         Client(Request &request);
         Client(Request &request, int cfd);
@@ -265,6 +267,8 @@ class WebServ
 
         // current number of files uploaded to the server (increments every time user uploads new file) 
         short currentUploadCount;
+
+        static set<string> possibleMethods;
     public:
         WebServ(char *confName);
         ~WebServ();
@@ -280,6 +284,8 @@ class WebServ
         void validateParsing();
         bool validateLocationStr(string &location, ServerNode &serverNode, size_t &lineNum);
         bool validateLocation(ServerNode &servNode, LocationNode &locationNode);
+        void validateLoginLocations(ServerNode &servNode);
+
         void postMethode(Client &client);
         void deleteMethod(Request &req, ServerNode &servNode);
         void server();
@@ -298,6 +304,7 @@ class WebServ
         void handleClientWrite(Client &client);
 
         void setClientReadyToRecvData(Client &client, bool error);  // this will set the right flags for epoll, and make client ready to handle the data sent to him, will make call to handleClientWrite possible
+        void setClientReadyToSendData(Client &client);  // this will set the right flags for epoll, and make client ready to send us data, will make call to handleClientRead possible
 
         void processCompleteRequest(Client &client);
         long stringToHexLong(string str, Client &client);
@@ -322,7 +329,7 @@ class WebServ
 
 void makeResponse(Client &client, string fileContent);
 
-string getSmallErrPage(unsigned short errCode);
+string getSmallPageStatusCode(unsigned short errCode);
 
 void sendErrPageToClient(int clientfd, unsigned short errCode, ServerNode &servNode);
 string getQuickResponse(short errCode, string fileStr);
@@ -339,6 +346,7 @@ bool checkDir(string dirname, int dirStat);
 bool validPath(string path);
 
 string ushortToStr(unsigned short port);
+string ulongToStr(unsigned long num);
 char decodeHex(string &str, size_t &idx);
 
 string removeTrailingCR(string str);

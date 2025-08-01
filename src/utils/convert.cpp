@@ -10,6 +10,14 @@ string ushortToStr(unsigned short port)
     return portStr;
 }
 
+string ulongToStr(unsigned long num)
+{
+    stringstream ss;
+    ss << num;
+    string numStr = ss.str();
+    return numStr;
+}
+
 long WebServ::stringToHexLong(std::string str, Client &client)
 {
     long res = 0;

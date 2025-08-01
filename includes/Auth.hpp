@@ -77,6 +77,7 @@ class Auth
         void redirectToPage(Client &client, string page, int errorCode);
         void redirectToLogin(Client &client, int errorCode);
         bool isLoggedIn(string sessionKey);
+        string getRedirectionRequest(Client &client, unsigned short statusCode, string location);
         Auth();
         map < string, User> &getUsers();
     public: 

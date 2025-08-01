@@ -35,10 +35,9 @@ void WebServ::handleLocationLine(LocationNode &locationNode, vector <string> &to
     {
         for (size_t i = 1; i < tokens.size(); i++)
         {
-            
             string method = tokens[i];
             transform(method.begin(), method.end(), method.begin(), ::toupper); // rfc 5.1.1  The method is case-sensitive.
-            if (locationNode.possibleMethods.find(method) == locationNode.possibleMethods.end())
+            if (possibleMethods.find(method) == possibleMethods.end())
                 throw ConfigException("syntax error, unknown method '" + method + "' at line: " + toString(lineNum), 400);
             if (locationNode.methods.find(method) != locationNode.methods.end())
                 throw ConfigException("syntax error, duplicate method '" + method + "' at line: " + toString(lineNum), 400);
@@ -243,7 +242,36 @@ void WebServ::handleServerBlock(ServerNode &servNode, vector <string> &tokens, s
         else
             servNode.hostIp = tokens[1];
     }
-    
+    else if (tokens[0] == "loginLocation")
+    {
+        if (tokens.size() != 2)
+            throw ConfigException("loginLocation syntax is wrong, must be -> loginLocation '/locationName' at line: " + toString(lineNum), 400);
+        if (servNode.loginLocation != "")
+            throw ConfigException("loginLocation syntax is duplicated at line: " + toString(lineNum), 400);
+        if (!startsWith(tokens[1], "/"))
+            throw ConfigException("loginLocation syntax is wrong, 'loginLocation' must start with a single slash at line: " + toString(lineNum), 400);
+        servNode.loginLocation = tokens[1];
+    }
+    else if (tokens[0] == "signupLocation")
+    {
+        if (tokens.size() != 2)
+            throw ConfigException("signupLocation syntax is wrong, must be -> signupLocation '/locationName' at line: " + toString(lineNum), 400);
+        if (servNode.signupLocation != "")
+            throw ConfigException("signupLocation syntax is duplicated at line: " + toString(lineNum), 400);
+        if (!startsWith(tokens[1], "/"))
+            throw ConfigException("signupLocation syntax is wrong, 'signupLocation' must start with a single slash at line: " + toString(lineNum), 400);
+        servNode.signupLocation = tokens[1];
+    }
+    else if (tokens[0] == "logoutLocation")
+    {
+        if (tokens.size() != 2)
+            throw ConfigException("logoutLocation syntax is wrong, must be -> logoutLocation '/locationName' at line: " + toString(lineNum), 400);
+        if (servNode.logoutLocation != "")
+            throw ConfigException("logoutLocation syntax is duplicated at line: " + toString(lineNum), 400);
+        if (!startsWith(tokens[1], "/"))
+            throw ConfigException("logoutLocation syntax is wrong, 'logoutLocation' must start with a single slash at line: " + toString(lineNum), 400);
+        servNode.logoutLocation = tokens[1];
+    }
     else if (tokens[0] == "root")
     {
         if (tokens.size() != 2)
@@ -339,6 +367,42 @@ bool WebServ::validateLocation(ServerNode &servNode, LocationNode &locationNode)
     return true;
 }
 
+void WebServ::validateLoginLocations(ServerNode &servNode)
+{
+    string locStr;
+    LocationNode locationNode;
+    
+    locStr = servNode.loginLocation;
+    if (servNode.loginLocation == "")
+        throw ConfigException("no login location block provided", 400);
+    if (!exists(servNode.locationDict, servNode.loginLocation))
+        throw ConfigException("bad login location block provided", 400);
+    locationNode = servNode.locationDict.find(locStr)->second;
+    if (!exists(locationNode.methods, string("POST"))) // the provided location doesnt even support posting
+        throw ConfigException("login location doesnt support post method", 400);
+
+    locStr = servNode.signupLocation;
+    if (servNode.signupLocation == "")
+        throw ConfigException("no signup location block provided", 400);
+    if (!exists(servNode.locationDict, servNode.signupLocation))
+        throw ConfigException("bad signup location block provided", 400);
+    locationNode = servNode.locationDict.find(locStr)->second;
+    if (!exists(locationNode.methods, string("POST"))) // the provided location doesnt even support posting
+        throw ConfigException("signup location doesnt support post method", 400);
+    
+    locStr = servNode.logoutLocation;
+    if (servNode.logoutLocation == "")
+        throw ConfigException("no logout location block provided", 400);
+    if (!exists(servNode.locationDict, servNode.logoutLocation))
+        throw ConfigException("bad logout location block provided", 400);
+    locationNode = servNode.locationDict.find(locStr)->second;
+    if (!exists(locationNode.methods, string("POST"))) // the provided location doesnt even support posting
+        throw ConfigException("logout location doesnt support post method", 400);
+        
+                
+
+}
+
 void WebServ::validateParsing()
 {
     size_t i = 0;
@@ -358,6 +422,8 @@ void WebServ::validateParsing()
             throw ConfigException("no listen block provided", 400);
         if (servNode.hostIp == "")
             throw ConfigException("no host block provided", 400);
+       
+        validateLoginLocations(servNode);
         for (size_t i = 0; i < servNode.locationNodes.size(); i++)
         {
             LocationNode &localNode = servNode.locationNodes[i];

@@ -17,6 +17,7 @@ Client::Client(Request &req): request(req)
     ofd = -1;
     requestBuff = "";
     responseBuff = "";
+    keepAlive = false;
     clientState = READING_HEADERS;
 }
 
@@ -27,6 +28,7 @@ Client::Client(Request &req, int cfd): request(req)
     ofd = -1;
     requestBuff = "";
     responseBuff = "";
+    keepAlive = false;
     this->clientState = READING_HEADERS;
 }
 
@@ -38,6 +40,7 @@ Client::Client(Request &req, int cfd, int sfd): request(req)
     ofd = -1;
     requestBuff = "";
     responseBuff = "";
+    keepAlive = false;
     this->clientState = READING_HEADERS;
 }
 
@@ -49,6 +52,7 @@ Client::Client(Request &req, int cfd,  int sfd, ClientState state): request(req)
     ofd = -1;
     requestBuff = "";
     responseBuff = "";
+    keepAlive = false;
     this->clientState = state;
 }
 
