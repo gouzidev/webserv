@@ -1,10 +1,10 @@
-*.conf
+# *.conf
 .vscode
 *.o
 /obj
 webserv
 *.vscode
-/badconf.conf
+# /badconf.conf
 /cgi.conf
 /www/upload/files
 /upload/files
